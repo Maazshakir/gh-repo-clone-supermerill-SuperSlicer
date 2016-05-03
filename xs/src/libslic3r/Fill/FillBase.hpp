@@ -1,6 +1,7 @@
 #ifndef slic3r_FillBase_hpp_
 #define slic3r_FillBase_hpp_
 
+#include <memory.h>
 #include <float.h>
 
 #include "../libslic3r.h"
@@ -61,7 +62,7 @@ public:
     virtual bool no_sort() const { return false; }
 
     // Perform the fill.
-    virtual Polylines fill_surface(const Surface *surface, const FillParams &params) = 0;
+    virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
 
 protected:
     Fill() :
@@ -75,7 +76,22 @@ protected:
         bounding_box(Point(0, 0), Point(-1, -1))
         {}
 
-    static coord_t adjust_solid_spacing(const coord_t width, const coord_t distance);
+    // The expolygon may be modified by the method to avoid a copy.
+    virtual void    _fill_surface_single(
+        const FillParams                &params, 
+        unsigned int                     thickness_layers,
+        const std::pair<float, Point>   &direction, 
+        ExPolygon                       &expolygon, 
+        Polylines                       &polylines_out) {}
+
+    static coord_t  _adjust_solid_spacing(const coord_t width, const coord_t distance);
+
+    virtual float _layer_angle(size_t idx) const { 
+        bool odd = idx & 1;
+        return (idx & 1) ? float(M_PI/2.) : 0;
+    }
+
+    virtual std::pair<float, Point> _infill_direction(const Surface *surface) const;
 };
 
 // An interface class to Perl, aggregating an instance of a Fill and a FillData.
@@ -86,16 +102,6 @@ public:
     ~Filler() { delete fill; fill = NULL; }
     Fill        *fill;
     FillParams   params;
-};
-
-class FillWithDirection : public Fill
-{
-public:
-    virtual float _layer_angle(size_t idx) const { 
-        bool odd = idx & 1;
-        return (idx & 1) ? float(M_PI/2.) : 0;
-    }
-    virtual std::pair<float, Point> infill_direction(const Surface *surface) const ;
 };
 
 } // namespace Slic3r

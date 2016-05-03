@@ -1,3 +1,4 @@
+#include "../ClipperUtils.hpp"
 #include "../Surface.hpp"
 
 #include "FillBase.hpp"
@@ -24,7 +25,8 @@ Fill* Fill::new_from_type(const std::string &type)
 	if (type == "line")
 		return new FillLine();
 	if (type == "grid")
-		return new FillGrid();
+//		return new FillGrid();
+        return new FillGrid2();
 	if (type == "archimedeanchords")
 		return new FillArchimedeanChords();
 	if (type == "hilbertcurve")
@@ -35,16 +37,33 @@ Fill* Fill::new_from_type(const std::string &type)
 	return NULL;
 }
 
-coord_t Fill::adjust_solid_spacing(const coord_t width, const coord_t distance)
+Polylines Fill::fill_surface(const Surface *surface, const FillParams &params)
+{
+    // Perform offset.
+    Slic3r::ExPolygons expp;
+    offset(surface->expolygon, &expp, -0.5*scale_(this->spacing));
+    // Create the infills for each of the regions.
+    Polylines polylines_out;
+    for (size_t i = 0; i < expp.size(); ++ i)
+        _fill_surface_single(
+            params,
+            surface->thickness_layers,
+            _infill_direction(surface),
+            expp[i],
+            polylines_out);
+    return polylines_out;
+}
+
+coord_t Fill::_adjust_solid_spacing(const coord_t width, const coord_t distance)
 {
     coord_t number_of_lines = coord_t(coordf_t(width) / coordf_t(distance)) + 1;
     coord_t extra_space     = width % distance;
     return (number_of_lines <= 1) ? 
-    	distance : 
-    	distance + extra_space / (number_of_lines - 1);
+        distance : 
+        distance + extra_space / (number_of_lines - 1);
 }
 
-std::pair<float, Point> FillWithDirection::infill_direction(const Surface *surface) const
+std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
 {
     // set infill angle
     float out_angle = this->angle;

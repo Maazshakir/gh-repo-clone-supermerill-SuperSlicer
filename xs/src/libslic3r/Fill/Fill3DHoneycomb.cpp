@@ -139,9 +139,14 @@ static Polylines makeGrid(coord_t z, coord_t gridSize, size_t gridWidth, size_t 
     return result;
 }
 
-Polylines Fill3DHoneycomb::fill_surface(const Surface *surface, const FillParams &params)
+void Fill3DHoneycomb::_fill_surface_single(
+    const FillParams                &params, 
+    unsigned int                     thickness_layers,
+    const std::pair<float, Point>   &direction, 
+    ExPolygon                       &expolygon, 
+    Polylines                       &polylines_out)
 {
-    ExPolygon   expolygon = surface->expolygon;
+    // no rotation is supported for this infill pattern
     BoundingBox bb = expolygon.contour.bounding_box();
     Point       size = bb.size();
     coord_t     distance = coord_t(scale_(this->spacing) / params.density);
@@ -159,7 +164,7 @@ Polylines Fill3DHoneycomb::fill_surface(const Surface *surface, const FillParams
         distance,
         ceil(size.x / distance) + 1,
         ceil(size.y / distance) + 1,
-        ((this->layer_id / surface->thickness_layers) % 2) + 1);
+        ((this->layer_id/thickness_layers) % 2) + 1);
     
     // move pattern in place
     for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
@@ -186,15 +191,11 @@ Polylines Fill3DHoneycomb::fill_surface(const Surface *surface, const FillParams
             polylines,
 #endif
             PolylineCollection::leftmost_point(polylines), false); // reverse allowed
-#if SLIC3R_CPPVER >= 11
-            assert(polylines.empty());
-#else
-            polylines.clear();
-#endif
+        bool first = true;
         for (Polylines::iterator it_polyline = chained.begin(); it_polyline != chained.end(); ++ it_polyline) {
-            if (! polylines.empty()) {
+            if (! first) {
                 // Try to connect the lines.
-                Points &pts_end = polylines.back().points;
+                Points &pts_end = polylines_out.back().points;
                 const Point &first_point = it_polyline->points.front();
                 const Point &last_point = pts_end.back();
                 // TODO: we should also check that both points are on a fill_boundary to avoid 
@@ -208,16 +209,14 @@ Polylines Fill3DHoneycomb::fill_surface(const Surface *surface, const FillParams
             }
             // The lines cannot be connected.
 #if SLIC3R_CPPVER >= 11
-            polylines.push_back(std::move(*it_polyline));
+            polylines_out.push_back(std::move(*it_polyline));
 #else
-            polylines.push_back(Polyline());
-            std::swap(polylines.back(), *it_polyline);
+            polylines_out.push_back(Polyline());
+            std::swap(polylines_out.back(), *it_polyline);
 #endif
+            first = false;
         }
     }
-    
-    // TODO: return ExtrusionLoop objects to get better chained paths
-    return polylines;
 }
 
 } // namespace Slic3r

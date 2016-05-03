@@ -593,12 +593,7 @@ static inline void dump_voronoi_to_svg(const Lines &lines, /* const */ voronoi_d
     const bool          primaryEdgesOnly            = false;
 
     BoundingBox bbox = BoundingBox(lines);
-    bbox.min.x -= coord_t(1. / SCALING_FACTOR);
-    bbox.min.y -= coord_t(1. / SCALING_FACTOR);
-    bbox.max.x += coord_t(1. / SCALING_FACTOR);
-    bbox.max.y += coord_t(1. / SCALING_FACTOR);
-
-    ::Slic3r::SVG svg(path, bbox);
+    ::Slic3r::SVG svg(path, bbox, scale_(1.));
 
     if (polylines != NULL)
         svg.draw(*polylines, "lime", "lime", voronoiLineWidth);

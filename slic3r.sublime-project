@@ -11,24 +11,24 @@
 			"name": "Run",
 			"working_dir": "$project_path",
    			"file_regex": " at (.*?) line ([0-9]*)",
-			"shell_cmd": "perl slic3r.pl --gui \"..\\Slic3r-tests\\gap fill torture 20 -rt.stl\""
+			"shell_cmd": "chdir & perl slic3r.pl --gui \"..\\Slic3r-tests\\gap fill torture 20 -rt.stl\""
 		},
 		{
 			"name": "full",
    			"file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
-			"shell_cmd": "perl Build.pl"
+			"shell_cmd": "chdir & perl Build.pl"
 		},
 		{
 			"name": "xs",
 			"working_dir": "$project_path/xs",
   			"file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
-			"shell_cmd": "perl Build install"
+			"shell_cmd": "chdir & perl Build install"
 		},
 		{
 			"name": "xs & run",
 			"working_dir": "$project_path/xs",
   			"file_regex": "^(..[^:]*):([0-9]+):?([0-9]+)?:? (.*)$",
-			"shell_cmd": "perl Build install & cd .. & perl slic3r.pl --gui \"..\\Slic3r-tests\\star3-big2.stl\""
+			"shell_cmd": "chdir & perl Build install & cd .. & perl slic3r.pl --gui \"..\\Slic3r-tests\\star3-big2.stl\""
 		}
 	],
 	"folders":

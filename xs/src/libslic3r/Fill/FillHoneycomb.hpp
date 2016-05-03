@@ -9,13 +9,19 @@
 
 namespace Slic3r {
 
-class FillHoneycomb : public FillWithDirection
+class FillHoneycomb : public Fill
 {
 public:
     virtual ~FillHoneycomb() {}
-    virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
 
 protected:
+	virtual void _fill_surface_single(
+	    const FillParams                &params, 
+	    unsigned int                     thickness_layers,
+	    const std::pair<float, Point>   &direction, 
+	    ExPolygon                       &expolygon, 
+	    Polylines                       &polylines_out);
+
 	// Caching the 
 	struct CacheID 
 	{

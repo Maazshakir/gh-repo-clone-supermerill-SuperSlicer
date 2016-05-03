@@ -44,6 +44,9 @@ class Polygon : public MultiPoint {
     Points convex_points(double angle = PI) const;
 };
 
+extern BoundingBox get_extents(const Polygon &poly);
+extern BoundingBox get_extents(const Polygons &polygons);
+
 }
 
 // start Boost

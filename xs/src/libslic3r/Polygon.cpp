@@ -1,3 +1,4 @@
+#include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "Polygon.hpp"
 #include "Polyline.hpp"
@@ -263,6 +264,22 @@ Polygon::convex_points(double angle) const
         points.push_back(this->points.back());
     
     return points;
+}
+
+BoundingBox get_extents(const Polygon &poly) 
+{ 
+    return poly.bounding_box();
+}
+
+BoundingBox get_extents(const Polygons &polygons)
+{
+    BoundingBox bb;
+    if (! polygons.empty()) {
+        bb = polygons.front().bounding_box();
+        for (size_t i = 1; i < polygons.size(); ++ i)
+            bb.merge(polygons[i]);
+    }
+    return bb;
 }
 
 }

@@ -1,14 +1,32 @@
+#include "BoundingBox.hpp"
+#include "Polygon.hpp"
 #include "PerimeterGenerator.hpp"
 #include "ClipperUtils.hpp"
 #include "ExtrusionEntityCollection.hpp"
 #include <cmath>
 #include <cassert>
 
+// #define PRECISE_INFILL
+
+#define PERIMETER_GENERATOR_DEBUG
+
+#ifdef PERIMETER_GENERATOR_DEBUG
+#include "SVG.hpp"
+#endif /* PERIMETER_GENERATOR_DEBUG */
+
 namespace Slic3r {
+
+
 
 void
 PerimeterGenerator::process()
 {
+#ifdef PERIMETER_GENERATOR_DEBUG
+    static int iRunPerimeter = 0;
+    ++ iRunPerimeter;
+    char path[2048];
+#endif /* PERIMETER_GENERATOR_DEBUG */
+
     // other perimeters
     this->_mm3_per_mm           = this->perimeter_flow.mm3_per_mm();
     coord_t pwidth              = this->perimeter_flow.scaled_width();
@@ -53,6 +71,11 @@ PerimeterGenerator::process()
     // extra perimeters for each one
     for (Surfaces::const_iterator surface = this->slices->surfaces.begin();
         surface != this->slices->surfaces.end(); ++surface) {
+#ifdef PERIMETER_GENERATOR_DEBUG
+        static int iSurface = 0;
+        ++ iSurface;
+#endif /* PERIMETER_GENERATOR_DEBUG */
+
         // detect how many perimeters must be generated for this island
         signed short loop_number = this->config->perimeters + surface->extra_perimeters;
         loop_number--;  // 0-indexed loops
@@ -60,6 +83,15 @@ PerimeterGenerator::process()
         Polygons gaps;
         
         Polygons last = surface->expolygon.simplify_p(SCALED_RESOLUTION);
+#ifdef PERIMETER_GENERATOR_DEBUG
+        sprintf(path, "out\\perimeter-%d-%d-initial.svg", iRunPerimeter, iSurface);
+        BoundingBox bbox = get_extents(last);
+        {
+            SVG svg(path, bbox, scale_(1.), true);
+            svg.draw_outline(last);
+        }
+#endif /* PERIMETER_GENERATOR_DEBUG */
+
         if (loop_number >= 0) {  // no loops = -1
             
             std::vector<PerimeterGeneratorLoops> contours(loop_number+1);    // depth => loops
@@ -67,7 +99,12 @@ PerimeterGenerator::process()
             ThickPolylines thin_walls;
             
             // we loop one time more than needed in order to find gaps after the last perimeter was applied
+//FIXME do we want to have a precise infill, or have an approximate infill and fill the gaps?
+#ifdef PRECISE_INFILL
+            for (signed short i = 0; i <= loop_number; ++i) {  // outer loop is 0
+#else
             for (signed short i = 0; i <= loop_number+1; ++i) {  // outer loop is 0
+#endif
                 Polygons offsets;
                 if (i == 0) {
                     // the minimum thickness of a single loop is:
@@ -143,6 +180,15 @@ PerimeterGenerator::process()
                         gaps.insert(gaps.end(), diff_pp.begin(), diff_pp.end());
                     }
                 }
+
+#ifdef PERIMETER_GENERATOR_DEBUG
+                sprintf(path, "out\\perimeter-%d-%d-loop-%d.svg", iRunPerimeter, iSurface, i);
+                BoundingBox bbox = get_extents(last);
+                {
+                    SVG svg(path, bbox, scale_(1.), true);
+                    svg.draw_outline(offsets);
+                }
+#endif /* PERIMETER_GENERATOR_DEBUG */
                 
                 if (offsets.empty()) break;
                 if (i > loop_number) break; // we were only looking for gaps this time
@@ -299,6 +345,9 @@ PerimeterGenerator::process()
             for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex)
                 ex->simplify_p(SCALED_RESOLUTION, &pp);
             
+            #ifdef PRECISE_INFILL
+            expp = offset_ex(pp, -inset);
+            #else
             // collapse too narrow infill areas
             coord_t min_perimeter_infill_spacing = ispacing * (1 - INSET_OVERLAP_TOLERANCE);
             expp = offset2_ex(
@@ -306,7 +355,8 @@ PerimeterGenerator::process()
                 -inset -min_perimeter_infill_spacing/2,
                 +min_perimeter_infill_spacing/2
             );
-            
+            #endif
+
             // append infill areas to fill_surfaces
             for (ExPolygons::const_iterator ex = expp.begin(); ex != expp.end(); ++ex)
                 this->fill_surfaces->surfaces.push_back(Surface(stInternal, *ex));  // use a bogus surface type

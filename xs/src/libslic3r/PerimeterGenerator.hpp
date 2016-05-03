@@ -2,6 +2,7 @@
 #define slic3r_PerimeterGenerator_hpp_
 
 #include "libslic3r.h"
+// #include "clipper.hpp"
 #include <vector>
 #include "ExPolygonCollection.hpp"
 #include "Flow.hpp"

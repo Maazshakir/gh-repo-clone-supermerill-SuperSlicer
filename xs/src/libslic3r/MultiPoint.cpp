@@ -46,8 +46,13 @@ MultiPoint::rotate(double angle)
 void
 MultiPoint::rotate(double angle, const Point &center)
 {
+    double s     = sin(angle);
+    double c     = cos(angle);
     for (Points::iterator it = points.begin(); it != points.end(); ++it) {
-        (*it).rotate(angle, center);
+        double cur_x = (double)it->x;
+        double cur_y = (double)it->y;
+        it->x = (coord_t)round((double)center.x + c * (cur_x - (double)center.x) - s * (cur_y - (double)center.y));
+        it->y = (coord_t)round((double)center.y + c * (cur_y - (double)center.y) + s * (cur_x - (double)center.x));
     }
 }
 
@@ -193,6 +198,11 @@ MultiPoint::_douglas_peucker(const Points &points, const double tolerance)
         results.push_back(points.back());
     }
     return results;
+}
+
+BoundingBox get_extents(const MultiPoint &mp)
+{ 
+    return mp.bounding_box();
 }
 
 }
