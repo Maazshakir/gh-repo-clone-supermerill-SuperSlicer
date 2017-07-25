@@ -38,7 +38,8 @@ typedef double coordf_t;
 #define LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER 0.15
 // Maximum perimeter length for the loop to apply the small perimeter speed. 
 #define SMALL_PERIMETER_LENGTH (6.5 / SCALING_FACTOR) * 2 * PI
-#define INSET_OVERLAP_TOLERANCE 0.4
+// overlap for thin wall into normal path (from 1=100% to 0 = 0%, old default = 0.4)
+#define INSET_OVERLAP_TOLERANCE 0.95
 // 3mm ring around the top / bottom / bridging areas.
 //FIXME This is quite a lot.
 #define EXTERNAL_INFILL_MARGIN 3.
