@@ -394,7 +394,7 @@ inline bool SlopesUnequalFilter(cInt dx1, cInt dy1, cInt dx2, cInt dy2) {
 inline bool SlopesEqual(const cInt dx1, const cInt dy1, const cInt dx2, const cInt dy2, bool UseFullInt64Range) {
   return (UseFullInt64Range) ?
     // |dx1| < 2^63, |dx2| < 2^63 etc,
-#if 1
+#if 0
     // Instead of jumping to 128bit multiply on a 32bit or 64bit CPU,
     // calculate an approximate value of the determinant and its error.
     // If the determinant is above the error, the slopes are certainly not equal.
