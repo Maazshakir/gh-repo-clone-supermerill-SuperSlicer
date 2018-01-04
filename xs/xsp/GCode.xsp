@@ -17,7 +17,14 @@
 %name{Slic3r::GCode} class GCode {
     GCode();
     ~GCode();
-    std::string do_export(Print *print, const char *path);
+    void do_export(Print *print, const char *path)
+        %code%{
+            try {
+                THIS->do_export(print, path);
+            } catch (std::exception& e) {
+                croak(e.what());
+            }
+        %};
 
     Ref<Pointf> origin()
         %code{% RETVAL = &(THIS->origin()); %};
@@ -41,5 +48,5 @@
         %};
 
     Ref<StaticPrintConfig> config()
-        %code{% RETVAL = const_cast<StaticPrintConfig*>(dynamic_cast<const StaticPrintConfig*>(&THIS->config())); %};
+        %code{% RETVAL = const_cast<StaticPrintConfig*>(static_cast<const StaticPrintConfig*>(static_cast<const PrintObjectConfig*>(&THIS->config()))); %};
 };

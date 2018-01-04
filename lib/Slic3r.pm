@@ -23,25 +23,14 @@ sub debugf {
 our $loglevel = 0;
 
 # load threads before Moo as required by it
-our $have_threads;
 BEGIN {
     # Test, whether the perl was compiled with ithreads support and ithreads actually work.
     use Config;
-    $have_threads = $Config{useithreads} && eval "use threads; use threads::shared; use Thread::Queue; 1";
-    warn "threads.pm >= 1.96 is required, please update\n" if $have_threads && $threads::VERSION < 1.96;
-    
-    ### temporarily disable threads if using the broken Moo version
     use Moo;
-    $have_threads = 0 if $Moo::VERSION == 1.003000;
-
-    # Disable multi threading completely by an environment value.
-    # This is useful for debugging as the Perl debugger does not work
-    # in multi-threaded context at all.
-    # A good interactive perl debugger is the ActiveState Komodo IDE
-    # or the EPIC http://www.epic-ide.org/
-    $have_threads = 0 if (defined($ENV{'SLIC3R_SINGLETHREADED'}) && $ENV{'SLIC3R_SINGLETHREADED'} == 1);
-    print "Threading disabled\n" if !$have_threads;
-
+    my $have_threads = $Config{useithreads} && eval "use threads; use threads::shared; use Thread::Queue; 1";
+    die "Slic3r Prusa Edition requires working Perl threads.\n" if ! $have_threads;
+    die "threads.pm >= 1.96 is required, please update\n" if $threads::VERSION < 1.96;
+    die "Perl threading is broken with this Moo version: " . $Moo::VERSION . "\n" if $Moo::VERSION == 1.003000;
     $debug = 1 if (defined($ENV{'SLIC3R_DEBUGOUT'}) && $ENV{'SLIC3R_DEBUGOUT'} == 1);
     print "Debugging output enabled\n" if $debug;
 }
@@ -50,8 +39,10 @@ warn "Running Slic3r under Perl 5.16 is neither supported nor recommended\n"
     if $^V == v5.16;
 
 use FindBin;
-# Path to the images.
-our $var = sub { decode_path($FindBin::Bin) . "/var/" . $_[0] };
+
+# Let the XS module know where the GUI resources reside.
+set_resources_dir(decode_path($FindBin::Bin) . (($^O eq 'darwin') ? '/../Resources' : '/resources'));
+set_var_dir(resources_dir() . "/icons");
 
 use Moo 1.003001;
 
@@ -88,6 +79,10 @@ my $paused = 0;
 # Set the logging level at the Slic3r XS module.
 $Slic3r::loglevel = (defined($ENV{'SLIC3R_LOGLEVEL'}) && $ENV{'SLIC3R_LOGLEVEL'} =~ /^[1-9]/) ? $ENV{'SLIC3R_LOGLEVEL'} : 0;
 set_logging_level($Slic3r::loglevel);
+
+# Let the palceholder parser evaluate one expression to initialize its local static macro_processor 
+# class instance in a thread safe manner.
+Slic3r::GCode::PlaceholderParser->new->evaluate_boolean_expression('1==1');
 
 sub spawn_thread {
     my ($cb) = @_;
@@ -163,6 +158,8 @@ sub thread_cleanup {
     *Slic3r::Surface::Collection::DESTROY   = sub {};
     *Slic3r::Print::SupportMaterial2::DESTROY = sub {};
     *Slic3r::TriangleMesh::DESTROY          = sub {};
+    *Slic3r::GUI::AppConfig::DESTROY        = sub {};
+    *Slic3r::GUI::PresetBundle::DESTROY     = sub {};
     return undef;  # this prevents a "Scalars leaked" warning
 }
 
