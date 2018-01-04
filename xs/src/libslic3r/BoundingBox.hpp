@@ -15,7 +15,7 @@ typedef Pointf3 Sizef3;
 template <class PointClass>
 class BoundingBoxBase
 {
-public:
+    public:
     PointClass min;
     PointClass max;
     bool defined;
@@ -42,14 +42,12 @@ public:
         return ! (this->max.x < other.min.x || this->min.x > other.max.x ||
                   this->max.y < other.min.y || this->min.y > other.max.y);
     }
-    bool operator==(const BoundingBoxBase<PointClass> &rhs) { return this->min == rhs.min && this->max == rhs.max; }
-    bool operator!=(const BoundingBoxBase<PointClass> &rhs) { return ! (*this == rhs); }
 };
 
 template <class PointClass>
 class BoundingBox3Base : public BoundingBoxBase<PointClass>
 {
-public:
+    public:
     BoundingBox3Base() : BoundingBoxBase<PointClass>() {};
     BoundingBox3Base(const PointClass &pmin, const PointClass &pmax) : 
         BoundingBoxBase<PointClass>(pmin, pmax) 
@@ -68,7 +66,7 @@ public:
 
 class BoundingBox : public BoundingBoxBase<Point>
 {
-public:
+    public:
     void polygon(Polygon* polygon) const;
     Polygon polygon() const;
     BoundingBox rotated(double angle) const;
@@ -89,7 +87,6 @@ public:
 
 class BoundingBox3  : public BoundingBox3Base<Point3> 
 {
-public:
     BoundingBox3() : BoundingBox3Base<Point3>() {};
     BoundingBox3(const Point3 &pmin, const Point3 &pmax) : BoundingBox3Base<Point3>(pmin, pmax) {};
     BoundingBox3(const std::vector<Point3> &points) : BoundingBox3Base<Point3>(points) {};
@@ -110,6 +107,18 @@ public:
     BoundingBoxf3(const Pointf3 &pmin, const Pointf3 &pmax) : BoundingBox3Base<Pointf3>(pmin, pmax) {};
     BoundingBoxf3(const std::vector<Pointf3> &points) : BoundingBox3Base<Pointf3>(points) {};
 };
+
+template<typename VT>
+inline bool operator==(const BoundingBoxBase<VT> &bb1, const BoundingBoxBase<VT> &bb2)
+{
+    return bb1.min == bb2.min && bb1.max == bb2.max;
+}
+
+template<typename VT>
+inline bool operator!=(const BoundingBoxBase<VT> &bb1, const BoundingBoxBase<VT> &bb2)
+{
+    return !(bb1 == bb2);
+}
 
 template<typename VT>
 inline bool empty(const BoundingBoxBase<VT> &bb)

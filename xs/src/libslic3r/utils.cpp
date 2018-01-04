@@ -1,5 +1,4 @@
 #include <locale>
-#include <ctime>
 
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
@@ -7,11 +6,6 @@
 
 #include <boost/locale.hpp>
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/date_time/local_time/local_time.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
-#include <boost/nowide/fstream.hpp>
 #include <boost/nowide/integration/filesystem.hpp>
 #include <boost/nowide/convert.hpp>
 
@@ -71,48 +65,6 @@ void trace(unsigned int level, const char *message)
 
     BOOST_LOG_STREAM_WITH_PARAMS(::boost::log::trivial::logger::get(),\
         (::boost::log::keywords::severity = severity)) << message;
-}
-
-static std::string g_var_dir;
-
-void set_var_dir(const std::string &dir)
-{
-    g_var_dir = dir;
-}
-
-const std::string& var_dir()
-{
-    return g_var_dir;
-}
-
-std::string var(const std::string &file_name)
-{
-    auto file = boost::filesystem::canonical(boost::filesystem::path(g_var_dir) / file_name).make_preferred();
-    return file.string();
-}
-
-static std::string g_resources_dir;
-
-void set_resources_dir(const std::string &dir)
-{
-    g_resources_dir = dir;
-}
-
-const std::string& resources_dir()
-{
-    return g_resources_dir;
-}
-
-static std::string g_data_dir;
-
-void set_data_dir(const std::string &dir)
-{
-    g_data_dir = dir;
-}
-
-const std::string& data_dir()
-{
-    return g_data_dir;
 }
 
 } // namespace Slic3r
@@ -195,7 +147,6 @@ confess_at(const char *file, int line, const char *func,
 
 namespace Slic3r {
 
-// Encode an UTF-8 string to the local code page.
 std::string encode_path(const char *src)
 {    
 #ifdef WIN32
@@ -213,7 +164,6 @@ std::string encode_path(const char *src)
 #endif /* WIN32 */
 }
 
-// Encode an 8-bit string from a local code page to UTF-8.
 std::string decode_path(const char *src)
 {  
 #ifdef WIN32
@@ -235,56 +185,6 @@ std::string normalize_utf8_nfc(const char *src)
 {
     static std::locale locale_utf8(boost::locale::generator().generate(""));
     return boost::locale::normalize(src, boost::locale::norm_nfc, locale_utf8);
-}
-
-namespace PerlUtils {
-    // Get a file name including the extension.
-    std::string path_to_filename(const char *src)       { return boost::filesystem::path(src).filename().string(); }
-    // Get a file name without the extension.
-    std::string path_to_stem(const char *src)           { return boost::filesystem::path(src).stem().string(); }
-    // Get just the extension.
-    std::string path_to_extension(const char *src)      { return boost::filesystem::path(src).extension().string(); }
-    // Get a directory without the trailing slash.
-    std::string path_to_parent_path(const char *src)    { return boost::filesystem::path(src).parent_path().string(); }
-};
-
-std::string timestamp_str()
-{
-    const auto now = boost::posix_time::second_clock::local_time();
-    const auto date = now.date();
-    char buf[2048];
-    sprintf(buf, "on %04d-%02d-%02d at %02d:%02d:%02d",
-        // Local date in an ANSII format.
-        int(now.date().year()), int(now.date().month()), int(now.date().day()),
-        int(now.time_of_day().hours()), int(now.time_of_day().minutes()), int(now.time_of_day().seconds()));
-    return buf;
-}
-
-std::string octoprint_encode_file_send_request_content(const char *cpath, bool select, bool print, const char *boundary)
-{
-    // Read the complete G-code string into a string buffer.
-    // It will throw if the file cannot be open or read.
-    std::stringstream str_stream;
-    {
-        boost::nowide::ifstream ifs(cpath);
-        str_stream << ifs.rdbuf();
-    }
-
-    boost::filesystem::path path(cpath);
-    std::string request = boundary + '\n';
-    request += "Content-Disposition: form-data; name=\"";
-    request += path.stem().string() + "\"; filename=\"" + path.filename().string() + "\"\n";
-    request += "Content-Type: application/octet-stream\n\n";
-    request += str_stream.str();
-    request += boundary + '\n';
-    request += "Content-Disposition: form-data; name=\"select\"\n\n";
-    request += select ? "true\n" : "false\n";
-    request += boundary + '\n';
-    request += "Content-Disposition: form-data; name=\"print\"\n\n";
-    request += print ? "true\n" : "false\n";
-    request += boundary + '\n';
-
-    return request;
 }
 
 }; // namespace Slic3r

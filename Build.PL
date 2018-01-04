@@ -10,8 +10,6 @@ my %prereqs = qw(
     Devel::CheckLib                 0
     ExtUtils::MakeMaker             6.80
     ExtUtils::ParseXS               3.22
-    ExtUtils::XSpp                  0
-    ExtUtils::Typemaps              0
     File::Basename                  0
     File::Spec                      0
     Getopt::Long                    0

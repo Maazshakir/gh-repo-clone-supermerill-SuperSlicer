@@ -4,7 +4,17 @@
 
 namespace Slic3r {
 
-std::string SpiralVase::process_layer(const std::string &gcode)
+std::string
+_format_z(float z)
+{
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(3)
+       << z;
+    return ss.str();
+}
+
+std::string
+SpiralVase::process_layer(const std::string &gcode)
 {
     /*  This post-processor relies on several assumptions:
         - all layers are processed through it, including those that are not supposed
@@ -17,7 +27,7 @@ std::string SpiralVase::process_layer(const std::string &gcode)
     // If we're not going to modify G-code, just feed it to the reader
     // in order to update positions.
     if (!this->enable) {
-        this->_reader.parse_buffer(gcode);
+        this->_reader.parse(gcode, {});
         return gcode;
     }
     
@@ -28,17 +38,16 @@ std::string SpiralVase::process_layer(const std::string &gcode)
     bool set_z = false;
     
     {
-        //FIXME Performance warning: This copies the GCodeConfig of the reader.
         GCodeReader r = this->_reader;  // clone
-        r.parse_buffer(gcode, [&total_layer_length, &layer_height, &z, &set_z]
-            (GCodeReader &reader, const GCodeReader::GCodeLine &line) {
-            if (line.cmd_is("G1")) {
-                if (line.extruding(reader)) {
-                    total_layer_length += line.dist_XY(reader);
-                } else if (line.has(Z)) {
-                    layer_height += line.dist_Z(reader);
+        r.parse(gcode, [&total_layer_length, &layer_height, &z, &set_z]
+            (GCodeReader &, const GCodeReader::GCodeLine &line) {
+            if (line.cmd == "G1") {
+                if (line.extruding()) {
+                    total_layer_length += line.dist_XY();
+                } else if (line.has('Z')) {
+                    layer_height += line.dist_Z();
                     if (!set_z) {
-                        z = line.new_Z(reader);
+                        z = line.new_Z();
                         set_z = true;
                     }
                 }
@@ -50,23 +59,23 @@ std::string SpiralVase::process_layer(const std::string &gcode)
     z -= layer_height;
     
     std::string new_gcode;
-    this->_reader.parse_buffer(gcode, [&new_gcode, &z, &layer_height, &total_layer_length]
-        (GCodeReader &reader, GCodeReader::GCodeLine line) {
-        if (line.cmd_is("G1")) {
-            if (line.has_z()) {
+    this->_reader.parse(gcode, [&new_gcode, &z, &layer_height, &total_layer_length]
+        (GCodeReader &, GCodeReader::GCodeLine line) {
+        if (line.cmd == "G1") {
+            if (line.has('Z')) {
                 // If this is the initial Z move of the layer, replace it with a
                 // (redundant) move to the last Z of previous layer.
-                line.set(reader, Z, z);
-                new_gcode += line.raw() + '\n';
+                line.set('Z', _format_z(z));
+                new_gcode += line.raw + '\n';
                 return;
             } else {
-                float dist_XY = line.dist_XY(reader);
+                float dist_XY = line.dist_XY();
                 if (dist_XY > 0) {
                     // horizontal move
-                    if (line.extruding(reader)) {
+                    if (line.extruding()) {
                         z += dist_XY * layer_height / total_layer_length;
-                        line.set(reader, Z, z);
-                        new_gcode += line.raw() + '\n';
+                        line.set('Z', _format_z(z));
+                        new_gcode += line.raw + '\n';
                     }
                     return;
                 
@@ -78,7 +87,7 @@ std::string SpiralVase::process_layer(const std::string &gcode)
                 }
             }
         }
-        new_gcode += line.raw() + '\n';
+        new_gcode += line.raw + '\n';
     });
     
     return new_gcode;

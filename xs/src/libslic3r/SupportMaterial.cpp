@@ -373,9 +373,15 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
             height_min = std::min(height_min, layer.height);
         }
         if (! empty) {
-            // Here the upper_layer and lower_layer pointers are left to null at the support layers, 
-            // as they are never used. These pointers are candidates for removal.
-            object.add_support_layer(layer_id ++, height_min, zavg);
+            object.add_support_layer(layer_id, height_min, zavg);
+            if (layer_id > 0) {
+                // Inter-link the support layers into a linked list.
+                SupportLayer *sl1 = object.support_layers[object.support_layer_count() - 2];
+                SupportLayer *sl2 = object.support_layers.back();
+                sl1->upper_layer = sl2;
+                sl2->lower_layer = sl1;
+            }
+            ++layer_id;
         }
         i = j;
     }
@@ -942,7 +948,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::top_contact_
                         slices_margin_cached,
                         // How much to offset the extracted contour outside of the grid.
                         m_object_config->support_material_spacing.value + m_support_material_flow.spacing(),
-                        Geometry::deg2rad(m_object_config->support_material_angle.value));
+                        Geometry::deg2rad(m_object_config->support_material_angle));
                     // 1) infill polygons, expand them by half the extrusion width + a tiny bit of extra.
                     new_layer.polygons = support_grid_pattern.extract_support(m_support_material_flow.scaled_spacing()/2 + 5);
                     // 2) Contact polygons will be projected down. To keep the interface and base layers to grow, return a contour a tiny bit smaller than the grid cells.
@@ -1149,7 +1155,7 @@ PrintObjectSupportMaterial::MyLayersPtr PrintObjectSupportMaterial::bottom_conta
                     trimming,
                     // How much to offset the extracted contour outside of the grid.
                     m_object_config->support_material_spacing.value + m_support_material_flow.spacing(),
-                    Geometry::deg2rad(m_object_config->support_material_angle.value));
+                    Geometry::deg2rad(m_object_config->support_material_angle));
                 tbb::task_group task_group_inner;
                 // 1) Cache the slice of a support volume. The support volume is expanded by 1/2 of support material flow spacing
                 // to allow a placement of suppot zig-zag snake along the grid lines.
@@ -2465,8 +2471,8 @@ void PrintObjectSupportMaterial::generate_toolpaths(
     LoopInterfaceProcessor loop_interface_processor(1.5 * m_support_material_interface_flow.scaled_width());
     loop_interface_processor.n_contact_loops = this->has_contact_loops() ? 1 : 0;
 
-    float    base_angle         = Geometry::deg2rad(float(m_object_config->support_material_angle.value));
-    float    interface_angle    = Geometry::deg2rad(float(m_object_config->support_material_angle.value + 90.));
+    float    base_angle         = Geometry::deg2rad(float(m_object_config->support_material_angle));
+    float    interface_angle    = Geometry::deg2rad(float(m_object_config->support_material_angle + 90.));
     coordf_t interface_spacing  = m_object_config->support_material_interface_spacing.value + m_support_material_interface_flow.spacing();
     coordf_t interface_density  = std::min(1., m_support_material_interface_flow.spacing() / interface_spacing);
     coordf_t support_spacing    = m_object_config->support_material_spacing.value + m_support_material_flow.spacing();
@@ -2563,7 +2569,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                         // TODO: use brim ordering algorithm
                         to_infill_polygons = to_polygons(to_infill);
                         // TODO: use offset2_ex()
-                        to_infill = offset_ex(to_infill, float(- 0.4 * flow.scaled_spacing()));
+                        to_infill = offset_ex(to_infill, float(- flow.scaled_spacing()));
                         extrusion_entities_append_paths(
                             support_layer.support_fills.entities, 
                             to_polylines(STDMOVE(to_infill_polygons)),
@@ -2596,8 +2602,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                 // Base flange.
                 filler->angle = raft_angle_1st_layer;
                 filler->spacing = m_first_layer_flow.spacing();
-                // 70% of density on the 1st layer.
-                density       = 0.7f;
+                density       = 0.5f;
             } else if (support_layer_id >= m_slicing_params.base_raft_layers) {
                 filler->angle = raft_angle_interface;
                 // We don't use $base_flow->spacing because we need a constant spacing
@@ -2758,7 +2763,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                 if (base_layer.layer->bottom_z < EPSILON) {
                     // Base flange (the 1st layer).
                     filler = filler_interface.get();
-                    filler->angle = Geometry::deg2rad(float(m_object_config->support_material_angle.value + 90.));
+                    filler->angle = Geometry::deg2rad(float(m_object_config->support_material_angle + 90.));
                     density = 0.5f;
                     flow = m_first_layer_flow;
                     // use the proper spacing for first layer as we don't need to align
@@ -2771,7 +2776,7 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     // TODO: use brim ordering algorithm
                     Polygons to_infill_polygons = to_polygons(to_infill);
                     // TODO: use offset2_ex()
-                    to_infill = offset_ex(to_infill, - 0.4 * float(flow.scaled_spacing()));
+                    to_infill = offset_ex(to_infill, - float(flow.scaled_spacing()));
                     extrusion_entities_append_paths(
                         base_layer.extrusions, 
                         to_polylines(STDMOVE(to_infill_polygons)),

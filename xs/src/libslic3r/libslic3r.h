@@ -14,7 +14,7 @@
 #include <boost/thread.hpp>
 
 #define SLIC3R_FORK_NAME "Slic3r Prusa Edition"
-#define SLIC3R_VERSION "1.39.0"
+#define SLIC3R_VERSION "1.33.8.devel"
 #define SLIC3R_BUILD "UNKNOWN"
 
 typedef long coord_t;
@@ -92,17 +92,12 @@ inline std::string debug_out_path(const char *name, ...)
 #define UNUSED(x) (void)(x)
 #endif /* UNUSED */
 
-// Detect whether the compiler supports C++11 noexcept exception specifications.
-#if defined(_MSC_VER) && _MSC_VER < 1900
-    #define noexcept throw()
-#endif
-
 // Write slices as SVG images into out directory during the 2D processing of the slices.
 // #define SLIC3R_DEBUG_SLICE_PROCESSING
 
 namespace Slic3r {
 
-enum Axis { X=0, Y, Z, E, F, NUM_AXES };
+enum Axis { X=0, Y, Z };
 
 template <class T>
 inline void append_to(std::vector<T> &dst, const std::vector<T> &src)

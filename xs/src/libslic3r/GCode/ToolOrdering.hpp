@@ -53,14 +53,14 @@ public:
 
 	void 				clear() { m_layer_tools.clear(); }
 
-	// Get the first extruder printing, including the extruder priming areas, returns -1 if there is no layer printed.
+	// Get the first extruder printing the layer_tools, returns -1 if there is no layer printed.
 	unsigned int   		first_extruder() const { return m_first_printing_extruder; }
 
 	// Get the first extruder printing the layer_tools, returns -1 if there is no layer printed.
 	unsigned int   		last_extruder() const { return m_last_printing_extruder; }
 
 	// For a multi-material print, the printing extruders are ordered in the order they shall be primed.
-	const std::vector<unsigned int>& all_extruders() const { return m_all_printing_extruders; }
+	std::vector<unsigned int> all_extruders() const { return m_all_printing_extruders; }
 
 	// Find LayerTools with the closest print_z.
 	LayerTools&			tools_for_layer(coordf_t print_z);
@@ -69,11 +69,9 @@ public:
 
 	const LayerTools&   front()       const { return m_layer_tools.front(); }
 	const LayerTools&   back()        const { return m_layer_tools.back(); }
-	std::vector<LayerTools>::const_iterator begin() const { return m_layer_tools.begin(); }
-	std::vector<LayerTools>::const_iterator end()   const { return m_layer_tools.end(); }
 	bool 				empty()       const { return m_layer_tools.empty(); }
 	const std::vector<LayerTools>& layer_tools() const { return m_layer_tools; }
-	bool 				has_wipe_tower() const { return ! m_layer_tools.empty() && m_first_printing_extruder != (unsigned int)-1 && m_layer_tools.front().wipe_tower_partitions > 0; }
+	bool 				has_wipe_tower() const { return ! m_layer_tools.empty() && m_first_printing_extruder != (size_t)-1 && m_layer_tools.front().wipe_tower_partitions > 0; }
 
 private:
 	void				initialize_layers(std::vector<coordf_t> &zs);
@@ -84,9 +82,9 @@ private:
 
 	std::vector<LayerTools> 	m_layer_tools;
 	// First printing extruder, including the multi-material priming sequence.
-	unsigned int 				m_first_printing_extruder = (unsigned int)-1;
+	unsigned int 				m_first_printing_extruder;
 	// Final printing extruder.
-	unsigned int 				m_last_printing_extruder  = (unsigned int)-1;
+	unsigned int 				m_last_printing_extruder;
 	// All extruders, which extrude some material over m_layer_tools.
     std::vector<unsigned int> 	m_all_printing_extruders;
 };

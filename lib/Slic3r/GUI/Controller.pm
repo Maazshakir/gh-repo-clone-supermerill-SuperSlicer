@@ -10,7 +10,6 @@ use utf8;
 use Wx qw(wxTheApp :frame :id :misc :sizer :bitmap :button :icon :dialog);
 use Wx::Event qw(EVT_CLOSE EVT_LEFT_DOWN EVT_MENU);
 use base qw(Wx::ScrolledWindow Class::Accessor);
-use List::Util qw(first);
 
 __PACKAGE__->mk_accessors(qw(_selected_printer_preset));
 
@@ -33,25 +32,27 @@ sub new {
     
     # button for adding new printer panels
     {
-        my $btn = $self->{btn_add} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new(Slic3r::var("add.png"), wxBITMAP_TYPE_PNG),
+        my $btn = $self->{btn_add} = Wx::BitmapButton->new($self, -1, Wx::Bitmap->new($Slic3r::var->("add.png"), wxBITMAP_TYPE_PNG),
             wxDefaultPosition, wxDefaultSize, Wx::wxBORDER_NONE);
         $btn->SetToolTipString("Add printer…")
             if $btn->can('SetToolTipString');
         
         EVT_LEFT_DOWN($btn, sub {
-            my $menu    = Wx::Menu->new;
-            my @panels  = $self->print_panels;
+            my $menu = Wx::Menu->new;
+            my %presets = wxTheApp->presets('printer');
+            
             # remove printers that already exist
-            # update configs of currently loaded print panels
-            foreach my $preset (@{wxTheApp->{preset_bundle}->printer}) {
-                my $preset_name = $preset->name;
-                next if ! $preset->config->serial_port ||
-                        defined first { defined $_ && $_->printer_name eq $preset_name } @panels;
-                my $myconfig = $preset->config->clone_only(\@ConfigOptions);
+            my @panels = $self->print_panels;
+            delete $presets{$_} for map $_->printer_name, @panels;
+            
+            foreach my $preset_name (sort keys %presets) {
+                my $config = Slic3r::Config->load($presets{$preset_name});
+                next if !$config->serial_port;
+                
                 my $id = &Wx::NewId();
                 $menu->Append($id, $preset_name);
                 EVT_MENU($menu, $id, sub {
-                    $self->add_printer($preset_name, $myconfig);
+                    $self->add_printer($preset_name, $config);
                 });
             }
             $self->PopupMenu($menu, $btn->GetPosition);
@@ -97,8 +98,12 @@ sub OnActivate {
     my ($self) = @_;
     
     # get all available presets
-    my %presets = map { $_->name => $_->config->clone_only(\@ConfigOptions) } 
-                  grep { $_->config->serial_port } @{wxTheApp->{preset_bundle}->printer};
+    my %presets = ();
+    {
+        my %all = wxTheApp->presets('printer');
+        my %configs = map { my $name = $_; $name => Slic3r::Config->load($all{$name}) } keys %all;
+        %presets = map { $_ => $configs{$_} } grep $configs{$_}->serial_port, keys %all;
+    }
     
     # decide which ones we want to keep
     my %active = ();
@@ -116,7 +121,7 @@ sub OnActivate {
         }
         if (!%active) {
             # enable printers whose port is available
-            my %ports = map { $_ => 1 } Slic3r::GUI::scan_serial_ports;
+            my %ports = map { $_ => 1 } wxTheApp->scan_serial_ports;
             $active{$_} = 1
                 for grep exists $ports{$presets{$_}->serial_port}, keys %presets;
         }
@@ -172,19 +177,26 @@ sub print_panels {
         map $_->GetWindow, $self->{sizer}->GetChildren;
 }
 
-# Called by Slic3r::GUI::Tab::Printer::_on_presets_changed
-# when the presets are loaded or the user selects another preset.
+# Called by 
+#       Slic3r::GUI::Tab::Print::_on_presets_changed
+#       Slic3r::GUI::Tab::Filament::_on_presets_changed
+#       Slic3r::GUI::Tab::Printer::_on_presets_changed
+# when the presets are loaded or the user select another preset.
 sub update_presets {
-    my ($self, $presets) = @_;
+    my $self = shift;
+    my ($group, $presets, $default_suppressed, $selected, $is_dirty) = @_;
+    
     # update configs of currently loaded print panels
-    my @presets = @$presets;
     foreach my $panel ($self->print_panels) {
-        my $preset = $presets->find_preset($panel->printer_name, 0);
-        $panel->config($preset->config->clone_only(\@ConfigOptions))
-            if defined $preset;
+        foreach my $preset (@$presets) {
+            if ($panel->printer_name eq $preset->name) {
+                my $config = $preset->config(\@ConfigOptions);
+                $panel->config->apply($config);
+            }
+        }
     }
-
-    $self->_selected_printer_preset($presets->get_selected_preset->name);
+    
+    $self->_selected_printer_preset($presets->[$selected]->name);
 }
 
 1;

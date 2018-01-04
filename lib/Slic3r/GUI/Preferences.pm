@@ -10,7 +10,6 @@ sub new {
     my $self = $class->SUPER::new($parent, -1, "Preferences", wxDefaultPosition, wxDefaultSize);
     $self->{values} = {};
     
-    my $app_config = wxTheApp->{app_config};
     my $optgroup;
     $optgroup = Slic3r::GUI::OptionsGroup->new(
         parent  => $self,
@@ -26,7 +25,7 @@ sub new {
 #        type        => 'bool',
 #        label       => 'Check for updates',
 #        tooltip     => 'If this is enabled, Slic3r will check for updates daily and display a reminder if a newer version is available.',
-#        default     => $app_config->get("version_check") // 1,
+#        default     => $Slic3r::GUI::Settings->{_}{version_check} // 1,
 #        readonly    => !wxTheApp->have_version_check,
 #    ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
@@ -34,50 +33,36 @@ sub new {
         type        => 'bool',
         label       => 'Remember output directory',
         tooltip     => 'If this is enabled, Slic3r will prompt the last output directory instead of the one containing the input files.',
-        default     => $app_config->get("remember_output_path"),
+        default     => $Slic3r::GUI::Settings->{_}{remember_output_path},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'autocenter',
         type        => 'bool',
         label       => 'Auto-center parts',
         tooltip     => 'If this is enabled, Slic3r will auto-center objects around the print bed center.',
-        default     => $app_config->get("autocenter"),
+        default     => $Slic3r::GUI::Settings->{_}{autocenter},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'background_processing',
         type        => 'bool',
         label       => 'Background processing',
         tooltip     => 'If this is enabled, Slic3r will pre-process objects as soon as they\'re loaded in order to save time when exporting G-code.',
-        default     => $app_config->get("background_processing"),
+        default     => $Slic3r::GUI::Settings->{_}{background_processing},
+        readonly    => !$Slic3r::have_threads,
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'no_controller',
         type        => 'bool',
         label       => 'Disable USB/serial connection',
         tooltip     => 'Disable communication with the printer over a serial / USB cable. This simplifies the user interface in case the printer is never attached to the computer.',
-        default     => $app_config->get("no_controller"),
+        default     => $Slic3r::GUI::Settings->{_}{no_controller},
     ));
     $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
         opt_id      => 'no_defaults',
         type        => 'bool',
         label       => 'Suppress "- default -" presets',
         tooltip     => 'Suppress "- default -" presets in the Print / Filament / Printer selections once there are any other valid presets available.',
-        default     => $app_config->get("no_defaults"),
-    ));
-    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id      => 'show_incompatible_presets',
-        type        => 'bool',
-        label       => 'Show incompatible print and filament presets',
-        tooltip     => 'When checked, the print and filament presets are shown in the preset editor even ' .
-                       'if they are marked as incompatible with the active printer',
-        default     => $app_config->get("show_incompatible_presets"),
-    ));
-    $optgroup->append_single_option_line(Slic3r::GUI::OptionsGroup::Option->new(
-        opt_id      => 'use_legacy_opengl',
-        type        => 'bool',
-        label       => 'Use legacy OpenGL 1.1 rendering',
-        tooltip     => 'If you have rendering issues caused by a buggy OpenGL 2.0 driver, you may try to check this checkbox. This will disable the layer height editing and anti aliasing, so it is likely better to upgrade your graphics driver.',
-        default     => $app_config->get("use_legacy_opengl"),
+        default     => $Slic3r::GUI::Settings->{_}{no_defaults},
     ));
     
     my $sizer = Wx::BoxSizer->new(wxVERTICAL);
@@ -94,16 +79,14 @@ sub new {
 }
 
 sub _accept {
-    my ($self) = @_;
+    my $self = shift;
     
-    if (defined($self->{values}{no_controller}) ||
-        defined($self->{values}{no_defaults}) ||
-        defined($self->{values}{use_legacy_opengl})) {
+    if (defined($self->{values}{no_controller})) {
         Slic3r::GUI::warning_catcher($self)->("You need to restart Slic3r to make the changes effective.");
     }
     
-    my $app_config = wxTheApp->{app_config};
-    $app_config->set($_, $self->{values}{$_}) for keys %{$self->{values}};
+    $Slic3r::GUI::Settings->{_}{$_} = $self->{values}{$_} for keys %{$self->{values}};
+    wxTheApp->save_settings;
     
     $self->EndModal(wxID_OK);
     $self->Close;  # needed on Linux

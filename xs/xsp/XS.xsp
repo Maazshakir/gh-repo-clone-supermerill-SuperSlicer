@@ -48,50 +48,7 @@ trace(level, message)
     CODE:
         Slic3r::trace(level, message);
 
-void
-set_var_dir(dir)
-    char  *dir;
-    CODE:
-        Slic3r::set_var_dir(dir);
-
-char*
-var_dir()
-    CODE:
-        RETVAL = const_cast<char*>(Slic3r::var_dir().c_str());
-    OUTPUT: RETVAL
-
-void
-set_resources_dir(dir)
-    char  *dir;
-    CODE:
-        Slic3r::set_resources_dir(dir);
-
-char*
-resources_dir()
-    CODE:
-        RETVAL = const_cast<char*>(Slic3r::resources_dir().c_str());
-    OUTPUT: RETVAL
-
 std::string
-var(file_name)
-    const char *file_name;
-    CODE:
-        RETVAL = Slic3r::var(file_name);
-    OUTPUT: RETVAL
-
-void
-set_data_dir(dir)
-    char  *dir;
-    CODE:
-        Slic3r::set_data_dir(dir);
-
-char*
-data_dir()
-    CODE:
-        RETVAL = const_cast<char*>(Slic3r::data_dir().c_str());
-    OUTPUT: RETVAL
-
-local_encoded_string
 encode_path(src)
     const char *src;
     CODE:
@@ -110,41 +67,6 @@ normalize_utf8_nfc(src)
     const char *src;
     CODE:
         RETVAL = Slic3r::normalize_utf8_nfc(src);
-    OUTPUT: RETVAL
-
-std::string
-path_to_filename(src)
-    const char *src;
-    CODE:
-        RETVAL = Slic3r::PerlUtils::path_to_filename(src);
-    OUTPUT: RETVAL
-
-local_encoded_string
-path_to_filename_raw(src)
-    const char *src;
-    CODE:
-        RETVAL = Slic3r::PerlUtils::path_to_filename(src);
-    OUTPUT: RETVAL
-
-std::string
-path_to_stem(src)
-    const char *src;
-    CODE:
-        RETVAL = Slic3r::PerlUtils::path_to_stem(src);
-    OUTPUT: RETVAL
-
-std::string
-path_to_extension(src)
-    const char *src;
-    CODE:
-        RETVAL = Slic3r::PerlUtils::path_to_extension(src);
-    OUTPUT: RETVAL
-
-std::string
-path_to_parent_path(src)
-    const char *src;
-    CODE:
-        RETVAL = Slic3r::PerlUtils::path_to_parent_path(src);
     OUTPUT: RETVAL
 
 void

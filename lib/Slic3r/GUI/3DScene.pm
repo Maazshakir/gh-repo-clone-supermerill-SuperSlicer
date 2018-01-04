@@ -15,7 +15,7 @@ package Slic3r::GUI::3DScene::Base;
 use strict;
 use warnings;
 
-use Wx qw(wxTheApp :timer :bitmap :icon :dialog);
+use Wx qw(:timer :bitmap :icon :dialog);
 use Wx::Event qw(EVT_PAINT EVT_SIZE EVT_ERASE_BACKGROUND EVT_IDLE EVT_MOUSEWHEEL EVT_MOUSE_EVENTS EVT_CHAR EVT_TIMER);
 # must load OpenGL *before* Wx::GLCanvas
 use OpenGL qw(:glconstants :glfunctions :glufunctions :gluconstants);
@@ -108,7 +108,6 @@ sub new {
     # We can only enable multi sample anti aliasing wih wxWidgets 3.0.3 and with a hacked Wx::GLCanvas,
     # which exports some new WX_GL_XXX constants, namely WX_GL_SAMPLE_BUFFERS and WX_GL_SAMPLES.
     my $can_multisample =
-        ! wxTheApp->{app_config}->get('use_legacy_opengl') &&
         Wx::wxVERSION >= 3.000003 &&
         defined Wx::GLCanvas->can('WX_GL_SAMPLE_BUFFERS') &&
         defined Wx::GLCanvas->can('WX_GL_SAMPLES');
@@ -957,16 +956,6 @@ sub UseVBOs {
     my ($self) = @_;
 
     if (! defined ($self->{use_VBOs})) {
-        my $use_legacy = wxTheApp->{app_config}->get('use_legacy_opengl');
-        if ($use_legacy eq '1') {
-            # Disable OpenGL 2.0 rendering.
-            $self->{use_VBOs} = 0;
-            # Don't enable the layer editing tool.
-            $self->{layer_editing_enabled} = 0;
-            # 2 means failed
-            $self->{layer_editing_initialized} = 2;
-            return 0;
-        }
         # This is a special path for wxWidgets on GTK, where an OpenGL context is initialized
         # first when an OpenGL widget is shown for the first time. How ugly.
         return 0 if (! $self->init && $^O eq 'linux');
@@ -1401,7 +1390,7 @@ sub _load_image_set_texture {
     my ($self, $file_name) = @_;
     # Load a PNG with an alpha channel.
     my $img = Wx::Image->new;
-    $img->LoadFile(Slic3r::var($file_name), wxBITMAP_TYPE_PNG);
+    $img->LoadFile($Slic3r::var->($file_name), wxBITMAP_TYPE_PNG);
     # Get RGB & alpha raw data from wxImage, interleave them into a Perl array.
     my @rgb = unpack 'C*', $img->GetData();
     my @alpha = $img->HasAlpha ? unpack 'C*', $img->GetAlpha() : (255) x (int(@rgb) / 3);

@@ -179,6 +179,14 @@ sub new_from_width {
     );
 }
 
+sub new_from_spacing {
+    my ($class, %args) = @_;
+    
+    return $class->_new_from_spacing(
+        @args{qw(spacing nozzle_diameter layer_height bridge)},
+    );
+}
+
 package Slic3r::Surface;
 
 sub new {
@@ -249,13 +257,6 @@ use overload
 
 sub CLONE_SKIP { 1 }
 
-package Slic3r::GUI::PresetCollection;
-use overload
-    '@{}' => sub { $_[0]->arrayref },
-    'fallback' => 1;
-
-sub CLONE_SKIP { 1 }
-
 package main;
 for my $class (qw(
         Slic3r::BridgeDetector
@@ -281,8 +282,6 @@ for my $class (qw(
         Slic3r::Geometry::BoundingBoxf
         Slic3r::Geometry::BoundingBoxf3
         Slic3r::GUI::_3DScene::GLVolume
-        Slic3r::GUI::Preset
-        Slic3r::GUI::PresetCollection
         Slic3r::Layer
         Slic3r::Layer::Region
         Slic3r::Layer::Support

@@ -7,8 +7,7 @@ namespace Slic3r {
 template <class PointClass>
 BoundingBoxBase<PointClass>::BoundingBoxBase(const std::vector<PointClass> &points)
 {
-    if (points.empty()) 
-        CONFESS("Empty point set supplied to BoundingBoxBase constructor");
+    if (points.empty()) CONFESS("Empty point set supplied to BoundingBoxBase constructor");
     typename std::vector<PointClass>::const_iterator it = points.begin();
     this->min.x = this->max.x = it->x;
     this->min.y = this->max.y = it->y;
@@ -27,8 +26,7 @@ template <class PointClass>
 BoundingBox3Base<PointClass>::BoundingBox3Base(const std::vector<PointClass> &points)
     : BoundingBoxBase<PointClass>(points)
 {
-    if (points.empty())
-        CONFESS("Empty point set supplied to BoundingBox3Base constructor");
+    if (points.empty()) CONFESS("Empty point set supplied to BoundingBox3Base constructor");
     typename std::vector<PointClass>::const_iterator it = points.begin();
     this->min.z = this->max.z = it->z;
     for (++it; it != points.end(); ++it) {
@@ -41,10 +39,9 @@ template BoundingBox3Base<Pointf3>::BoundingBox3Base(const std::vector<Pointf3> 
 BoundingBox::BoundingBox(const Lines &lines)
 {
     Points points;
-    points.reserve(lines.size());
-    for (const Line &line : lines) {
-        points.emplace_back(line.a);
-        points.emplace_back(line.b);
+    for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line) {
+        points.push_back(line->a);
+        points.push_back(line->b);
     }
     *this = BoundingBox(points);
 }
@@ -193,9 +190,9 @@ BoundingBox3Base<PointClass>::size() const
 }
 template Pointf3 BoundingBox3Base<Pointf3>::size() const;
 
-template <class PointClass> double BoundingBoxBase<PointClass>::radius() const
+template <class PointClass> double
+BoundingBoxBase<PointClass>::radius() const
 {
-    assert(this->defined);
     double x = this->max.x - this->min.x;
     double y = this->max.y - this->min.y;
     return 0.5 * sqrt(x*x+y*y);
@@ -203,7 +200,8 @@ template <class PointClass> double BoundingBoxBase<PointClass>::radius() const
 template double BoundingBoxBase<Point>::radius() const;
 template double BoundingBoxBase<Pointf>::radius() const;
 
-template <class PointClass> double BoundingBox3Base<PointClass>::radius() const
+template <class PointClass> double
+BoundingBox3Base<PointClass>::radius() const
 {
     double x = this->max.x - this->min.x;
     double y = this->max.y - this->min.y;

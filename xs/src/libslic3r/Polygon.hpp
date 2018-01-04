@@ -154,6 +154,7 @@ inline Polylines to_polylines(const Polygons &polys)
     return polylines;
 }
 
+#if SLIC3R_CPPVER >= 11
 inline Polylines to_polylines(Polygons &&polys)
 {
     Polylines polylines;
@@ -167,6 +168,7 @@ inline Polylines to_polylines(Polygons &&polys)
     assert(idx == polylines.size());
     return polylines;
 }
+#endif
 
 } // Slic3r
 

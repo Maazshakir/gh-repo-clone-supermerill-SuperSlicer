@@ -1,4 +1,4 @@
-use Test::More tests => 2;
+use Test::More;
 use strict;
 use warnings;
 
@@ -11,6 +11,11 @@ BEGIN {
 use List::Util qw(first);
 use Slic3r;
 use Slic3r::Test;
+
+if (!$Slic3r::have_threads) {
+    plan skip_all => "this perl is not compiled with threads";
+}
+plan tests => 2;
 
 {
     my $print = Slic3r::Test::init_print('20mm_cube');
