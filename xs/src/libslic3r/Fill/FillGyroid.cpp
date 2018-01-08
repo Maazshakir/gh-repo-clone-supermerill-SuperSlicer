@@ -79,10 +79,11 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 	double xPos = 0, yPos=0, width=gridWidth, height=gridHeight;
 	 //scale factor for 5% : 8 712 388
 	 // 1z = 10^-6 mm ?
-	double z = gridZ/(2.0 * scaleFactor);
+	double z = gridZ/(1.0 * scaleFactor);
 	// std::cout<<"gridZ= "<<gridZ<<", z? "<<z<<", scaleFactor= "<<scaleFactor<<", segmentSize= "<<segmentSize<<", decal= "<<decal<<" scale:"<<scale_(1)<<std::endl;
 	double zSn = sin(z);
 	double zCs = cos(z);
+	
 	if(abs(zSn)<=abs(zCs)){
 		//vertical
 		//begin to first one
@@ -139,7 +140,7 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 		int iter = 1;
 		//search first line output
 		double currentYBegin = yPos ;
-		currentYBegin = PI*(int)(currentYBegin/PI -1);
+		currentYBegin = PI*(int)(currentYBegin/PI -0);
 		iter = (int)(currentYBegin/PI +1)%2;
 		
 		bool flip = iter%2==1;
@@ -147,8 +148,9 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 		while(currentYBegin < yPos+width){
 
 			if(doubleLine){
-				result.push_back(makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip,flip?-decal:decal));
-				Polyline wrongOrder = makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip,flip?decal:-decal);
+				result.push_back(makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?decal:-decal));
+				
+				Polyline wrongOrder = makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?-decal:decal);
 				Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
 				wrongOrder.points.assign(temp.begin(),temp.end());
 				result.push_back(wrongOrder);
@@ -163,10 +165,9 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 			
 			if(currentYBegin<yPos+width){
 				if(doubleLine){
-					//i don't know why i need to *2 ...
-					result.push_back(makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip,flip?decal*2:-decal*2));
+					result.push_back(makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?-decal:decal));
 
-					Polyline wrongOrder = makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip?-decal*2:decal*2);
+					Polyline wrongOrder = makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?decal:-decal);
 					Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
 					wrongOrder.points.assign(temp.begin(),temp.end());
 					result.push_back(wrongOrder);
@@ -247,7 +248,7 @@ void FillGyroid::_fill_surface_single(
                 const Point &last_point = pts_end.back();
                 // TODO: we should also check that both points are on a fill_boundary to avoid 
                 // connecting paths on the boundaries of internal regions
-                if (first_point.distance_to(last_point) <= 6 * distance && 
+                if (first_point.distance_to(last_point) <= 4 * distance && 
                     expolygon_off.contains(Line(last_point, first_point))) {
                     // Append the polyline.
                     pts_end.insert(pts_end.end(), it_polyline->points.begin(), it_polyline->points.end());
