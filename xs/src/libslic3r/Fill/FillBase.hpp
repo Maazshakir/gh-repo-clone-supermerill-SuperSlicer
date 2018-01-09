@@ -47,6 +47,8 @@ public:
     size_t      layer_id;
     // Z coordinate of the top print surface, in unscaled coordinates
     coordf_t    z;
+	// For gyroid, to avoid impossible slopes, in unscaled value
+	coordf_t      layer_height;
     // in unscaled coordinates
     coordf_t    spacing;
     // infill / perimeter overlap, in unscaled coordinates

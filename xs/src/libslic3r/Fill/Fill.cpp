@@ -215,6 +215,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         }
 
         f->layer_id = layerm.layer()->id();
+		f->layer_height = layerm.layer()->object()->config.layer_height.value;
         f->z = layerm.layer()->print_z;
         f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value));
         // Maximum length of the perimeter segment linking two infill lines.
