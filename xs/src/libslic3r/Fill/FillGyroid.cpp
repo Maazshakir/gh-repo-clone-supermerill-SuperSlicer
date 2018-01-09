@@ -9,11 +9,13 @@
 
 namespace Slic3r {
 
+// 0 = auto (from 2 to ~6). note: if not in auto, the density is not properly calculated anymore.
+static int const staticNbLines = 0;
 
-static double const doubleLine = true;
 
 static Polyline makeLineVert(double xPos, double yPos, double width, double height, double currentXBegin, double segmentSize, coord_t scaleFactor, double zCs, double zSn, bool flip, double decal=0){
 	
+	double maxSlope = abs(abs(zCs)-abs(zSn));
 	Polyline polyline;
 	polyline.points.push_back(Point(coord_t((std::max(std::min(currentXBegin, xPos+width),xPos) + decal) * scaleFactor), coord_t(yPos * scaleFactor)));
 	for(double y=yPos;y<yPos+height+segmentSize;y+=segmentSize){
@@ -37,7 +39,8 @@ static Polyline makeLineVert(double xPos, double yPos, double width, double heig
 			x = xPos+width;
 		}
 		{
-			polyline.points.push_back(Point(coord_t((x+decal) * scaleFactor), coord_t(y * scaleFactor)));
+			double ydeviation = (flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
+			polyline.points.push_back(Point(coord_t((x+decal) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
 		}
 	}
 	
@@ -45,37 +48,47 @@ static Polyline makeLineVert(double xPos, double yPos, double width, double heig
 }
 
 static Polyline makeLineHori(double xPos, double yPos, double width, double height, double currentYBegin, double segmentSize, coord_t scaleFactor, double zCs, double zSn, bool flip, double decal=0){
+	double maxSlope = abs(abs(zCs)-abs(zSn));
 	Polyline polyline;
 	polyline.points.push_back(Point(coord_t(xPos * scaleFactor), coord_t((std::max(std::min(currentYBegin, yPos+height),yPos)+decal) * scaleFactor)));
 	for(double x=xPos;x<xPos+width+segmentSize;x+=segmentSize){
 		if(x>xPos+width) x = xPos+width;
 		double xSn = sin(x +(zSn<0?3.14:0) +(flip?0:3.14));
 		double xCs = cos(x +(zSn<0?3.14:0) );
-
 		double a = xCs;
 		double b = -zSn;
 		double res = zCs*xSn;
 		double r = sqrt(a*a + b*b);
 		double y = asin(a/r) + asin(res/r) +3.14/2;
 		y += currentYBegin;
-		polyline.points.push_back(Point(coord_t(x * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal) * scaleFactor)));
+		double xdeviation = (flip?-1:1)*(zCs>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
+		polyline.points.push_back(Point(coord_t((x + xdeviation) * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal) * scaleFactor)));
 	}
 	
 	return polyline;
 }
 
+static inline void correctOrderAndAdd(const int num, Polyline &poly, Polylines &array){
+	if(num%2==0){
+		Points temp(poly.points.rbegin(), poly.points.rend());
+		poly.points.assign(temp.begin(),temp.end());
+	}
+	array.push_back(poly);
+}
+
 // Generate a set of curves (array of array of 2d points) that describe a
 // horizontal slice of a truncated regular octahedron with a specified
 // grid square size.
-static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, size_t gridHeight, size_t curveType)
+static Polylines makeGrid(coord_t gridZ, double density, double layer_width, double layer_height, size_t gridWidth, size_t gridHeight, size_t curveType)
 {
-	//TODO: reverse order 1layer/2 to change the "wall" for the other side
+	//reduce the density a bit to have a 90% infill not over-extruding.
+	density = density * 0.8;
 	
-    coord_t  scaleFactor = gridSize;
+    coord_t  scaleFactor = coord_t(scale_(layer_width) / density);;
     Polylines result;
 	Polyline *polyline2;
-	double segmentSize = 871238.0 / scaleFactor; //871238
-	double decal = 8712380.0 / (scaleFactor*40);
+	double segmentSize = density/2;
+	double decal = layer_width*density;
 	double xPos = 0, yPos=0, width=gridWidth, height=gridHeight;
 	 //scale factor for 5% : 8 712 388
 	 // 1z = 10^-6 mm ?
@@ -83,6 +96,43 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 	// std::cout<<"gridZ= "<<gridZ<<", z? "<<z<<", scaleFactor= "<<scaleFactor<<", segmentSize= "<<segmentSize<<", decal= "<<decal<<" scale:"<<scale_(1)<<std::endl;
 	double zSn = sin(z);
 	double zCs = cos(z);
+	double maxSlope = abs(abs(zCs)-abs(zSn));
+	//be sure to don't be too near each other)
+	while(maxSlope<0.05){
+		// move away
+		bool sameSign = zCs*zSn>=0;
+		bool absCosGtAbsSin = abs(zCs)>abs(zSn);
+		if(sameSign && !absCosGtAbsSin || !sameSign && absCosGtAbsSin){
+			// then add
+			z += 0.001;
+		}else{
+			// then remove
+			z -= 0.001;
+		}
+		zSn = sin(z);
+		zCs = cos(z);
+		maxSlope = abs(abs(zCs)-abs(zSn));
+		for(int i=0;i<100000000;i++){i%2==0?density+=0.001:density-=0.001;}
+	}
+	
+
+	int numLine = 0;
+	//nbLines depends of layer_width, layer_height, density and maxSlope 
+	int nbLines = staticNbLines;
+	if(staticNbLines==0){
+		if(density>0.6){
+			nbLines = 2;
+		}else{
+			//compute the coverage of the current layer
+			double nbLineMore = 1 + (1 - maxSlope);
+			nbLineMore *= nbLineMore;
+			nbLineMore *= nbLineMore;
+			nbLineMore = nbLineMore -1;
+			nbLineMore *= 0.1 * layer_height / (layer_width * sqrt(density));
+			nbLines = 2 + nbLineMore;
+			// std::cout<<"|maxSlope="<<maxSlope<<"; nbLineMore= "<<nbLineMore<<std::endl;
+		}
+	}
 	
 	if(abs(zSn)<=abs(zCs)){
 		//vertical
@@ -95,15 +145,10 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 		// bool needNewLine =false;
 		while(currentXBegin<xPos+width-PI/2){
 			
-			
-			if(doubleLine){
-				result.push_back(makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip,flip?-decal:decal));
-				Polyline wrongOrder = makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip,flip?decal:-decal);
-				Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
-				wrongOrder.points.assign(temp.begin(),temp.end());
-				result.push_back(wrongOrder);
-			}else{
-				result.push_back(makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip));
+			for(int num=0;num<nbLines;num++){
+				double movex = -decal * (nbLines-1) + num*decal*2;
+				correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+				numLine++;
 			}
 			
 			//then, return by the other side
@@ -112,21 +157,14 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 			flip = iter%2==1;
 			
 			if(currentXBegin < xPos+width-PI/2){
-				if(doubleLine){
-					result.push_back(makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip,flip?decal:-decal));
-					Polyline wrongOrder = makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip,flip?-decal:decal);
-					Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
-					wrongOrder.points.assign(temp.begin(),temp.end());
-					result.push_back(wrongOrder);
-				}else{
 				
-					Polyline wrongOrder = makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip);
-					Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
-					wrongOrder.points.assign(temp.begin(),temp.end());
-					result.push_back(wrongOrder);
+				for(int num=0;num<nbLines;num++){
+					double movex = -decal * (nbLines-1) + num*decal*2;
+					correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+					numLine++;
 				}
-				
-				// //relance
+
+				// relance
 				iter++;
 				currentXBegin = currentXBegin + PI;
 				flip = iter%2==1;
@@ -145,38 +183,26 @@ static Polylines makeGrid(coord_t gridZ, coord_t gridSize, size_t gridWidth, siz
 		
 		bool flip = iter%2==1;
 		
+		
 		while(currentYBegin < yPos+width){
 
-			if(doubleLine){
-				result.push_back(makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?decal:-decal));
-				
-				Polyline wrongOrder = makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?-decal:decal);
-				Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
-				wrongOrder.points.assign(temp.begin(),temp.end());
-				result.push_back(wrongOrder);
-			}else{
-				result.push_back(makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip));
+			for(int num=0;num<nbLines;num++){
+				double movex = -decal * (nbLines-1) + num*decal*2;
+				correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+				numLine++;
 			}
-
+		
 			//then, return by the other side
 			iter++;
 			currentYBegin = currentYBegin + PI;
 			flip = iter%2==1;
 			
 			if(currentYBegin<yPos+width){
-				if(doubleLine){
-					result.push_back(makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?-decal:decal));
-
-					Polyline wrongOrder = makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, flip?decal:-decal);
-					Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
-					wrongOrder.points.assign(temp.begin(),temp.end());
-					result.push_back(wrongOrder);
-				}else{
-
-					Polyline wrongOrder = makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip);
-					Points temp(wrongOrder.points.rbegin(), wrongOrder.points.rend());
-					wrongOrder.points.assign(temp.begin(),temp.end());
-					result.push_back(wrongOrder);
+				
+				for(int num=0;num<nbLines;num++){
+					double movex = -decal * (nbLines-1) + num*decal*2;
+					correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+					numLine++;
 				}
 				
 				//relance
@@ -201,6 +227,7 @@ void FillGyroid::_fill_surface_single(
     BoundingBox bb = expolygon.contour.bounding_box();
     coord_t     distance = coord_t(scale_(this->spacing) / params.density);
 
+	std::cout<<"thickness_layers="<<thickness_layers<<", spacing="<<this->spacing<<", scale_(this->spacing)="<<scale_(this->spacing)<<", params.density="<<params.density<<", distance="<<distance<<std::endl;
     // align bounding box to a multiple of our honeycomb grid module
     // (a module is 2*$distance since one $distance half-module is 
     // growing while the other $distance half-module is shrinking)
@@ -209,7 +236,9 @@ void FillGyroid::_fill_surface_single(
     // generate pattern
     Polylines   polylines = makeGrid(
         scale_(this->z),
-        distance,
+        params.density,
+        this->spacing,
+		this->layer_height,
         ceil(bb.size().x / distance) + 1,
         ceil(bb.size().y / distance) + 1,
         ((this->layer_id/thickness_layers) % 2) + 1);
@@ -248,6 +277,7 @@ void FillGyroid::_fill_surface_single(
                 const Point &last_point = pts_end.back();
                 // TODO: we should also check that both points are on a fill_boundary to avoid 
                 // connecting paths on the boundaries of internal regions
+				// question : why not using this->link_max_length?
                 if (first_point.distance_to(last_point) <= 4 * distance && 
                     expolygon_off.contains(Line(last_point, first_point))) {
                     // Append the polyline.
