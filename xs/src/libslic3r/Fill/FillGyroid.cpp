@@ -39,8 +39,8 @@ static Polyline makeLineVert(double xPos, double yPos, double width, double heig
 			x = xPos+width;
 		}
 		{
-			double ydeviation = (flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
-			polyline.points.push_back(Point(coord_t((x+decal) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
+			double ydeviation = 0.5*(flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
+			polyline.points.push_back(Point(coord_t((x+decal-ydeviation/2) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
 		}
 	}
 	
@@ -61,8 +61,8 @@ static Polyline makeLineHori(double xPos, double yPos, double width, double heig
 		double r = sqrt(a*a + b*b);
 		double y = asin(a/r) + asin(res/r) +3.14/2;
 		y += currentYBegin;
-		double xdeviation = (flip?-1:1)*(zCs>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
-		polyline.points.push_back(Point(coord_t((x + xdeviation) * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal) * scaleFactor)));
+		double xdeviation = 0.5*(flip?-1:1)*(zCs>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
+		polyline.points.push_back(Point(coord_t((x + xdeviation) * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal-xdeviation/2) * scaleFactor)));
 	}
 	
 	return polyline;
