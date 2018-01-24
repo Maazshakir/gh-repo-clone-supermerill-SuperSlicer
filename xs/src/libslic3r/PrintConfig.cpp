@@ -238,12 +238,11 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "ensure-vertical-shell-thickness!";
     def->default_value = new ConfigOptionBool(false);
 
-    def = this->add("external_fill_pattern", coEnum);
-    def->label = "Top/bottom fill pattern";
+    def = this->add("top_fill_pattern", coEnum);
+    def->label = "Top fill pattern";
     def->category = "Infill";
-    def->tooltip = "Fill pattern for top/bottom infill. This only affects the external visible layer, "
-                   "and not its adjacent solid shells.";
-    def->cli = "external-fill-pattern|solid-fill-pattern=s";
+    def->tooltip = "Fill pattern for top infill. This only affects the top external visible layer, and not its adjacent solid shells.";
+    def->cli = "top-fill-pattern|solid-fill-pattern=s";
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("concentric");
@@ -257,6 +256,24 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Octagram Spiral");
     // solid_fill_pattern is an obsolete equivalent to external_fill_pattern.
     def->aliases.push_back("solid_fill_pattern");
+    def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
+
+    def = this->add("bottom_fill_pattern", coEnum);
+    def->label = "bottom fill pattern";
+    def->category = "Infill";
+    def->tooltip = "Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells.";
+    def->cli = "bottom-fill-pattern|solid-fill-pattern=s";
+    def->enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
+    def->enum_values.push_back("rectilinear");
+    def->enum_values.push_back("concentric");
+    def->enum_values.push_back("hilbertcurve");
+    def->enum_values.push_back("archimedeanchords");
+    def->enum_values.push_back("octagramspiral");
+    def->enum_labels.push_back("Rectilinear");
+    def->enum_labels.push_back("Concentric");
+    def->enum_labels.push_back("Hilbert Curve");
+    def->enum_labels.push_back("Archimedean Chords");
+    def->enum_labels.push_back("Octagram Spiral");
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
