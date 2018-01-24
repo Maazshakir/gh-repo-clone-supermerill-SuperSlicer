@@ -9,8 +9,10 @@
 
 namespace Slic3r {
 
-// 0 = auto (from 2 to ~6). note: if not in auto, the density is not properly calculated anymore.
-static int const staticNbLines = 0;
+// 0 = auto (from 0 to ~4).
+//neg : auto whit min = -WALL_NB_LINES
+//  note: if not -2, the density is not properly calculated anymore.
+static int const WALL_NB_LINES = -2;
 
 
 static Polyline makeLineVert(double xPos, double yPos, double width, double height, double currentXBegin, double segmentSize, coord_t scaleFactor, double zCs, double zSn, bool flip, double decal=0){
@@ -82,7 +84,6 @@ static inline void correctOrderAndAdd(const int num, Polyline &poly, Polylines &
 static Polylines makeGrid(coord_t gridZ, double density, double layer_width, double layer_height, size_t gridWidth, size_t gridHeight, size_t curveType)
 {
 	//reduce the density a bit to have a 90% infill not over-extruding.
-	density = density * 0.8;
 	
     coord_t  scaleFactor = coord_t(scale_(layer_width) / density);;
     Polylines result;
@@ -118,18 +119,17 @@ static Polylines makeGrid(coord_t gridZ, double density, double layer_width, dou
 
 	int numLine = 0;
 	//nbLines depends of layer_width, layer_height, density and maxSlope 
-	int nbLines = staticNbLines;
-	if(staticNbLines==0){
+	int nbLines = WALL_NB_LINES;
+	if(WALL_NB_LINES<=0){
 		if(density>0.6){
 			nbLines = 2;
 		}else{
 			//compute the coverage of the current layer
 			double nbLineMore = 1 + (1 - maxSlope);
-			nbLineMore *= nbLineMore;
-			nbLineMore *= nbLineMore;
+			nbLineMore = pow(nbLineMore,5);
 			nbLineMore = nbLineMore -1;
 			nbLineMore *= 0.1 * layer_height / (layer_width * sqrt(density));
-			nbLines = 2 + nbLineMore;
+			nbLines = nbLineMore - WALL_NB_LINES;
 			// std::cout<<"|maxSlope="<<maxSlope<<"; nbLineMore= "<<nbLineMore<<std::endl;
 		}
 	}
@@ -225,9 +225,9 @@ void FillGyroid::_fill_surface_single(
 {
     // no rotation is supported for this infill pattern
     BoundingBox bb = expolygon.contour.bounding_box();
-    coord_t     distance = coord_t(scale_(this->spacing) / params.density);
+    coord_t     distance = coord_t(scale_(this->spacing) / (params.density*0.8));
 
-	std::cout<<"thickness_layers="<<thickness_layers<<", spacing="<<this->spacing<<", scale_(this->spacing)="<<scale_(this->spacing)<<", params.density="<<params.density<<", distance="<<distance<<std::endl;
+	// std::cout<<"thickness_layers="<<thickness_layers<<", spacing="<<this->spacing<<", scale_(this->spacing)="<<scale_(this->spacing)<<", params.density="<<params.density<<", distance="<<distance<<std::endl;
     // align bounding box to a multiple of our honeycomb grid module
     // (a module is 2*$distance since one $distance half-module is 
     // growing while the other $distance half-module is shrinking)
@@ -236,7 +236,7 @@ void FillGyroid::_fill_surface_single(
     // generate pattern
     Polylines   polylines = makeGrid(
         scale_(this->z),
-        params.density,
+        params.density*0.8,
         this->spacing,
 		this->layer_height,
         ceil(bb.size().x / distance) + 1,
@@ -246,6 +246,7 @@ void FillGyroid::_fill_surface_single(
     // move pattern in place
     for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
         it->translate(bb.min.x, bb.min.y);
+	
 
     // clip pattern to boundaries
     polylines = intersection_pl(polylines, (Polygons)expolygon);
@@ -277,8 +278,8 @@ void FillGyroid::_fill_surface_single(
                 const Point &last_point = pts_end.back();
                 // TODO: we should also check that both points are on a fill_boundary to avoid 
                 // connecting paths on the boundaries of internal regions
-				// question : why not using this->link_max_length?
-                if (first_point.distance_to(last_point) <= 4 * distance && 
+				// TODO: avoid crossing current infill path, a bug somewhere?
+				if (first_point.distance_to(last_point) <= 5 * distance && 
                     expolygon_off.contains(Line(last_point, first_point))) {
                     // Append the polyline.
                     pts_end.insert(pts_end.end(), it_polyline->points.begin(), it_polyline->points.end());
