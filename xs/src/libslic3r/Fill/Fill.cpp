@@ -69,8 +69,9 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 if (surface.is_solid() && (!surface.is_bridge() || layerm.layer()->id() == 0)) {
                     group_attrib[i].is_solid = true;
                     group_attrib[i].flow_width = (surface.surface_type == stTop) ? top_solid_infill_flow.width : solid_infill_flow.width;
-                    group_attrib[i].pattern = surface.is_external() ? layerm.region()->config.external_fill_pattern.value : ipRectilinear;
-                }
+					group_attrib[i].pattern = (surface.surface_type == stTop && surface.is_external()) ? layerm.region()->config.top_fill_pattern.value : ipRectilinear;
+					group_attrib[i].pattern = (surface.surface_type == stBottom && surface.is_external()) ? layerm.region()->config.bottom_fill_pattern.value : ipRectilinear;
+				}
             }
             // Loop through solid groups, find compatible groups and append them to this one.
             for (size_t i = 0; i < groups.size(); ++ i) {
@@ -157,13 +158,20 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         FlowRole role = (surface.surface_type == stTop) ? frTopSolidInfill :
             (surface.is_solid() ? frSolidInfill : frInfill);
         bool is_bridge = layerm.layer()->id() > 0 && surface.is_bridge();
-        
-        if (surface.is_solid()) {
-            density = 100.;
-            fill_pattern = (surface.is_external() && ! is_bridge) ? 
-                layerm.region()->config.external_fill_pattern.value :
-                ipRectilinear;
-        } else if (density <= 0)
+
+		if (surface.is_solid()) {
+			density = 100.;
+			fill_pattern = (surface.is_external() && surface.surface_type == stTop && !is_bridge) ?
+				layerm.region()->config.top_fill_pattern.value :
+				ipRectilinear;
+		}
+		else if (surface.is_solid()) {
+			density = 100.;
+			fill_pattern = (surface.is_external() && surface.surface_type == stBottom && !is_bridge) ?
+				layerm.region()->config.bottom_fill_pattern.value :
+				ipRectilinear;
+		}
+		else if (density <= 0)
             continue;
         
         // get filler object

@@ -238,26 +238,45 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "ensure-vertical-shell-thickness!";
     def->default_value = new ConfigOptionBool(false);
 
-    def = this->add("external_fill_pattern", coEnum);
-    def->label = "Top/bottom fill pattern";
-    def->category = "Infill";
-    def->tooltip = "Fill pattern for top/bottom infill. This only affects the external visible layer, "
-                   "and not its adjacent solid shells.";
-    def->cli = "external-fill-pattern|solid-fill-pattern=s";
-    def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
-    def->enum_values.push_back("rectilinear");
-    def->enum_values.push_back("concentric");
-    def->enum_values.push_back("hilbertcurve");
-    def->enum_values.push_back("archimedeanchords");
-    def->enum_values.push_back("octagramspiral");
-    def->enum_labels.push_back("Rectilinear");
-    def->enum_labels.push_back("Concentric");
-    def->enum_labels.push_back("Hilbert Curve");
-    def->enum_labels.push_back("Archimedean Chords");
-    def->enum_labels.push_back("Octagram Spiral");
-    // solid_fill_pattern is an obsolete equivalent to external_fill_pattern.
-    def->aliases.push_back("solid_fill_pattern");
-    def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
+	def = this->add("top_fill_pattern", coEnum);
+	def->label = "Top fill pattern";
+	def->category = "Infill";
+	def->tooltip = "Fill pattern for top infill. This only affects the external visible layer, "
+		"and not its adjacent solid shells.";
+	def->cli = "external-fill-pattern|solid-fill-pattern=s";
+	def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
+	def->enum_values.push_back("rectilinear");
+	def->enum_values.push_back("concentric");
+	def->enum_values.push_back("hilbertcurve");
+	def->enum_values.push_back("archimedeanchords");
+	def->enum_values.push_back("octagramspiral");
+	def->enum_labels.push_back("Rectilinear");
+	def->enum_labels.push_back("Concentric");
+	def->enum_labels.push_back("Hilbert Curve");
+	def->enum_labels.push_back("Archimedean Chords");
+	def->enum_labels.push_back("Octagram Spiral");
+	// solid_fill_pattern is an obsolete equivalent to external_fill_pattern (now top_fill_pattern and bottom_fill_pattern).
+	def->aliases.push_back("solid_fill_pattern");
+	def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
+
+	def = this->add("bottom_fill_pattern", coEnum);
+	def->label = "bottom fill pattern";
+	def->category = "Infill";
+	def->tooltip = "Fill pattern for bottom infill. This only affects the external visible layer, "
+		"and not its adjacent solid shells.";
+	def->cli = "external-fill-pattern|solid-fill-pattern=s";
+	def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
+	def->enum_values.push_back("rectilinear");
+	def->enum_values.push_back("concentric");
+	def->enum_values.push_back("hilbertcurve");
+	def->enum_values.push_back("archimedeanchords");
+	def->enum_values.push_back("octagramspiral");
+	def->enum_labels.push_back("Rectilinear");
+	def->enum_labels.push_back("Concentric");
+	def->enum_labels.push_back("Hilbert Curve");
+	def->enum_labels.push_back("Archimedean Chords");
+	def->enum_labels.push_back("Octagram Spiral");
+	def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
 
     def = this->add("external_perimeter_extrusion_width", coFloatOrPercent);
     def->label = "External perimeters";
@@ -1935,16 +1954,25 @@ std::string FullPrintConfig::validate()
     // --fill-pattern
     if (! print_config_def.get("fill_pattern")->has_enum_value(this->fill_pattern.serialize()))
         return "Invalid value for --fill-pattern";
-    
-    // --external-fill-pattern
-    if (! print_config_def.get("external_fill_pattern")->has_enum_value(this->external_fill_pattern.serialize()))
-        return "Invalid value for --external-fill-pattern";
 
-    // --fill-density
-    if (fabs(this->fill_density.value - 100.) < EPSILON &&
-        ! print_config_def.get("external_fill_pattern")->has_enum_value(this->fill_pattern.serialize()))
-        return "The selected fill pattern is not supposed to work at 100% density";
-    
+	// --top-fill-pattern
+	if (!print_config_def.get("top_fill_pattern")->has_enum_value(this->top_fill_pattern.serialize()))
+		return "Invalid value for --top_fill_pattern";
+
+	// --fill-density
+	if (fabs(this->fill_density.value - 100.) < EPSILON &&
+		!print_config_def.get("top_fill_pattern")->has_enum_value(this->fill_pattern.serialize()))
+		return "The selected fill pattern is not supposed to work at 100% density";
+
+	// --bottom-fill-pattern
+	if (!print_config_def.get("bottom_fill_pattern")->has_enum_value(this->bottom_fill_pattern.serialize()))
+		return "Invalid value for --bottom_fill_pattern";
+
+	// --fill-density
+	if (fabs(this->fill_density.value - 100.) < EPSILON &&
+		!print_config_def.get("bottom_fill_pattern")->has_enum_value(this->fill_pattern.serialize()))
+		return "The selected fill pattern is not supposed to work at 100% density";
+
     // --infill-every-layers
     if (this->infill_every_layers < 1)
         return "Invalid value for --infill-every-layers";
