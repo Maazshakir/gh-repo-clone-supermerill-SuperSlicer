@@ -1483,48 +1483,48 @@ Polylines FillSmooth::fill_surface(const Surface *surface, const FillParams &par
 }
 void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out )
 {
-    // Each linear fill covers 1/3 of the target coverage.
+	//second pass with half layer width
     FillParams params2 = params;
     params2.density *= 2.0f;
     Polylines polylines_out;
     Polylines polylines_outNoExtrud;
-    if (! fill_surface_by_lines(surface, params, 0.f, 0., polylines_out) ||
-        ! fill_surface_by_lines(surface, params2, float(M_PI/2), 0., polylines_outNoExtrud)) {
-        printf("FillCubic::fill_surface() failed to fill a region.\n");
+    if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
+        ! fill_surface_by_lines(surface, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
+        printf("FillSmooth::fill_surface() failed to fill a region.\n");
     } 
 	
 	if (polylines_out.empty())
 		return;
 	
-	Flow tempFlow = Flow::new_from_spacing(spacing, flow.nozzle_diameter, flow.height, flow.bridge || use_bridge_flow());
+	// Flow tempFlow = flow;
 	
-	float stdflowWidth = tempFlow.width;
+	ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
+	out.entities.push_back(eecroot);
+	eecroot->no_sort = true;
 	
+	// float stdflowWidth = tempFlow.width;
 	// Save into layer.
 	ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
-	out.entities.push_back(eec);
-	// Only concentric fills are not sorted.
-	eec->no_sort = no_sort();
-	tempFlow.width = stdflowWidth * 1.8f; // print almost 100% (90%)
+	eecroot->entities.push_back(eec);
+	// tempFlow.width = stdflowWidth * 0.9f; // print almost 100% (90%)
 	extrusion_entities_append_paths(
 		eec->entities, STDMOVE(polylines_out),
-		tempFlow.bridge ?
+		flow.bridge ?
 			erBridgeInfill :
 			(surface->is_solid() ?
 				((surface->surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
 				erInternalInfill),
-		tempFlow.mm3_per_mm(), tempFlow.width, tempFlow.height);
+		flow.mm3_per_mm()*0.95, flow.width*0.95, flow.height);
 		
 	// Save into layer smoothing path.
 	eec = new ExtrusionEntityCollection();
-	out.entities.push_back(eec);
-	// Only concentric fills are not sorted.
-	eec->no_sort = no_sort();
-	tempFlow.width = stdflowWidth * 0.05f; //print the last 10% (with 2 times more lines) -> gapfill
+	eecroot->entities.push_back(eec);
+	// tempFlow.width = stdflowWidth * 0.05f; //print the last 10% (with 2 times more lines) -> gapfill
 	extrusion_entities_append_paths(
 		eec->entities, STDMOVE(polylines_outNoExtrud),
-		erNone, //speedy (or use erInternalInfill)
-		tempFlow.mm3_per_mm(), tempFlow.width, tempFlow.height);
+		erInternalInfill, //speedy (or use erInternalInfill, erNone)
+		flow.mm3_per_mm()*0.15, flow.width*0.15, flow.height);
+	// std::cout<<"std : flow"<<(flow.mm3_per_mm()*0.2)<<", width"<<(flow.width*0.2)<<", height"<<(flow.height)<<"\n";
 }
 
 } // namespace Slic3r
