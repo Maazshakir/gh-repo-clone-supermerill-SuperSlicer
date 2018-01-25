@@ -68,6 +68,17 @@ protected:
     virtual float _layer_angle(size_t idx) const { return 0.f; }
 };
 
+class FillSmooth : public FillRectilinear2
+{
+public:
+    virtual Fill* clone() const { return new FillSmooth(*this); };
+    virtual ~FillSmooth() {}
+    virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
+    virtual bool can_create_extrusion_entity_collection() const { return true; }
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out );
+
+};
+
 
 }; // namespace Slic3r
 

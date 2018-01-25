@@ -57,8 +57,8 @@ _arguments -S \
     '--solid-layers[specify number of solid layers to do for top/bottom surfaces]:number of layers for top/bottom surfaces' \
     '--fill-density[specify infill density]:infill density in percent' \
     '--fill-angle[specify infill angle]:infill angle in degrees' \
-    '--fill-pattern[specify pattern used for infill]:infill pattern:(rectilinear line concentric honeycomb hilbertcurve archimedeanchords octagramspiral)' \
-    '--solid-fill-pattern[specify pattern used for solid layers]:solid fill pattern:(rectilinear concentric hilbertcurve archimedeanchords octagramspiral)' \
+    '--fill-pattern[specify pattern used for infill]:infill pattern:(rectilinear line concentric honeycomb hilbertcurve archimedeanchords octagramspiral smooth)' \
+    '--solid-fill-pattern[specify pattern used for solid layers]:solid fill pattern:(rectilinear concentric hilbertcurve archimedeanchords octagramspiral smooth)' \
     '--start-gcode[load initial G-code from file]:start G-code file:_files -g "*.(#i)(gcode)(-.)"' \
     '--end-gcode[load final G-code from file]:end G-code file:_files -g "*.(#i)(gcode)(-.)"' \
     '--layer-gcode[load layer-change G-code from file]:layer-change G-code file:_files -g "*.(#i)(gcode)(-.)"' \

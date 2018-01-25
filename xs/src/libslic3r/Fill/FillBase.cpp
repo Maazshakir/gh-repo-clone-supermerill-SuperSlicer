@@ -23,6 +23,7 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ip3DHoneycomb:         return new Fill3DHoneycomb();
     case ipRectilinear:         return new FillRectilinear2();
 //  case ipRectilinear:         return new FillRectilinear();
+    case ipSmooth:              return new FillSmooth();
     case ipLine:                return new FillLine();
     case ipGrid:                return new FillGrid2();
     case ipTriangles:           return new FillTriangles();
