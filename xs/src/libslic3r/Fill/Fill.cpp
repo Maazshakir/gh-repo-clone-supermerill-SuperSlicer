@@ -230,6 +230,19 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 //        params.dont_adjust = true;
         params.dont_adjust = false;
 		
+		
+		// calculate actual flow from spacing (which might have been adjusted by the infill
+		// pattern generator)
+		if (using_internal_flow) {
+			// if we used the internal flow we're not doing a solid infill
+			// so we can safely ignore the slight variation that might have
+			// been applied to $f->flow_spacing
+		} else {
+			std::cout<<"before : flow"<<(flow.mm3_per_mm())<<", width"<<(flow.width)<<", height"<<(flow.height)<<"\n";
+			flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
+			std::cout<<"after : flow"<<(flow.mm3_per_mm())<<", width"<<(flow.width)<<", height"<<(flow.height)<<"\n";
+		}
+		
 		//check if the infill want to be able to create the whole extrusion or we can do the standard work.
 		if(f->can_create_extrusion_entity_collection()){
 			flow.bridge = is_bridge; //i'm not 100% sure of that line [merill]
@@ -239,15 +252,6 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 			if (polylines.empty())
 				continue;
 
-			// calculate actual flow from spacing (which might have been adjusted by the infill
-			// pattern generator)
-			if (using_internal_flow) {
-				// if we used the internal flow we're not doing a solid infill
-				// so we can safely ignore the slight variation that might have
-				// been applied to $f->flow_spacing
-			} else {
-				flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
-			}
 
 			// Save into layer.
 			auto *eec = new ExtrusionEntityCollection();
