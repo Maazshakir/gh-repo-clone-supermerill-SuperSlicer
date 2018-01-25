@@ -9,6 +9,7 @@
 #include "../libslic3r.h"
 #include "../BoundingBox.hpp"
 #include "../PrintConfig.hpp"
+#include "../Flow.hpp"
 
 namespace Slic3r {
 
@@ -77,6 +78,15 @@ public:
 
     // Perform the fill.
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
+
+    // If this algorithm want to create an ExtrusionEntityCollection instead of a Polylines.
+    virtual bool can_create_extrusion_entity_collection() const { return false; }
+	
+    // If canCreateExtrusionEntityCollection return true, this method have to return a correct new ExtrusionEntityCollection.
+    virtual void fill_surface_extrusion(const Surface *surface, 
+	const FillParams &params, 
+	const Flow &flow, 
+	ExtrusionEntityCollection &out ){}
 
 protected:
     Fill() :

@@ -11,6 +11,7 @@
 #include "../ExPolygon.hpp"
 #include "../Geometry.hpp"
 #include "../Surface.hpp"
+#include "../ExtrusionEntityCollection.hpp"
 
 #include "FillRectilinear2.hpp"
 
@@ -772,7 +773,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
     rotate_vector.first += angleBase;
 
-    assert(params.density > 0.0001f && params.density <= 1.f);
+    assert(params.density > 0.0001f ); //&& params.density <= 1.f); nned it to smoothen the thing
     coord_t line_spacing = coord_t(scale_(this->spacing) / params.density);
 
     // On the polygons of poly_with_offset, the infill lines will be connected.
@@ -1444,11 +1445,12 @@ Polylines FillStars::fill_surface(const Surface *surface, const FillParams &para
     Polylines polylines_out;
     if (! fill_surface_by_lines(surface, params2, 0.f, 0., polylines_out) ||
         ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), 0., polylines_out) ||
-        ! fill_surface_by_lines(surface, params2, float(2. * M_PI / 3.), 0.5 * this->spacing / params2.density, polylines_out)) {
+        ! fill_surface_by_lines(surface, params2, float(2. * M_PI / 3.), 0.5f * this->spacing / params2.density, polylines_out)) {
         printf("FillStars::fill_surface() failed to fill a region.\n");
     }
     return polylines_out;
 }
+
 
 Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &params)
 {
@@ -1457,13 +1459,72 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
     params2.density *= 0.333333333f;
     Polylines polylines_out;
     coordf_t dx = sqrt(0.5) * z;
-    if (! fill_surface_by_lines(surface, params2, 0.f, dx, polylines_out) ||
-        ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), - dx, polylines_out) ||
+    if (! fill_surface_by_lines(surface, params2, 0.f, float(dx), polylines_out) ||
+        ! fill_surface_by_lines(surface, params2, float(M_PI / 3.), float(- dx), polylines_out) ||
         // Rotated by PI*2/3 + PI to achieve reverse sloping wall.
-        ! fill_surface_by_lines(surface, params2, float(M_PI * 2. / 3.), dx, polylines_out)) {
+        ! fill_surface_by_lines(surface, params2, float(M_PI * 2. / 3.), float(dx), polylines_out)) {
         printf("FillCubic::fill_surface() failed to fill a region.\n");
     } 
     return polylines_out; 
+}
+
+
+Polylines FillSmooth::fill_surface(const Surface *surface, const FillParams &params)
+{
+	//second pass with half layer width
+    FillParams params2 = params;
+    params2.density *= 2.0f;
+    Polylines polylines_out;
+    if (! fill_surface_by_lines(surface, params, 0.f, 0., polylines_out) ||
+        ! fill_surface_by_lines(surface, params2, float(M_PI/2), 0., polylines_out)) {
+        printf("FillCubic::fill_surface() failed to fill a region.\n");
+    } 
+    return polylines_out; 
+}
+void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out )
+{
+    // Each linear fill covers 1/3 of the target coverage.
+    FillParams params2 = params;
+    params2.density *= 2.0f;
+    Polylines polylines_out;
+    Polylines polylines_outNoExtrud;
+    if (! fill_surface_by_lines(surface, params, 0.f, 0., polylines_out) ||
+        ! fill_surface_by_lines(surface, params2, float(M_PI/2), 0., polylines_outNoExtrud)) {
+        printf("FillCubic::fill_surface() failed to fill a region.\n");
+    } 
+	
+	if (polylines_out.empty())
+		return;
+	
+	Flow tempFlow = Flow::new_from_spacing(spacing, flow.nozzle_diameter, flow.height, flow.bridge || use_bridge_flow());
+	
+	float stdflowWidth = tempFlow.width;
+	
+	// Save into layer.
+	ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+	out.entities.push_back(eec);
+	// Only concentric fills are not sorted.
+	eec->no_sort = no_sort();
+	tempFlow.width = stdflowWidth * 1.8f; // print almost 100% (90%)
+	extrusion_entities_append_paths(
+		eec->entities, STDMOVE(polylines_out),
+		tempFlow.bridge ?
+			erBridgeInfill :
+			(surface->is_solid() ?
+				((surface->surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
+				erInternalInfill),
+		tempFlow.mm3_per_mm(), tempFlow.width, tempFlow.height);
+		
+	// Save into layer smoothing path.
+	eec = new ExtrusionEntityCollection();
+	out.entities.push_back(eec);
+	// Only concentric fills are not sorted.
+	eec->no_sort = no_sort();
+	tempFlow.width = stdflowWidth * 0.05f; //print the last 10% (with 2 times more lines) -> gapfill
+	extrusion_entities_append_paths(
+		eec->entities, STDMOVE(polylines_outNoExtrud),
+		erNone, //speedy (or use erInternalInfill)
+		tempFlow.mm3_per_mm(), tempFlow.width, tempFlow.height);
 }
 
 } // namespace Slic3r
