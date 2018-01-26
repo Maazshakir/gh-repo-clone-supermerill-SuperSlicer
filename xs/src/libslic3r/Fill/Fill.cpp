@@ -237,9 +237,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 			// so we can safely ignore the slight variation that might have
 			// been applied to $f->flow_spacing
 		} else {
-			std::cout<<"before : flow"<<(flow.mm3_per_mm())<<", width"<<(flow.width)<<", height"<<(flow.height)<<"\n";
 			flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
-			std::cout<<"after : flow"<<(flow.mm3_per_mm())<<", width"<<(flow.width)<<", height"<<(flow.height)<<"\n";
 		}
 		
 		//check if the infill want to be able to create the whole extrusion or we can do the standard work.
@@ -255,6 +253,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 			// Save into layer.
 			auto *eec = new ExtrusionEntityCollection();
 			out.entities.push_back(eec);
+			eec->name = "normal fill";
 			// Only concentric fills are not sorted.
 			eec->no_sort = f->no_sort();
 			extrusion_entities_append_paths(
@@ -275,6 +274,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
     // Why the paths are unpacked?
     for (const ExtrusionEntity *thin_fill : layerm.thin_fills.entities) {
         ExtrusionEntityCollection &collection = *(new ExtrusionEntityCollection());
+		collection.name="thin_wall";
         out.entities.push_back(&collection);
         collection.entities.push_back(thin_fill->clone());
     }

@@ -1500,12 +1500,16 @@ void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams
 	
 	ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
 	out.entities.push_back(eecroot);
+	out.name = "root";
+	eecroot->name = "nosortnode";
 	eecroot->no_sort = true;
 	
 	// float stdflowWidth = tempFlow.width;
 	// Save into layer.
 	ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
 	eecroot->entities.push_back(eec);
+	eec->no_sort = true;
+	eec->name = "full";
 	// tempFlow.width = stdflowWidth * 0.9f; // print almost 100% (90%)
 	extrusion_entities_append_paths(
 		eec->entities, STDMOVE(polylines_out),
@@ -1514,11 +1518,13 @@ void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams
 			(surface->is_solid() ?
 				((surface->surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
 				erInternalInfill),
-		flow.mm3_per_mm()*0.95, flow.width*0.95, flow.height);
+		flow.mm3_per_mm()*0.9, flow.width*0.9, flow.height);
 		
 	// Save into layer smoothing path.
 	eec = new ExtrusionEntityCollection();
 	eecroot->entities.push_back(eec);
+	eec->no_sort = true;
+	eec->name = "sparse";
 	// tempFlow.width = stdflowWidth * 0.05f; //print the last 10% (with 2 times more lines) -> gapfill
 	extrusion_entities_append_paths(
 		eec->entities, STDMOVE(polylines_outNoExtrud),
