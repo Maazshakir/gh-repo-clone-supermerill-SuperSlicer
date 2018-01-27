@@ -6,7 +6,7 @@
 namespace Slic3r {
 
 ExtrusionEntityCollection::ExtrusionEntityCollection(const ExtrusionPaths &paths)
-    : no_sort(false), name("blank")
+    : no_sort(false)
 {
     this->append(paths);
 }
@@ -18,7 +18,6 @@ ExtrusionEntityCollection& ExtrusionEntityCollection::operator= (const Extrusion
         this->entities[i] = this->entities[i]->clone();
     this->orig_indices  = other.orig_indices;
     this->no_sort       = other.no_sort;
-    this->name       = "="+other.name;
     return *this;
 }
 
@@ -28,7 +27,6 @@ ExtrusionEntityCollection::swap(ExtrusionEntityCollection &c)
     std::swap(this->entities, c.entities);
     std::swap(this->orig_indices, c.orig_indices);
     std::swap(this->no_sort, c.no_sort);
-    std::swap(this->name, c.name);
 }
 
 void ExtrusionEntityCollection::clear()
@@ -36,7 +34,6 @@ void ExtrusionEntityCollection::clear()
 	for (size_t i = 0; i < this->entities.size(); ++i)
 		delete this->entities[i];
     this->entities.clear();
-    this->name       = "clear";
 }
 
 ExtrusionEntityCollection::operator ExtrusionPaths() const
@@ -56,14 +53,12 @@ ExtrusionEntityCollection::clone() const
     for (size_t i = 0; i < coll->entities.size(); ++i)
         coll->entities[i] = this->entities[i]->clone();
 	
-	coll->name = "clone_" + name;
     return coll;
 }
 
 void
 ExtrusionEntityCollection::reverse()
 {
-	std::cout<<"REVERSE "<<can_reverse()<<" : "<<name<<"\n";
     for (ExtrusionEntitiesPtr::iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
         // Don't reverse it if it's a loop, as it doesn't change anything in terms of elements ordering
         // and caller might rely on winding order
@@ -110,13 +105,10 @@ ExtrusionEntityCollection ExtrusionEntityCollection::chained_path_from(Point sta
 
 void ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEntityCollection* retval, bool no_reverse, ExtrusionRole role, std::vector<size_t>* orig_indices) const
 {
-	std::cout<<"chained_path_from "<<name;
     if (this->no_sort) {
-		std::cout<<" no sort! return this\n";
         *retval = *this;
         return;
     }
-		std::cout<<" sort this\n";
     retval->entities.reserve(this->entities.size());
     retval->orig_indices.reserve(this->entities.size());
     
@@ -198,7 +190,6 @@ ExtrusionEntityCollection::items_count() const
 void
 ExtrusionEntityCollection::flatten(ExtrusionEntityCollection* retval) const
 {
-	std::cout<<"Flatten"<<name<<"\n";
     for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
         if ((*it)->is_collection()) {
             ExtrusionEntityCollection* collection = dynamic_cast<ExtrusionEntityCollection*>(*it);
@@ -221,7 +212,6 @@ ExtrusionEntityCollection::flatten() const
 void
 ExtrusionEntityCollection::flattenIfSortable(ExtrusionEntityCollection* retval) const
 {
-	std::cout<<"flattenIfSortable"<<name<<"\n";
 	if(no_sort){
 		ExtrusionEntityCollection *unsortable = new ExtrusionEntityCollection(*this);
 		retval->append(*unsortable);
