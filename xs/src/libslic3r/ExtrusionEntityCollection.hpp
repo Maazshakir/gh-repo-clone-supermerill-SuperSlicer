@@ -13,14 +13,13 @@ public:
     ExtrusionEntitiesPtr entities;     // we own these entities
     std::vector<size_t> orig_indices;  // handy for XS
     bool no_sort;
-    std::string name;
-    ExtrusionEntityCollection(): no_sort(false), name("nothing") {};
-    ExtrusionEntityCollection(const ExtrusionEntityCollection &other) : orig_indices(other.orig_indices), no_sort(other.no_sort), name(other.name) { this->append(other.entities); }
-    ExtrusionEntityCollection(ExtrusionEntityCollection &&other) : entities(std::move(other.entities)), orig_indices(std::move(other.orig_indices)), no_sort(other.no_sort), name(other.name) {}
+    ExtrusionEntityCollection(): no_sort(false) {};
+    ExtrusionEntityCollection(const ExtrusionEntityCollection &other) : orig_indices(other.orig_indices), no_sort(other.no_sort) { this->append(other.entities); }
+    ExtrusionEntityCollection(ExtrusionEntityCollection &&other) : entities(std::move(other.entities)), orig_indices(std::move(other.orig_indices)), no_sort(other.no_sort) {}
     explicit ExtrusionEntityCollection(const ExtrusionPaths &paths);
     ExtrusionEntityCollection& operator=(const ExtrusionEntityCollection &other);
     ExtrusionEntityCollection& operator=(ExtrusionEntityCollection &&other) 
-        { this->entities = std::move(other.entities); this->orig_indices = std::move(other.orig_indices); this->no_sort = other.no_sort; this->name = other.name; return *this; }
+        { this->entities = std::move(other.entities); this->orig_indices = std::move(other.orig_indices); this->no_sort = other.no_sort; return *this; }
     ~ExtrusionEntityCollection() { clear(); }
     explicit operator ExtrusionPaths() const;
     
