@@ -1500,8 +1500,6 @@ void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams
 	
 	ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
 	out.entities.push_back(eecroot);
-	out.name = "root";
-	eecroot->name = "nosortnode";
 	eecroot->no_sort = true;
 	
 	// float stdflowWidth = tempFlow.width;
@@ -1509,8 +1507,7 @@ void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams
 	ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
 	eecroot->entities.push_back(eec);
 	eec->no_sort = true;
-	eec->name = "full";
-	// tempFlow.width = stdflowWidth * 0.9f; // print almost 100% (90%)
+	// print at almost 100% (90%) flow
 	extrusion_entities_append_paths(
 		eec->entities, STDMOVE(polylines_out),
 		flow.bridge ?
@@ -1524,13 +1521,11 @@ void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams
 	eec = new ExtrusionEntityCollection();
 	eecroot->entities.push_back(eec);
 	eec->no_sort = true;
-	eec->name = "sparse";
-	// tempFlow.width = stdflowWidth * 0.05f; //print the last 10% (with 2 times more lines) -> gapfill
+	//print the last 10% with 2*15% -> gapfill (if less => gaps)
 	extrusion_entities_append_paths(
 		eec->entities, STDMOVE(polylines_outNoExtrud),
-		erInternalInfill, //speedy (or use erInternalInfill, erNone)
+		erInternalInfill, //speedy (it's generally the most speedy)
 		flow.mm3_per_mm()*0.15, flow.width*0.15, flow.height);
-	// std::cout<<"std : flow"<<(flow.mm3_per_mm()*0.2)<<", width"<<(flow.width*0.2)<<", height"<<(flow.height)<<"\n";
 }
 
 } // namespace Slic3r

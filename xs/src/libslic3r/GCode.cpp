@@ -1089,13 +1089,6 @@ void GCode::process_layer(
                     if (fill->entities.empty())
                         // This shouldn't happen but first_point() would fail.
                         continue;
-					std::cout<<"process_layer infill "<<fill->name<<"\n";
-					if(fill->name == "nosortnode"){
-						std::cout<<"test order: "<<fill->entities.size()<<"\n";
-//						std::cout<<"0:"<<((ExtrusionEntityCollection*)(&(fill->entities[0])))->name<<"\n";
-//						std::cout<<"1:"<<((ExtrusionEntityCollection*)(&(fill->entities[1])))->name<<"\n";
-						
-					}
                     // init by_extruder item only if we actually use the extruder
                     int extruder_id = std::max<int>(0, (is_solid_infill(fill->entities.front()->role()) ? region.config.solid_infill_extruder : region.config.infill_extruder) - 1);
                     // Init by_extruder item only if we actually use the extruder.
@@ -1111,8 +1104,6 @@ void GCode::process_layer(
                             point_inside_surface(i, fill->first_point())) {
                             if (islands[i].by_region.empty())
                                 islands[i].by_region.assign(print.regions.size(), ObjectByExtruder::Island::Region());
-							std::cout<<"process_layer infill (child) "<<fill->name<<"\n";
-							if(fill->name == "nosortnode") islands[i].by_region[region_id].infills.name = "take_"+fill->name;
 							//don't do fill->entities because it will discard no_sort
 							//fill->flattenIfSortable().entities keep no_sort attribute. !! it create a new ExtrusionEntityCollection tree, 
 							//  be careful to delete properly the new(flattenIfSortable()) / old(fill)one (fill) !! (not 100% sure yet) TODO: review
@@ -1835,9 +1826,7 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
         m_config.apply(print.regions[&region - &by_region.front()]->config);
-				std::cout<<"extrude region.infills:"<<region.infills.name<<"\n";
 		ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
-				std::cout<<"extrude ExtrusionEntityCollection:"<<chained.name<<"\n";
         gcode += extrude_infill(print, chained);
     }
     return gcode;
@@ -1846,7 +1835,6 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
 std::string GCode::extrude_infill(const Print &print, const ExtrusionEntityCollection &collection)
 {
     std::string gcode;
-	std::cout<<"extrude collection:"<<collection.name<<"\n";
 
 	ExtrusionEntityCollection chained;
 	if(collection.no_sort) chained = collection;
@@ -1854,7 +1842,7 @@ std::string GCode::extrude_infill(const Print &print, const ExtrusionEntityColle
 	for (ExtrusionEntity *fill : chained.entities) {
 		auto *eec = dynamic_cast<ExtrusionEntityCollection*>(fill);
 		if (eec) {
-			extrude_infill(print, *eec);
+			gcode += extrude_infill(print, *eec);
 		} else
 			gcode += this->extrude_entity(*fill, "infill");
 	}
