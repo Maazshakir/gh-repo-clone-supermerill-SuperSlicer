@@ -510,6 +510,7 @@ PrintConfigDef::PrintConfigDef()
     def->max = 100;
     def->enum_values.push_back("0");
     def->enum_values.push_back("5");
+    def->enum_values.push_back("7.5");
     def->enum_values.push_back("10");
     def->enum_values.push_back("15");
     def->enum_values.push_back("20");
@@ -524,6 +525,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("100");
     def->enum_labels.push_back("0%");
     def->enum_labels.push_back("5%");
+    def->enum_labels.push_back("7.5%");
     def->enum_labels.push_back("10%");
     def->enum_labels.push_back("15%");
     def->enum_labels.push_back("20%");
@@ -554,6 +556,8 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
     def->enum_values.push_back("gyroid");
+    def->enum_values.push_back("gyroidthin");
+    def->enum_values.push_back("gyroidthick");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
@@ -567,6 +571,8 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Honeycomb");
     def->enum_labels.push_back("3D Honeycomb");
     def->enum_labels.push_back("Gyroid");
+    def->enum_labels.push_back("Thin Gyroid");
+    def->enum_labels.push_back("Thick Gyroid");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
