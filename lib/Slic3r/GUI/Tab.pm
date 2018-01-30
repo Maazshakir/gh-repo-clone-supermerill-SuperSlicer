@@ -593,6 +593,7 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Quality (slower slicing)');
             $optgroup->append_single_option_line('extra_perimeters');
+            $optgroup->append_single_option_line('only_one_perimeter_top');
             $optgroup->append_single_option_line('ensure_vertical_shell_thickness');
             $optgroup->append_single_option_line('avoid_crossing_perimeters');
             $optgroup->append_single_option_line('thin_walls');

@@ -1437,6 +1437,8 @@ void PrintObject::_make_perimeters()
 {
     if (this->state.is_done(posPerimeters)) return;
     this->state.set_started(posPerimeters);
+	
+	
 
     BOOST_LOG_TRIVIAL(info) << "Generating perimeters...";
     
@@ -1447,6 +1449,16 @@ void PrintObject::_make_perimeters()
         this->typed_slices = false;
         this->state.invalidate(posPrepareInfill);
     }
+	
+	//if we want only one perimeter for each top surface, we need to know who is a top surface before the infill
+	// ! detect_surfaces_type is done is every case in the infill() call chain.
+	if(_print->default_region_config.only_one_perimeter_top){
+		// This will assign a type (top/bottom/internal) to $layerm->slices.
+		// Then the classifcation of $layerm->slices is transfered onto 
+		// the $layerm->fill_surfaces by clipping $layerm->fill_surfaces
+		// by the cummulative area of the previous $layerm->fill_surfaces.
+		this->detect_surfaces_type();
+	}
     
     // compare each layer to the one below, and mark those slices needing
     // one additional inner perimeter, like the top of domed objects-
