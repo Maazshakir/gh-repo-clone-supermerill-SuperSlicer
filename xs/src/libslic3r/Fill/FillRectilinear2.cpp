@@ -1488,44 +1488,98 @@ void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams
     params2.density *= 2.0f;
     Polylines polylines_out;
     Polylines polylines_outNoExtrud;
-    if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
-        ! fill_surface_by_lines(surface, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
-        printf("FillSmooth::fill_surface() failed to fill a region.\n");
-    } 
 	
-	if (polylines_out.empty())
-		return;
-	
-	// Flow tempFlow = flow;
-	
-	ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
-	out.entities.push_back(eecroot);
-	eecroot->no_sort = true;
-	
-	// float stdflowWidth = tempFlow.width;
-	// Save into layer.
-	ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
-	eecroot->entities.push_back(eec);
-	eec->no_sort = true;
-	// print at almost 100% (90%) flow
-	extrusion_entities_append_paths(
-		eec->entities, STDMOVE(polylines_out),
-		flow.bridge ?
-			erBridgeInfill :
-			(surface->is_solid() ?
-				((surface->surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
-				erInternalInfill),
-		flow.mm3_per_mm()*0.9, flow.width*0.9, flow.height);
+	//choose between v1 (no extrusion on second pass) and v2 (small extrusion on second pass)
+	if(surface->area() < (scale_(this->spacing)*scale_(this->spacing)) * 100){
+		//v1 (only if < 100 nozzle² (for a 0.4 nozzle, it's 16 mm² ~ 0.16 cm² ~ half of a 5mmx5mm cube on a notebook)
+		Surface surfaceIncr(*surface);
+		Polygons paths = offset(surfaceIncr.expolygon.contour, scale_(this->spacing));
+		surfaceIncr.expolygon.contour = paths[0];
 		
-	// Save into layer smoothing path.
-	eec = new ExtrusionEntityCollection();
-	eecroot->entities.push_back(eec);
-	eec->no_sort = true;
-	//print the last 10% with 2*15% -> gapfill (if less => gaps)
-	extrusion_entities_append_paths(
-		eec->entities, STDMOVE(polylines_outNoExtrud),
-		erInternalInfill, //speedy (it's generally the most speedy)
-		flow.mm3_per_mm()*0.15, flow.width*0.15, flow.height);
+		if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
+			! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
+			printf("FillSmooth::fill_surface() failed to fill a region.\n");
+		} 
+		
+		if (polylines_out.empty())
+			return;
+		
+		// Flow tempFlow = flow;
+		
+		ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
+		out.entities.push_back(eecroot);
+		eecroot->no_sort = true;
+		
+		// float stdflowWidth = tempFlow.width;
+		// Save into layer.
+		ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+		eecroot->entities.push_back(eec);
+		eec->no_sort = true;
+		// print at almost 100% (90%) flow
+		extrusion_entities_append_paths(
+			eec->entities, STDMOVE(polylines_out),
+			flow.bridge ?
+				erBridgeInfill :
+				(surface->is_solid() ?
+					((surface->surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
+					erInternalInfill),
+			flow.mm3_per_mm()*1, flow.width*1, flow.height);
+			
+		// Save into layer smoothing path.
+		eec = new ExtrusionEntityCollection();
+		eecroot->entities.push_back(eec);
+		eec->no_sort = true;
+		//print the last 10% with 2*15% -> gapfill (if less => gaps)
+		extrusion_entities_append_paths(
+			eec->entities, STDMOVE(polylines_outNoExtrud),
+			erInternalInfill, //speedy (it's generally the most speedy)
+			0.f, flow.width*0.05, flow.height);
+	}else{
+		//v2
+		Surface surfaceIncr(*surface);
+		Polygons paths = offset(surfaceIncr.expolygon.contour, scale_(this->spacing * 0.3f));
+		surfaceIncr.expolygon.contour = paths[0];
+		
+		if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
+			! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
+			printf("FillSmooth::fill_surface() failed to fill a region.\n");
+		} 
+		
+		if (polylines_out.empty())
+			return;
+		
+		// Flow tempFlow = flow;
+		
+		ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
+		out.entities.push_back(eecroot);
+		eecroot->no_sort = true;
+		
+		// float stdflowWidth = tempFlow.width;
+		// Save into layer.
+		ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+		eecroot->entities.push_back(eec);
+		eec->no_sort = true;
+		// print at almost 100% (90%) flow
+		extrusion_entities_append_paths(
+			eec->entities, STDMOVE(polylines_out),
+			flow.bridge ?
+				erBridgeInfill :
+				(surface->is_solid() ?
+					((surface->surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
+					erInternalInfill),
+			flow.mm3_per_mm()*0.9, flow.width*0.9, flow.height);
+			
+		// Save into layer smoothing path.
+		eec = new ExtrusionEntityCollection();
+		eecroot->entities.push_back(eec);
+		eec->no_sort = true;
+		//print the last 10% with 2*15% -> gapfill (if less => gaps)
+		extrusion_entities_append_paths(
+			eec->entities, STDMOVE(polylines_outNoExtrud),
+			erInternalInfill, //speedy (it's generally the most speedy)
+			flow.mm3_per_mm()*0.15, flow.width*0.15, flow.height);
+	}
+	
 }
 
 } // namespace Slic3r
