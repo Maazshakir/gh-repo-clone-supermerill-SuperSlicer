@@ -9,13 +9,8 @@
 
 namespace Slic3r {
 
-// 0 = auto (from 0 to ~4).
-//neg : auto whit min = -WALL_NB_LINES
-//  note: if not -2, the density is not properly calculated anymore.
-static int const WALL_NB_LINES = -2;
-
-
-static Polyline makeLineVert(double xPos, double yPos, double width, double height, double currentXBegin, double segmentSize, coord_t scaleFactor, double zCs, double zSn, bool flip, double decal=0){
+Polyline FillGyroid::makeLineVert(double xPos, double yPos, double width, double height, double currentXBegin, double segmentSize, coord_t scaleFactor, 
+		double zCs, double zSn, bool flip, double decal){
 	
 	double maxSlope = abs(abs(zCs)-abs(zSn));
 	Polyline polyline;
@@ -49,7 +44,8 @@ static Polyline makeLineVert(double xPos, double yPos, double width, double heig
 	return polyline;
 }
 
-static Polyline makeLineHori(double xPos, double yPos, double width, double height, double currentYBegin, double segmentSize, coord_t scaleFactor, double zCs, double zSn, bool flip, double decal=0){
+Polyline FillGyroid::makeLineHori(double xPos, double yPos, double width, double height, double currentYBegin, double segmentSize, coord_t scaleFactor, 
+		double zCs, double zSn, bool flip, double decal){
 	double maxSlope = abs(abs(zCs)-abs(zSn));
 	Polyline polyline;
 	polyline.points.push_back(Point(coord_t(xPos * scaleFactor), coord_t((std::max(std::min(currentYBegin, yPos+height),yPos)+decal) * scaleFactor)));
@@ -70,7 +66,7 @@ static Polyline makeLineHori(double xPos, double yPos, double width, double heig
 	return polyline;
 }
 
-static inline void correctOrderAndAdd(const int num, Polyline &poly, Polylines &array){
+inline void FillGyroid::correctOrderAndAdd(const int num, Polyline &poly, Polylines &array){
 	if(num%2==0){
 		Points temp(poly.points.rbegin(), poly.points.rend());
 		poly.points.assign(temp.begin(),temp.end());
@@ -81,11 +77,10 @@ static inline void correctOrderAndAdd(const int num, Polyline &poly, Polylines &
 // Generate a set of curves (array of array of 2d points) that describe a
 // horizontal slice of a truncated regular octahedron with a specified
 // grid square size.
-static Polylines makeGrid(coord_t gridZ, double density, double layer_width, double layer_height, size_t gridWidth, size_t gridHeight, size_t curveType)
+Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width, double layer_height, size_t gridWidth, size_t gridHeight, size_t curveType)
 {
-	//reduce the density a bit to have a 90% infill not over-extruding.
 	
-    coord_t  scaleFactor = coord_t(scale_(layer_width) / density);;
+    coord_t  scaleFactor = coord_t(scale_(layer_width) / density);
     Polylines result;
 	Polyline *polyline2;
 	double segmentSize = density/2;
@@ -119,8 +114,8 @@ static Polylines makeGrid(coord_t gridZ, double density, double layer_width, dou
 
 	int numLine = 0;
 	//nbLines depends of layer_width, layer_height, density and maxSlope 
-	int nbLines = WALL_NB_LINES;
-	if(WALL_NB_LINES<=0){
+	int nbLines = wall_nb_lines;
+	if(wall_nb_lines<=0){
 		if(density>0.6){
 			nbLines = 2;
 		}else{
@@ -129,7 +124,7 @@ static Polylines makeGrid(coord_t gridZ, double density, double layer_width, dou
 			nbLineMore = pow(nbLineMore,5);
 			nbLineMore = nbLineMore -1;
 			nbLineMore *= 0.1 * layer_height / (layer_width * sqrt(density));
-			nbLines = nbLineMore - WALL_NB_LINES;
+			nbLines = (int)(nbLineMore - wall_nb_lines);
 			// std::cout<<"|maxSlope="<<maxSlope<<"; nbLineMore= "<<nbLineMore<<std::endl;
 		}
 	}
@@ -225,23 +220,20 @@ void FillGyroid::_fill_surface_single(
 {
     // no rotation is supported for this infill pattern
     BoundingBox bb = expolygon.contour.bounding_box();
-    coord_t     distance = coord_t(scale_(this->spacing) / (params.density*0.8));
+    coord_t     distance = coord_t(scale_(this->spacing) / (params.density*scaling));
 
-	// std::cout<<"thickness_layers="<<thickness_layers<<", spacing="<<this->spacing<<", scale_(this->spacing)="<<scale_(this->spacing)<<", params.density="<<params.density<<", distance="<<distance<<std::endl;
-    // align bounding box to a multiple of our honeycomb grid module
-    // (a module is 2*$distance since one $distance half-module is 
-    // growing while the other $distance half-module is shrinking)
-    bb.merge(_align_to_grid(bb.min, Point(2*distance, 2*distance)));
+	// align bounding box to a multiple of our grid module
+    bb.merge(_align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
     
     // generate pattern
     Polylines   polylines = makeGrid(
-        scale_(this->z),
-        params.density*0.8,
+        (coord_t)scale_(this->z),
+        params.density*scaling,
         this->spacing,
 		this->layer_height,
-        ceil(bb.size().x / distance) + 1,
-        ceil(bb.size().y / distance) + 1,
-        ((this->layer_id/thickness_layers) % 2) + 1);
+        (size_t)(ceil(bb.size().x / distance) + 1),
+        (size_t)(ceil(bb.size().y / distance) + 1),
+        (size_t)(((this->layer_id/thickness_layers) % 2) + 1) );
     
     // move pattern in place
     for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
@@ -255,7 +247,7 @@ void FillGyroid::_fill_surface_single(
     if (! params.dont_connect && ! polylines.empty()) { // prevent calling leftmost_point() on empty collections
         ExPolygon expolygon_off;
         {
-            ExPolygons expolygons_off = offset_ex(expolygon, SCALED_EPSILON);
+            ExPolygons expolygons_off = offset_ex(expolygon, (float)SCALED_EPSILON);
             if (! expolygons_off.empty()) {
                 // When expanding a polygon, the number of islands could only shrink. Therefore the offset_ex shall generate exactly one expanded island for one input island.
                 assert(expolygons_off.size() == 1);
