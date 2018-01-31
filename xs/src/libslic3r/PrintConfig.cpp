@@ -11,11 +11,13 @@ PrintConfigDef::PrintConfigDef()
     external_fill_pattern.type = coEnum;
     external_fill_pattern.enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
     external_fill_pattern.enum_values.push_back("rectilinear");
+    external_fill_pattern.enum_values.push_back("smooth");
     external_fill_pattern.enum_values.push_back("concentric");
     external_fill_pattern.enum_values.push_back("hilbertcurve");
     external_fill_pattern.enum_values.push_back("archimedeanchords");
     external_fill_pattern.enum_values.push_back("octagramspiral");
     external_fill_pattern.enum_labels.push_back("Rectilinear");
+    external_fill_pattern.enum_labels.push_back("Smooth");
     external_fill_pattern.enum_labels.push_back("Concentric");
     external_fill_pattern.enum_labels.push_back("Hilbert Curve");
     external_fill_pattern.enum_labels.push_back("Archimedean Chords");
@@ -290,6 +292,13 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Add more perimeters when needed for avoiding gaps in sloping walls.";
     def->cli = "extra-perimeters!";
     def->default_value = new ConfigOptionBool(true);
+    
+    def = this->add("only_one_perimeter_top", coBool);
+    def->label = "Only one perimeter on Top surfaces";
+    def->category = "Layers and Perimeters";
+    def->tooltip = "Use only one perimeter on flat top surface, to let more space to the top infill pattern.";
+    def->cli = "one-top-perimeters!";
+    def->default_value = new ConfigOptionBool(true);
 
     def = this->add("extruder", coInt);
     def->gui_type = "i_enum_open";
@@ -472,6 +481,7 @@ PrintConfigDef::PrintConfigDef()
     def->max = 100;
     def->enum_values.push_back("0");
     def->enum_values.push_back("5");
+    def->enum_values.push_back("7.5");
     def->enum_values.push_back("10");
     def->enum_values.push_back("15");
     def->enum_values.push_back("20");
@@ -486,6 +496,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("100");
     def->enum_labels.push_back("0%");
     def->enum_labels.push_back("5%");
+    def->enum_labels.push_back("7.5");
     def->enum_labels.push_back("10%");
     def->enum_labels.push_back("15%");
     def->enum_labels.push_back("20%");
@@ -522,6 +533,8 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
+    def->enum_values.push_back("gyroidthin");
+    def->enum_values.push_back("gyroidthick");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
@@ -534,6 +547,8 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Honeycomb");
     def->enum_labels.push_back("3D Honeycomb");
+    def->enum_labels.push_back("Thin Gyroid");
+    def->enum_labels.push_back("Thick Gyroid");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
@@ -787,16 +802,16 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(100);
 
     def = this->add("max_layer_height", coFloats);
-	def->label = "Max";
-	def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
-	def->sidetext = "mm";
-	def->cli = "max-layer-height=f@";
-	def->min = 0;
-	{
-		ConfigOptionFloats* opt = new ConfigOptionFloats();
-		opt->values.push_back(0.3);
-		def->default_value = opt;
-	}
+    def->label = "Max";
+    def->tooltip = "This is the highest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are slightly smaller than nozzle_diameter.";
+    def->sidetext = "mm";
+    def->cli = "max-layer-height=f@";
+    def->min = 0;
+    {
+        ConfigOptionFloats* opt = new ConfigOptionFloats();
+        opt->values.push_back(0.3);
+        def->default_value = opt;
+    }
 
     def = this->add("max_print_speed", coFloat);
     def->label = "Max print speed";
@@ -826,16 +841,16 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionInt(35);
 
     def = this->add("min_layer_height", coFloats);
-	def->label = "Min";
-	def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
-	def->sidetext = "mm";
-	def->cli = "min-layer-height=f@";
-	def->min = 0;
-	{
-		ConfigOptionFloats* opt = new ConfigOptionFloats();
-		opt->values.push_back(0.15);
-		def->default_value = opt;
-	}
+    def->label = "Min";
+    def->tooltip = "This is the lowest printable layer height for this extruder and limits the resolution for adaptive slicing. Typical values are 0.1 or 0.05.";
+    def->sidetext = "mm";
+    def->cli = "min-layer-height=f@";
+    def->min = 0;
+    {
+        ConfigOptionFloats* opt = new ConfigOptionFloats();
+        opt->values.push_back(0.15);
+        def->default_value = opt;
+    }
 
     def = this->add("min_print_speed", coFloat);
     def->label = "Min print speed";

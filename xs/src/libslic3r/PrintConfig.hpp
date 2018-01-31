@@ -34,9 +34,10 @@ enum HostType {
 };
 
 enum InfillPattern {
-    ipRectilinear, ipGrid, ipAlignedRectilinear,
+    ipRectilinear, ipSmooth, ipGrid, ipAlignedRectilinear,
     ipTriangles, ipStars, ipCubic, 
     ipConcentric, ipHoneycomb, ip3DHoneycomb,
+    ipGyroidThin, ipGyroidThick,
     ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
 };
 
@@ -72,6 +73,7 @@ template<> inline t_config_enum_values ConfigOptionEnum<HostType>::get_enum_valu
 template<> inline t_config_enum_values ConfigOptionEnum<InfillPattern>::get_enum_values() {
     t_config_enum_values keys_map;
     keys_map["rectilinear"]         = ipRectilinear;
+    keys_map["smooth"]              = ipSmooth;
     keys_map["alignedrectilinear"]  = ipAlignedRectilinear;
     keys_map["grid"]                = ipGrid;
     keys_map["triangles"]           = ipTriangles;
@@ -80,6 +82,8 @@ template<> inline t_config_enum_values ConfigOptionEnum<InfillPattern>::get_enum
     keys_map["concentric"]          = ipConcentric;
     keys_map["honeycomb"]           = ipHoneycomb;
     keys_map["3dhoneycomb"]         = ip3DHoneycomb;
+    keys_map["gyroidthin"]          = ipGyroidThin;
+    keys_map["gyroidthick"]         = ipGyroidThick;
     keys_map["hilbertcurve"]        = ipHilbertCurve;
     keys_map["archimedeanchords"]   = ipArchimedeanChords;
     keys_map["octagramspiral"]      = ipOctagramSpiral;
@@ -238,6 +242,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
     ConfigOptionBool                extra_perimeters;
+    ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
     ConfigOptionPercent             fill_density;
     ConfigOptionBool                fill_gaps;
@@ -279,6 +284,7 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
         OPT_PTR(extra_perimeters);
+        OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);
         OPT_PTR(fill_density);
         OPT_PTR(fill_gaps);

@@ -48,6 +48,8 @@ class ExtrusionEntityCollection : public ExtrusionEntity
     size_t items_count() const;
     void flatten(ExtrusionEntityCollection* retval) const;
     ExtrusionEntityCollection flatten() const;
+    void flattenIfSortable(ExtrusionEntityCollection* retval) const;
+    ExtrusionEntityCollection flattenIfSortable() const;
     double min_mm3_per_mm() const;
     Polyline as_polyline() const {
         CONFESS("Calling as_polyline() on a ExtrusionEntityCollection");

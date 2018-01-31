@@ -15,14 +15,14 @@ public:
     virtual bool can_solid() const { return true; };
 
 protected:
-	virtual void _fill_surface_single(
-	    unsigned int                     thickness_layers,
-	    const direction_t               &direction, 
-	    ExPolygon                       &expolygon, 
-	    Polylines*                      polylines_out);
+    virtual void _fill_surface_single(
+        unsigned int                     thickness_layers,
+        const direction_t               &direction, 
+        ExPolygon                       &expolygon, 
+        Polylines*                      polylines_out);
     
-	void _fill_single_direction(ExPolygon expolygon, const direction_t &direction,
-	    coord_t x_shift, Polylines* out);
+    void _fill_single_direction(ExPolygon expolygon, const direction_t &direction,
+        coord_t x_shift, Polylines* out);
 };
 
 class FillAlignedRectilinear : public FillRectilinear
@@ -33,7 +33,7 @@ public:
     virtual bool can_solid() const { return false; };
 
 protected:
-	// Keep the angle constant in all layers.
+    // Keep the angle constant in all layers.
     virtual float _layer_angle(size_t idx) const { return 0.f; };
 };
 
@@ -45,14 +45,14 @@ public:
     virtual bool can_solid() const { return false; };
 
 protected:
-	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    // The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
     virtual float _layer_angle(size_t idx) const { return 0.f; }
-	
-	virtual void _fill_surface_single(
-	    unsigned int                     thickness_layers,
-	    const std::pair<float, Point>   &direction, 
-	    ExPolygon                       &expolygon, 
-	    Polylines*                      polylines_out);
+    
+    virtual void _fill_surface_single(
+        unsigned int                     thickness_layers,
+        const std::pair<float, Point>   &direction, 
+        ExPolygon                       &expolygon, 
+        Polylines*                      polylines_out);
 };
 
 class FillTriangles : public FillRectilinear
@@ -63,14 +63,14 @@ public:
     virtual bool can_solid() const { return false; };
 
 protected:
-	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    // The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
     virtual float _layer_angle(size_t idx) const { return 0.f; }
-	
-	virtual void _fill_surface_single(
-	    unsigned int                     thickness_layers,
-	    const std::pair<float, Point>   &direction, 
-	    ExPolygon                       &expolygon, 
-	    Polylines*                      polylines_out);
+    
+    virtual void _fill_surface_single(
+        unsigned int                     thickness_layers,
+        const std::pair<float, Point>   &direction, 
+        ExPolygon                       &expolygon, 
+        Polylines*                      polylines_out);
 };
 
 class FillStars : public FillRectilinear
@@ -81,14 +81,14 @@ public:
     virtual bool can_solid() const { return false; };
 
 protected:
-	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    // The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
     virtual float _layer_angle(size_t idx) const { return 0.f; }
-	
-	virtual void _fill_surface_single(
-	    unsigned int                     thickness_layers,
-	    const std::pair<float, Point>   &direction, 
-	    ExPolygon                       &expolygon, 
-	    Polylines*                      polylines_out);
+    
+    virtual void _fill_surface_single(
+        unsigned int                     thickness_layers,
+        const std::pair<float, Point>   &direction, 
+        ExPolygon                       &expolygon, 
+        Polylines*                      polylines_out);
 };
 
 class FillCubic : public FillRectilinear
@@ -99,14 +99,28 @@ public:
     virtual bool can_solid() const { return false; };
 
 protected:
-	// The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
+    // The grid fill will keep the angle constant between the layers,; see the implementation of Slic3r::Fill.
     virtual float _layer_angle(size_t idx) const { return 0.f; }
+    
+    virtual void _fill_surface_single(
+        unsigned int                     thickness_layers,
+        const std::pair<float, Point>   &direction, 
+        ExPolygon                       &expolygon, 
+        Polylines*                      polylines_out);
+};
+
+class FillSmooth : public FillRectilinear2
+{
+public:
+    virtual Fill* clone() const { return new FillSmooth(*this); };
+    virtual ~FillSmooth() {}
+    virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
+    virtual bool can_create_extrusion_entity_collection() const { return true; }
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out );
 	
-	virtual void _fill_surface_single(
-	    unsigned int                     thickness_layers,
-	    const std::pair<float, Point>   &direction, 
-	    ExPolygon                       &expolygon, 
-	    Polylines*                      polylines_out);
+protected:
+    virtual ExtrusionEntityCollection* create_extrusions(const float percent_flow_thick, const float percent_flow_thin, Polylines &polylines_thick, Polylines &polylines_thin, const Flow &flow);
+
 };
 
 }; // namespace Slic3r

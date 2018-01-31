@@ -233,6 +233,7 @@ LayerRegion::make_fill()
             (perimeter_spacing + scale_(f->min_spacing))/2);
 
         f->layer_id = this->layer()->id();
+		f->layer_height = this->layer()->object()->config.layer_height.value;
         f->z        = this->layer()->print_z;
         f->angle    = Geometry::deg2rad(this->region()->config.fill_angle.value);
         
@@ -253,9 +254,6 @@ LayerRegion::make_fill()
             << " angle: " << f->angle << " min-spacing: " << f->min_spacing
             << " endpoints_overlap: " << f->endpoints_overlap << std::endl << std::endl;
         */
-        Polylines polylines = f->fill_surface(surface);
-        if (polylines.empty())
-            continue;
 
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)
@@ -266,28 +264,38 @@ LayerRegion::make_fill()
         } else {
             flow = Flow::new_from_spacing(f->spacing(), flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
         }
-
-        // Save into layer.
-        ExtrusionEntityCollection* coll = new ExtrusionEntityCollection();
-        coll->no_sort = f->no_sort();
-        this->fills.entities.push_back(coll);
         
-        {
-            ExtrusionRole role;
-            if (is_bridge) {
-                role = erBridgeInfill;
-            } else if (surface.is_solid()) {
-                role = (surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill;
-            } else {
-                role = erInternalInfill;
+        //check if the infill want to be able to create the whole extrusion or we can do the standard work.
+        if(f->can_create_extrusion_entity_collection()){
+            flow.bridge = is_bridge; //i'm not 100% sure of that line [merill]
+            f->fill_surface_extrusion(&surface, params, flow, this->fills);
+        }else{
+            Polylines polylines = f->fill_surface(&surface, params);
+            if (polylines.empty())
+                continue;
+
+            // Save into layer.
+            ExtrusionEntityCollection* coll = new ExtrusionEntityCollection();
+            coll->no_sort = f->no_sort();
+            this->fills.entities.push_back(coll);
+            
+            {
+                ExtrusionRole role;
+                if (is_bridge) {
+                    role = erBridgeInfill;
+                } else if (surface.is_solid()) {
+                    role = (surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill;
+                } else {
+                    role = erInternalInfill;
+                }
+                
+                ExtrusionPath templ(role);
+                templ.mm3_per_mm    = flow.mm3_per_mm();
+                templ.width         = flow.width;
+                templ.height        = flow.height;
+                
+                coll->append(STDMOVE(polylines), templ);
             }
-            
-            ExtrusionPath templ(role);
-            templ.mm3_per_mm    = flow.mm3_per_mm();
-            templ.width         = flow.width;
-            templ.height        = flow.height;
-            
-            coll->append(STDMOVE(polylines), templ);
         }
     }
 

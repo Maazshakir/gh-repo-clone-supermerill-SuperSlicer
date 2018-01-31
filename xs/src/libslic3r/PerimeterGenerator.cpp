@@ -54,7 +54,9 @@ PerimeterGenerator::process()
     for (Surfaces::const_iterator surface = this->slices->surfaces.begin();
         surface != this->slices->surfaces.end(); ++surface) {
         // detect how many perimeters must be generated for this island
-        const int loop_number = this->config->perimeters + surface->extra_perimeters -1;  // 0-indexed loops
+        const int loop_number =  (config->only_one_perimeter_top && surface.is_external() && !surface.is_bridge() && surface.surface_type == stTop) ? 
+			0 : // only 1 perimeter for top surface if the option is set (0-indexed loops)
+			(this->config->perimeters + surface.extra_perimeters -1);  // normal case (0-indexed loops)
         
         Polygons gaps;
         

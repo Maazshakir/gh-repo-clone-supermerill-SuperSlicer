@@ -36,6 +36,10 @@ Fill::new_from_type(const InfillPattern type)
         case ipHilbertCurve:        return new FillHilbertCurve();
         case ipOctagramSpiral:      return new FillOctagramSpiral();
         
+        case ipSmooth:              return new FillSmooth();
+        case ipGyroidThin:          return new FillGyroidThin();
+        case ipGyroidThick:         return new FillGyroidThick();
+        
         default: CONFESS("unknown type"); return NULL;
     }
 }

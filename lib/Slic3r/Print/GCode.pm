@@ -691,10 +691,24 @@ sub _extrude_infill {
         $self->_gcodegen->config->apply_static($self->print->get_region($region_id)->config);
         
         my $collection = Slic3r::ExtrusionPath::Collection->new(@{ $entities_by_region->{$region_id} });
-        for my $fill (@{$collection->chained_path_from($self->_gcodegen->last_pos, 0)}) {
+		
+        $gcode .= $self->_extrude_infill_recurs($_, $collection) ;
+		
+    }
+    return $gcode;
+}
+
+sub _extrude_infill_recurs {
+    my ($self, $collectionIn) = @_;
+    
+    my $gcode = "";
+        
+        my $collection = collectionIn;
+		if($collection->no_sort) $collection->chained_path_from($self->_gcodegen->last_pos, 0) ;
+		
+        for my $fill (@{$collection->entities}) {
             if ($fill->isa('Slic3r::ExtrusionPath::Collection')) {
-                $gcode .= $self->_gcodegen->extrude($_, 'infill', -1) 
-                    for @{$fill->chained_path_from($self->_gcodegen->last_pos, 0)};
+                $gcode .= $self->_extrude_infill_recurs($_, $fill) ;
             } else {
                 $gcode .= $self->_gcodegen->extrude($fill, 'infill', -1) ;
             }

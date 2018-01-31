@@ -11,6 +11,7 @@
 #include "../ExPolygon.hpp"
 #include "../Polyline.hpp"
 #include "../PrintConfig.hpp"
+#include "../Flow.hpp"
 
 namespace Slic3r {
 
@@ -25,6 +26,9 @@ public:
     
     // Z coordinate of the top print surface, in unscaled coordinates
     coordf_t    z;
+    
+    // For gyroid, to avoid impossible slopes, in unscaled value
+    coordf_t      layer_height;
     
     // in unscaled coordinates
     coordf_t    min_spacing;
@@ -79,6 +83,12 @@ public:
 
     // Perform the fill.
     virtual Polylines fill_surface(const Surface &surface);
+
+    // If this algorithm want to create an ExtrusionEntityCollection instead of a Polylines.
+    virtual bool can_create_extrusion_entity_collection() const { return false; }
+    
+    // If canCreateExtrusionEntityCollection return true, this method have to return a correct new ExtrusionEntityCollection.
+    virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out ){}
     
     coordf_t spacing() const { return this->_spacing; };
     

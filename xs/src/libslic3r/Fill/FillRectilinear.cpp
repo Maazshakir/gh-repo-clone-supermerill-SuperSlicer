@@ -537,4 +537,95 @@ void FillCubic::_fill_surface_single(
     fill2._fill_single_direction(expolygon, direction2, -x_shift, out);
 }
 
+Polylines FillSmooth::fill_surface(const Surface *surface, const FillParams &params)
+{
+    //ERROR: you shouldn't call that. Default to the rectilinear one.
+    printf("FillSmooth::fill_surface() : you call the wrong method (fill_surface instead of fill_surface_extrusion).\n");
+    Polylines polylines_out;
+    if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out)) {
+        printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
+    }
+    return polylines_out;
+}
+
+void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out )
+{
+    //second pass with half layer width
+    FillParams params2 = params;
+    params2.density *= 2.0f;
+    Polylines polylines_out;
+    Polylines polylines_outNoExtrud;
+    
+    //choose between v1 (no extrusion on second pass) and v2 (small extrusion on second pass)
+    if(surface->area() < (scale_(this->spacing)*scale_(this->spacing)) * 200){
+        //v1 (only if < 200 nozzle² (for a 0.4 nozzle, it's 32 mm² ~ 0.32 cm² ~ a 5mmx5mm cube on a notebook)
+        //TODO: also use the v1 if the surface is too narrow (no 5x5mm cube can fit inside)
+        
+        // a complete perimeter overlap (no extrusion anyway)
+        Surface surfaceIncr(*surface);
+        Polygons paths = offset(surfaceIncr.expolygon.contour, scale_(this->spacing)); 
+        surfaceIncr.expolygon.contour = paths[0];
+        
+        if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
+            ! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
+            printf("FillSmooth::fill_surface() failed to fill a region.\n");
+        } 
+        
+        if (polylines_out.empty())
+            return;
+        
+        out.entities.push_back(create_extrusions(1.f, 0.f, polylines_out, polylines_outNoExtrud, flow));
+    }else{
+        //v2
+        
+         //a small overlap
+        Surface surfaceIncr(*surface);
+        Polygons paths = offset(surfaceIncr.expolygon.contour, scale_((float)this->spacing * 0.25f));
+        surfaceIncr.expolygon.contour = paths[0];
+        
+        if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
+            ! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
+            printf("FillSmooth::fill_surface() failed to fill a region.\n");
+        } 
+        
+        if (polylines_out.empty())
+            return;
+        
+        out.entities.push_back(create_extrusions(0.95f, 0.15f, polylines_out, polylines_outNoExtrud, flow));
+    }
+    
+}
+
+ExtrusionEntityCollection* FillSmooth::create_extrusions(const float flowThickP, const float flowThinP, Polylines &polylines_thick, Polylines &polylines_thin, const Flow &flow){
+    
+    ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
+    //you don't want to sort the extrusions: big infill first, quick weak second
+    eecroot->no_sort = true;
+    
+    // Save into layer normal rectilinear path.
+    ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+    eecroot->entities.push_back(eec);
+    eec->no_sort = true;
+    ExtrusionRole role = flow.bridge ? erBridgeInfill : erTopSolidInfill;
+    ExtrusionPath templ(role);
+    templ.mm3_per_mm    = flow.mm3_per_mm()*flowThickP;
+    templ.width         = flow.width*1.f;
+    templ.height        = flow.height;
+    // print thick
+    coll->append(STDMOVE(polylines_thick), templ);
+        
+    // Save into layer smoothing path.
+    eec = new ExtrusionEntityCollection();
+    eecroot->entities.push_back(eec);
+    eec->no_sort = true;
+    role = erInternalInfill;
+    ExtrusionPath templ(role);
+    templ.mm3_per_mm    = flow.mm3_per_mm()*flowThinP;
+    templ.width         = flow.width*0.15f;
+    // print thin
+    coll->append(STDMOVE(polylines_thin), templ);
+    
+    return eecroot;
+}
+
 } // namespace Slic3r
