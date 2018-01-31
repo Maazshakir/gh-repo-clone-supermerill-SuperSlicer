@@ -76,6 +76,7 @@ public:
     virtual Polylines fill_surface(const Surface *surface, const FillParams &params);
     virtual bool can_create_extrusion_entity_collection() const { return true; }
     virtual void fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out );
+    virtual ExtrusionEntityCollection* create_extrusions(const float percent_flow_thick, const float percent_flow_thin, Polylines &polylines_thick, Polylines &polylines_thin, const Flow &flow);
 
 };
 
