@@ -1001,7 +1001,7 @@ sub _update {
     my $have_perimeters = $config->perimeters > 0;
     $self->get_field($_)->toggle($have_perimeters)
         for qw(extra_perimeters ensure_vertical_shell_thickness thin_walls overhangs seam_position external_perimeters_first
-            external_perimeter_extrusion_width
+            external_perimeter_extrusion_width only_one_perimeter_top
             perimeter_speed small_perimeter_speed external_perimeter_speed);
     
     my $have_infill = $config->fill_density > 0;
