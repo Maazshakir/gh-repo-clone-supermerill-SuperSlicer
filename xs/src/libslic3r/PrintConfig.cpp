@@ -316,7 +316,7 @@ PrintConfigDef::PrintConfigDef()
                    "is supported.";
     def->cli = "extra-perimeters!";
     def->default_value = new ConfigOptionBool(true);
-	
+    
     def = this->add("only_one_perimeter_top", coBool);
     def->label = "Only one perimeter on Top surfaces";
     def->category = "Layers and Perimeters";

@@ -215,7 +215,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         }
 
         f->layer_id = layerm.layer()->id();
-		f->layer_height = layerm.layer()->object()->config.layer_height.value;
+        f->layer_height = layerm.layer()->object()->config.layer_height.value;
         f->z = layerm.layer()->print_z;
         f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value));
         // Maximum length of the perimeter segment linking two infill lines.
@@ -229,42 +229,42 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         params.density = 0.01 * density;
 //        params.dont_adjust = true;
         params.dont_adjust = false;
-		
-		
-		// calculate actual flow from spacing (which might have been adjusted by the infill
-		// pattern generator)
-		if (using_internal_flow) {
-			// if we used the internal flow we're not doing a solid infill
-			// so we can safely ignore the slight variation that might have
-			// been applied to $f->flow_spacing
-		} else {
-			flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
-		}
-		
-		//check if the infill want to be able to create the whole extrusion or we can do the standard work.
-		if(f->can_create_extrusion_entity_collection()){
-			flow.bridge = is_bridge; //i'm not 100% sure of that line [merill]
-			f->fill_surface_extrusion(&surface, params, flow, out);
-		}else{
-			Polylines polylines = f->fill_surface(&surface, params);
-			if (polylines.empty())
-				continue;
+        
+        
+        // calculate actual flow from spacing (which might have been adjusted by the infill
+        // pattern generator)
+        if (using_internal_flow) {
+            // if we used the internal flow we're not doing a solid infill
+            // so we can safely ignore the slight variation that might have
+            // been applied to $f->flow_spacing
+        } else {
+            flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
+        }
+        
+        //check if the infill want to be able to create the whole extrusion or we can do the standard work.
+        if(f->can_create_extrusion_entity_collection()){
+            flow.bridge = is_bridge; //i'm not 100% sure of that line [merill]
+            f->fill_surface_extrusion(&surface, params, flow, out);
+        }else{
+            Polylines polylines = f->fill_surface(&surface, params);
+            if (polylines.empty())
+                continue;
 
 
-			// Save into layer.
-			auto *eec = new ExtrusionEntityCollection();
-			out.entities.push_back(eec);
-			// Only concentric fills are not sorted.
-			eec->no_sort = f->no_sort();
-			extrusion_entities_append_paths(
-				eec->entities, STDMOVE(polylines),
-				is_bridge ?
-					erBridgeInfill :
-					(surface.is_solid() ?
-						((surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
-						erInternalInfill),
-				flow.mm3_per_mm(), flow.width, flow.height);
-		}
+            // Save into layer.
+            auto *eec = new ExtrusionEntityCollection();
+            out.entities.push_back(eec);
+            // Only concentric fills are not sorted.
+            eec->no_sort = f->no_sort();
+            extrusion_entities_append_paths(
+                eec->entities, STDMOVE(polylines),
+                is_bridge ?
+                    erBridgeInfill :
+                    (surface.is_solid() ?
+                        ((surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
+                        erInternalInfill),
+                flow.mm3_per_mm(), flow.width, flow.height);
+        }
     }
 
     // add thin fill regions

@@ -47,8 +47,8 @@ public:
     size_t      layer_id;
     // Z coordinate of the top print surface, in unscaled coordinates
     coordf_t    z;
-	// For gyroid, to avoid impossible slopes, in unscaled value
-	coordf_t      layer_height;
+    // For gyroid, to avoid impossible slopes, in unscaled value
+    coordf_t      layer_height;
     // in unscaled coordinates
     coordf_t    spacing;
     // infill / perimeter overlap, in unscaled coordinates
@@ -83,12 +83,12 @@ public:
 
     // If this algorithm want to create an ExtrusionEntityCollection instead of a Polylines.
     virtual bool can_create_extrusion_entity_collection() const { return false; }
-	
+    
     // If canCreateExtrusionEntityCollection return true, this method have to return a correct new ExtrusionEntityCollection.
     virtual void fill_surface_extrusion(const Surface *surface, 
-	const FillParams &params, 
-	const Flow &flow, 
-	ExtrusionEntityCollection &out ){}
+    const FillParams &params, 
+    const Flow &flow, 
+    ExtrusionEntityCollection &out ){}
 
 protected:
     Fill() :
@@ -127,8 +127,8 @@ public:
         // for both positive and negative numbers. Here we want to round down for negative
         // numbers as well.
         coord_t aligned = (coord < 0) ?
-        		((coord - spacing + 1) / spacing) * spacing :
-        		(coord / spacing) * spacing;
+                ((coord - spacing + 1) / spacing) * spacing :
+                (coord / spacing) * spacing;
         assert(aligned <= coord);
         return aligned;
     }
