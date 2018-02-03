@@ -947,7 +947,7 @@ sub _update {
     
     if ($config->fill_density == 100
         && (!first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{top_fill_pattern}{values}}
-			|| !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{bottom_fill_pattern}{values}})) {
+            || !first { $_ eq $config->fill_pattern } @{$Slic3r::Config::Options->{bottom_fill_pattern}{values}})) {
         my $dialog = Wx::MessageDialog->new($self,
             "The " . $config->fill_pattern . " infill pattern is not supposed to work at 100% density.\n"
             . "\nShall I switch to rectilinear fill pattern?",

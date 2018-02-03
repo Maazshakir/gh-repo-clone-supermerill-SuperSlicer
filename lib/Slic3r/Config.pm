@@ -278,7 +278,7 @@ sub validate {
     # --top-fill-pattern
     die "Invalid value for --top-fill-pattern\n"
         if !first { $_ eq $self->top_fill_pattern } @{$Options->{top_fill_pattern}{values}};
-	
+    
     # --bottom-fill-pattern
     die "Invalid value for --bottom-fill-pattern\n"
         if !first { $_ eq $self->bottom_fill_pattern } @{$Options->{bottom_fill_pattern}{values}};

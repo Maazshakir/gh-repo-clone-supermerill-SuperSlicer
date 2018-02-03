@@ -171,7 +171,7 @@ std::string WipeTowerIntegration::append_tcr(GCode &gcodegen, const WipeTower::T
     // Inform the G-code writer about the changes done behind its back.
     gcode += tcr.gcode;
     // Let the m_writer know the current extruder_id, but ignore the generated G-code.
-	if (new_extruder_id >= 0 && gcodegen.writer().need_toolchange(new_extruder_id))
+    if (new_extruder_id >= 0 && gcodegen.writer().need_toolchange(new_extruder_id))
         gcodegen.writer().toolchange(new_extruder_id);
     // A phony move to the end position at the wipe tower.
     gcodegen.writer().travel_to_xy(Pointf(tcr.end_pos.x, tcr.end_pos.y));
@@ -236,12 +236,12 @@ G1 E-4 F1000.0\n";
 std::string WipeTowerIntegration::tool_change(GCode &gcodegen, int extruder_id, bool finish_layer)
 {
     std::string gcode;
-	assert(m_layer_idx >= 0 && m_layer_idx <= m_tool_changes.size());
+    assert(m_layer_idx >= 0 && m_layer_idx <= m_tool_changes.size());
     if (! m_brim_done || gcodegen.writer().need_toolchange(extruder_id) || finish_layer) {
-		if (m_layer_idx < m_tool_changes.size()) {
-			assert(m_tool_change_idx < m_tool_changes[m_layer_idx].size());
-			gcode += append_tcr(gcodegen, m_tool_changes[m_layer_idx][m_tool_change_idx++], extruder_id);
-		}
+        if (m_layer_idx < m_tool_changes.size()) {
+            assert(m_tool_change_idx < m_tool_changes[m_layer_idx].size());
+            gcode += append_tcr(gcodegen, m_tool_changes[m_layer_idx][m_tool_change_idx++], extruder_id);
+        }
         m_brim_done = true;
     }
     return gcode;
@@ -514,19 +514,19 @@ bool GCode::_do_export(Print &print, FILE *file)
     unsigned int final_extruder_id   = (unsigned int)-1;
     size_t       initial_print_object_id = 0;
     if (print.config.complete_objects.value) {
-		// Find the 1st printing object, find its tool ordering and the initial extruder ID.
-		for (; initial_print_object_id < print.objects.size(); ++initial_print_object_id) {
-			tool_ordering = ToolOrdering(*print.objects[initial_print_object_id], initial_extruder_id);
-			if ((initial_extruder_id = tool_ordering.first_extruder()) != (unsigned int)-1)
-				break;
-		}
-	} else {
-		// Find tool ordering for all the objects at once, and the initial extruder ID.
+        // Find the 1st printing object, find its tool ordering and the initial extruder ID.
+        for (; initial_print_object_id < print.objects.size(); ++initial_print_object_id) {
+            tool_ordering = ToolOrdering(*print.objects[initial_print_object_id], initial_extruder_id);
+            if ((initial_extruder_id = tool_ordering.first_extruder()) != (unsigned int)-1)
+                break;
+        }
+    } else {
+        // Find tool ordering for all the objects at once, and the initial extruder ID.
         // If the tool ordering has been pre-calculated by Print class for wipe tower already, reuse it.
-		tool_ordering = print.m_tool_ordering.empty() ?
+        tool_ordering = print.m_tool_ordering.empty() ?
             ToolOrdering(print, initial_extruder_id) :
             print.m_tool_ordering;
-		initial_extruder_id = tool_ordering.first_extruder();
+        initial_extruder_id = tool_ordering.first_extruder();
     }
     if (initial_extruder_id == (unsigned int)-1) {
         // Nothing to print!
@@ -690,7 +690,7 @@ bool GCode::_do_export(Print &print, FILE *file)
         if (print.has_wipe_tower() && ! layers_to_print.empty()) {
             if (tool_ordering.has_wipe_tower()) {
                 m_wipe_tower.reset(new WipeTowerIntegration(print.config, *print.m_wipe_tower_priming.get(), print.m_wipe_tower_tool_changes, *print.m_wipe_tower_final_purge.get()));
-			    write(file, m_wipe_tower->prime(*this));
+                write(file, m_wipe_tower->prime(*this));
                 // Verify, whether the print overaps the priming extrusions.
                 BoundingBoxf bbox_print(get_print_extrusions_extents(print));
                 coordf_t twolayers_printz = ((layers_to_print.size() == 1) ? layers_to_print.front() : layers_to_print[1]).first + EPSILON;
@@ -900,7 +900,7 @@ void GCode::process_layer(
         gcode += pp.process(print.config.before_layer_gcode.value, m_writer.extruder()->id()) + "\n";
     }
     gcode += this->change_layer(print_z);  // this will increase m_layer_index
-	m_layer = &layer;
+    m_layer = &layer;
     if (! print.config.layer_gcode.value.empty()) {
         PlaceholderParser pp(m_placeholder_parser);
         pp.set("layer_num", m_layer_index);
@@ -927,18 +927,18 @@ void GCode::process_layer(
     // Extrude skirt at the print_z of the raft layers and normal object layers
     // not at the print_z of the interlaced support material layers.
     bool extrude_skirt = 
-		! print.skirt.entities.empty() &&
+        ! print.skirt.entities.empty() &&
         // Not enough skirt layers printed yet.
         (m_skirt_done.size() < print.config.skirt_height.value || print.has_infinite_skirt()) &&
         // This print_z has not been extruded yet
-		(m_skirt_done.empty() ? 0. : m_skirt_done.back()) < print_z - EPSILON &&
+        (m_skirt_done.empty() ? 0. : m_skirt_done.back()) < print_z - EPSILON &&
         // and this layer is the 1st layer, or it is an object layer, or it is a raft layer.
         (first_layer || object_layer != nullptr || support_layer->id() < m_config.raft_layers.value);
     std::map<unsigned int, std::pair<size_t, size_t>> skirt_loops_per_extruder;
     coordf_t                                          skirt_height = 0.;
     if (extrude_skirt) {
         // Fill in skirt_loops_per_extruder.
-		skirt_height = print_z - (m_skirt_done.empty() ? 0. : m_skirt_done.back());
+        skirt_height = print_z - (m_skirt_done.empty() ? 0. : m_skirt_done.back());
         m_skirt_done.push_back(print_z);
         if (first_layer) {
             // Prime the extruders over the skirt lines.
@@ -952,8 +952,8 @@ void GCode::process_layer(
                     break;
                 }
             size_t n_loops = print.skirt.entities.size();
-			if (n_loops <= extruder_ids.size()) {
-				for (size_t i = 0; i < n_loops; ++i)
+            if (n_loops <= extruder_ids.size()) {
+                for (size_t i = 0; i < n_loops; ++i)
                     skirt_loops_per_extruder[extruder_ids[i]] = std::pair<size_t, size_t>(i, i + 1);
             } else {
                 // Assign skirt loops to the extruders.
@@ -1104,9 +1104,9 @@ void GCode::process_layer(
                             point_inside_surface(i, fill->first_point())) {
                             if (islands[i].by_region.empty())
                                 islands[i].by_region.assign(print.regions.size(), ObjectByExtruder::Island::Region());
-							//don't do fill->entities because it will discard no_sort
-							//fill->flattenIfSortable().entities keep no_sort attribute. !! it create a new ExtrusionEntityCollection tree, 
-							//  be careful to delete properly the new(flattenIfSortable()) / old(fill)one (fill) !! (not 100% sure yet) TODO: review
+                            //don't do fill->entities because it will discard no_sort
+                            //fill->flattenIfSortable().entities keep no_sort attribute. !! it create a new ExtrusionEntityCollection tree, 
+                            //  be careful to delete properly the new(flattenIfSortable()) / old(fill)one (fill) !! (not 100% sure yet) TODO: review
                             islands[i].by_region[region_id].infills.append(fill->flattenIfSortable().entities); 
                             break;
                         }
@@ -1167,9 +1167,9 @@ void GCode::process_layer(
         for (const ObjectByExtruder &object_by_extruder : objects_by_extruder_it->second) {
             const size_t       layer_id     = &object_by_extruder - objects_by_extruder_it->second.data();
             const PrintObject *print_object = layers[layer_id].object();
-			if (print_object == nullptr)
-				// This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
-				continue;
+            if (print_object == nullptr)
+                // This layer is empty for this particular object, it has neither object extrusions nor support extrusions at this print_z.
+                continue;
             if (m_enable_analyzer_markers) {
                 // Store the binary pointer to the layer object directly into the G-code to be accessed by the GCodeAnalyzer.
                 char buf[64];
@@ -1337,16 +1337,16 @@ static inline const char* ExtrusionLoopRole2String(const ExtrusionLoopRole role)
 static inline float bspline_kernel(float x)
 {
     x = std::abs(x);
-	if (x < 1.f) {
-		return 1.f - (3.f / 2.f) * x * x + (3.f / 4.f) * x * x * x;
-	}
-	else if (x < 2.f) {
-		x -= 1.f;
-		float x2 = x * x;
-		float x3 = x2 * x;
-		return (1.f / 4.f) - (3.f / 4.f) * x + (3.f / 4.f) * x2 - (1.f / 4.f) * x3;
-	}
-	else
+    if (x < 1.f) {
+        return 1.f - (3.f / 2.f) * x * x + (3.f / 4.f) * x * x * x;
+    }
+    else if (x < 2.f) {
+        x -= 1.f;
+        float x2 = x * x;
+        float x3 = x2 * x;
+        return (1.f / 4.f) - (3.f / 4.f) * x + (3.f / 4.f) * x2 - (1.f / 4.f) * x3;
+    }
+    else
         return 0;
 }
 
@@ -1419,13 +1419,13 @@ static Points::iterator project_point_to_polygon_and_insert(Polygon &polygon, co
                 pt_min = p1;
                 double linv = double(d_seg) / double(l2_seg);
                 pt_min.x = pt.x - coord_t(floor(double(v_seg.y) * linv + 0.5));
-				pt_min.y = pt.y + coord_t(floor(double(v_seg.x) * linv + 0.5));
-				assert(Line(p1, p2).distance_to(pt_min) < scale_(1e-5));
+                pt_min.y = pt.y + coord_t(floor(double(v_seg.x) * linv + 0.5));
+                assert(Line(p1, p2).distance_to(pt_min) < scale_(1e-5));
             }
         }
     }
 
-	assert(i_min != size_t(-1));
+    assert(i_min != size_t(-1));
     if (pt_min.distance_to(polygon.points[i_min]) > eps) {
         // Insert a new point on the segment i_min, i_min+1.
         return polygon.points.insert(polygon.points.begin() + (i_min + 1), pt_min);
@@ -1489,9 +1489,9 @@ std::vector<float> polygon_angles_at_vertices(const Polygon &polygon, const std:
         const Point &p2 = polygon.points[idx_next];
         const Point  v1 = p0.vector_to(p1);
         const Point  v2 = p1.vector_to(p2);
-		int64_t dot   = int64_t(v1.x)*int64_t(v2.x) + int64_t(v1.y)*int64_t(v2.y);
-		int64_t cross = int64_t(v1.x)*int64_t(v2.y) - int64_t(v1.y)*int64_t(v2.x);
-		float angle = float(atan2(double(cross), double(dot)));
+        int64_t dot   = int64_t(v1.x)*int64_t(v2.x) + int64_t(v1.y)*int64_t(v2.y);
+        int64_t cross = int64_t(v1.x)*int64_t(v2.y) - int64_t(v1.y)*int64_t(v2.x);
+        float angle = float(atan2(double(cross), double(dot)));
         angles[idx_curr] = angle;
     }
 
@@ -1826,26 +1826,28 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
         m_config.apply(print.regions[&region - &by_region.front()]->config);
-		ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
+        ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
         gcode += extrude_infill(print, chained);
     }
     return gcode;
 }
 
+//recursive algorithm to explore the collection tree
 std::string GCode::extrude_infill(const Print &print, const ExtrusionEntityCollection &collection)
 {
     std::string gcode;
 
-	ExtrusionEntityCollection chained;
-	if(collection.no_sort) chained = collection;
-	else chained = collection.chained_path_from(m_last_pos, false);
-	for (ExtrusionEntity *fill : chained.entities) {
-		auto *eec = dynamic_cast<ExtrusionEntityCollection*>(fill);
-		if (eec) {
-			gcode += extrude_infill(print, *eec);
-		} else
-			gcode += this->extrude_entity(*fill, "infill");
-	}
+    ExtrusionEntityCollection chained;
+    if(collection.no_sort) chained = collection;
+    else chained = collection.chained_path_from(m_last_pos, false);
+    for (ExtrusionEntity *fill : chained.entities) {
+        auto *eec = dynamic_cast<ExtrusionEntityCollection*>(fill);
+        if (eec) {
+            gcode += extrude_infill(print, *eec);
+        } else {
+            gcode += this->extrude_entity(*fill, "infill");
+        }
+    }
     return gcode;
 }
 
@@ -2032,7 +2034,7 @@ std::string GCode::travel_to(const Point &point, ExtrusionRole role, std::string
     // use G1 because we rely on paths being straight (G0 may make round paths)
     Lines lines = travel.lines();
     for (Lines::const_iterator line = lines.begin(); line != lines.end(); ++line)
-	    gcode += m_writer.travel_to_xy(this->point_to_gcode(line->b), comment);
+        gcode += m_writer.travel_to_xy(this->point_to_gcode(line->b), comment);
     
     return gcode;
 }

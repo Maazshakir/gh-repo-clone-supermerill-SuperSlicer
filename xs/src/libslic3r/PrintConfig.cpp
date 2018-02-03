@@ -280,7 +280,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = "Add more perimeters when needed for avoiding gaps in sloping walls. Slic3r keeps adding perimeters, until more than 70% of the loop immediately above is supported.";
     def->cli = "extra-perimeters!";
     def->default_value = new ConfigOptionBool(true);
-	
+    
     def = this->add("only_one_perimeter_top", coBool);
     def->label = "Only one perimeter on Top surfaces";
     def->category = "Layers and Perimeters";

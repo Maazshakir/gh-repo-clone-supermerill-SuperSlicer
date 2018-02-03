@@ -296,13 +296,13 @@ public:
         polygons_inner = offset(polygons_outer, aoffset2 - aoffset1,
             ClipperLib::jtMiter,
             mitterLimit);
-		// Filter out contours with zero area or small area, contours with 2 points only.
+        // Filter out contours with zero area or small area, contours with 2 points only.
         const double min_area_threshold = 0.01 * aoffset2 * aoffset2;
         remove_small(polygons_outer, min_area_threshold);
         remove_small(polygons_inner, min_area_threshold);
         remove_sticks(polygons_outer);
         remove_sticks(polygons_inner);
-		n_contours_outer = polygons_outer.size();
+        n_contours_outer = polygons_outer.size();
         n_contours_inner = polygons_inner.size();
         n_contours = n_contours_outer + n_contours_inner;
         polygons_ccw.assign(n_contours, false);
@@ -657,32 +657,32 @@ static inline coordf_t measure_perimeter_segment_on_vertical_line_length(
 // The first point (the point of iIntersection) will not be inserted,
 // the last point will be inserted.
 static inline void emit_perimeter_segment_on_vertical_line(
-	const ExPolygonWithOffset                     &poly_with_offset,
-	const std::vector<SegmentedIntersectionLine>  &segs,
-	size_t                                         iVerticalLine,
-	size_t                                         iInnerContour,
-	size_t                                         iIntersection,
-	size_t                                         iIntersection2,
-	Polyline                                      &out,
-	bool                                           forward)
+    const ExPolygonWithOffset                     &poly_with_offset,
+    const std::vector<SegmentedIntersectionLine>  &segs,
+    size_t                                         iVerticalLine,
+    size_t                                         iInnerContour,
+    size_t                                         iIntersection,
+    size_t                                         iIntersection2,
+    Polyline                                      &out,
+    bool                                           forward)
 {
-	const SegmentedIntersectionLine &il = segs[iVerticalLine];
-	const SegmentIntersection       &itsct = il.intersections[iIntersection];
-	const SegmentIntersection       &itsct2 = il.intersections[iIntersection2];
-	const Polygon                   &poly = poly_with_offset.contour(iInnerContour);
-	assert(itsct.is_inner());
-	assert(itsct2.is_inner());
-	assert(itsct.type != itsct2.type);
+    const SegmentedIntersectionLine &il = segs[iVerticalLine];
+    const SegmentIntersection       &itsct = il.intersections[iIntersection];
+    const SegmentIntersection       &itsct2 = il.intersections[iIntersection2];
+    const Polygon                   &poly = poly_with_offset.contour(iInnerContour);
+    assert(itsct.is_inner());
+    assert(itsct2.is_inner());
+    assert(itsct.type != itsct2.type);
     assert(itsct.iContour == iInnerContour);
-	assert(itsct.iContour == itsct2.iContour);
-	// Do not append the first point.
-	// out.points.push_back(Point(il.pos, itsct.pos));
-	if (forward)
-		polygon_segment_append(out.points, poly, itsct.iSegment, itsct2.iSegment);
-	else
-		polygon_segment_append_reversed(out.points, poly, itsct.iSegment, itsct2.iSegment);
-	// Append the last point.
-	out.points.push_back(Point(il.pos, itsct2.pos()));
+    assert(itsct.iContour == itsct2.iContour);
+    // Do not append the first point.
+    // out.points.push_back(Point(il.pos, itsct.pos));
+    if (forward)
+        polygon_segment_append(out.points, poly, itsct.iSegment, itsct2.iSegment);
+    else
+        polygon_segment_append_reversed(out.points, poly, itsct.iSegment, itsct2.iSegment);
+    // Append the last point.
+    out.points.push_back(Point(il.pos, itsct2.pos()));
 }
 
 //TBD: For precise infill, measure the area of a slab spanned by an infill line.
@@ -810,9 +810,9 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
     // Intersect a set of euqally spaced vertical lines wiht expolygon.
     // n_vlines = ceil(bbox_width / line_spacing)
     size_t  n_vlines = (bounding_box.max.x - bounding_box.min.x + line_spacing - 1) / line_spacing;
-	coord_t x0 = bounding_box.min.x;
-	if (params.full_infill())
-		x0 += (line_spacing + SCALED_EPSILON) / 2;
+    coord_t x0 = bounding_box.min.x;
+    if (params.full_infill())
+        x0 += (line_spacing + SCALED_EPSILON) / 2;
 
 #ifdef SLIC3R_DEBUG
     static int iRun = 0;
@@ -863,7 +863,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
             assert(ir >= 0 && ir < segs.size());
             for (int i = il; i <= ir; ++ i) {
                 coord_t this_x = segs[i].pos;
-				assert(this_x == i * line_spacing + x0);
+                assert(this_x == i * line_spacing + x0);
                 SegmentIntersection is;
                 is.iContour = iContour;
                 is.iSegment = iSegment;
@@ -1182,7 +1182,7 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
 
             // 3) Sort the intersection points, clear iPrev / iNext / iSegBelow / iSegAbove,
             // if it is preceded by any other intersection point along the contour.
-			unsigned int vert_seg_dir_valid_mask = 
+            unsigned int vert_seg_dir_valid_mask = 
                 (going_up ? 
                     (iSegAbove != -1 && seg.intersections[iAbove].type == SegmentIntersection::INNER_LOW) :
                     (iSegBelow != -1 && seg.intersections[iBelow].type == SegmentIntersection::INNER_HIGH)) ?
@@ -1271,23 +1271,23 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
             if (vert_seg_dir_valid_mask) {
                 bool valid = true;
                 // Verify, that there is no intersection with the inner contour up to the end of the contour segment.
-				// Verify, that the successive segment has not been consumed yet.
-				if (going_up) {
-					if (seg.intersections[iAbove].consumed_vertical_up) {
-						valid = false;
-					} else {
-						for (int i = (int)i_intersection + 1; i < iAbove && valid; ++i)
-							if (seg.intersections[i].is_inner()) 
-								valid = false;
-					}
+                // Verify, that the successive segment has not been consumed yet.
+                if (going_up) {
+                    if (seg.intersections[iAbove].consumed_vertical_up) {
+                        valid = false;
+                    } else {
+                        for (int i = (int)i_intersection + 1; i < iAbove && valid; ++i)
+                            if (seg.intersections[i].is_inner()) 
+                                valid = false;
+                    }
                 } else {
-					if (seg.intersections[iBelow-1].consumed_vertical_up) {
-						valid = false;
-					} else {
-						for (int i = iBelow + 1; i < (int)i_intersection && valid; ++i)
-							if (seg.intersections[i].is_inner()) 
-								valid = false;
-					}
+                    if (seg.intersections[iBelow-1].consumed_vertical_up) {
+                        valid = false;
+                    } else {
+                        for (int i = iBelow + 1; i < (int)i_intersection && valid; ++i)
+                            if (seg.intersections[i].is_inner()) 
+                                valid = false;
+                    }
                 }
                 if (valid) {
                     const Polygon &poly = poly_with_offset.contour(intrsctn->iContour);
@@ -1356,9 +1356,9 @@ bool FillRectilinear2::fill_surface_by_lines(const Surface *surface, const FillP
         assert(! polyline_current->has_duplicate_points());
         // Handle nearly zero length edges.
         if (polyline_current->points.size() <= 1 ||
-        	(polyline_current->points.size() == 2 &&
-        		std::abs(polyline_current->points.front().x - polyline_current->points.back().x) < SCALED_EPSILON &&
-				std::abs(polyline_current->points.front().y - polyline_current->points.back().y) < SCALED_EPSILON))
+            (polyline_current->points.size() == 2 &&
+                std::abs(polyline_current->points.front().x - polyline_current->points.back().x) < SCALED_EPSILON &&
+                std::abs(polyline_current->points.front().y - polyline_current->points.back().y) < SCALED_EPSILON))
             polylines_out.pop_back();
         intrsctn = NULL;
         i_intersection = -1;
@@ -1471,8 +1471,8 @@ Polylines FillCubic::fill_surface(const Surface *surface, const FillParams &para
 
 Polylines FillSmooth::fill_surface(const Surface *surface, const FillParams &params)
 {
-	//ERROR: you shouldn't call that. Default to the rectilinear one.
-	printf("FillSmooth::fill_surface() : you call the wrong method (fill_surface instead of fill_surface_extrusion).\n");
+    //ERROR: you shouldn't call that. Default to the rectilinear one.
+    printf("FillSmooth::fill_surface() : you call the wrong method (fill_surface instead of fill_surface_extrusion).\n");
     Polylines polylines_out;
     if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out)) {
         printf("FillRectilinear2::fill_surface() failed to fill a region.\n");
@@ -1483,80 +1483,80 @@ Polylines FillSmooth::fill_surface(const Surface *surface, const FillParams &par
 
 void FillSmooth::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, ExtrusionEntityCollection &out )
 {
-	//second pass with half layer width
+    //second pass with half layer width
     FillParams params2 = params;
     params2.density *= 2.0f;
     Polylines polylines_out;
     Polylines polylines_outNoExtrud;
-	
-	//choose between v1 (no extrusion on second pass) and v2 (small extrusion on second pass)
-	if(surface->area() < (scale_(this->spacing)*scale_(this->spacing)) * 200){
-		//v1 (only if < 200 nozzle� (for a 0.4 nozzle, it's 32 mm� ~ 0.32 cm� ~ a 5mmx5mm cube on a notebook)
-		//TODO: also use the v1 if the surface is too narrow (no 5x5mm cube can fit inside)
-		
-		// a complete perimeter overlap (no extrusion anyway)
-		Surface surfaceIncr(*surface);
-		Polygons paths = offset(surfaceIncr.expolygon.contour, scale_(this->spacing)); 
-		surfaceIncr.expolygon.contour = paths[0];
-		
-		if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
-			! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
-			printf("FillSmooth::fill_surface() failed to fill a region.\n");
-		} 
-		
-		if (polylines_out.empty())
-			return;
-		
-		out.entities.push_back(create_extrusions(1.f, 0.f, polylines_out, polylines_outNoExtrud, flow));
-	}else{
-		//v2
-		
-		 //a small overlap
-		Surface surfaceIncr(*surface);
-		Polygons paths = offset(surfaceIncr.expolygon.contour, scale_((float)this->spacing * 0.25f));
-		surfaceIncr.expolygon.contour = paths[0];
-		
-		if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
-			! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
-			printf("FillSmooth::fill_surface() failed to fill a region.\n");
-		} 
-		
-		if (polylines_out.empty())
-			return;
-		
-		out.entities.push_back(create_extrusions(0.95f, 0.15f, polylines_out, polylines_outNoExtrud, flow));
-	}
-	
+    
+    //choose between v1 (no extrusion on second pass) and v2 (small extrusion on second pass)
+    if(surface->area() < (scale_(this->spacing)*scale_(this->spacing)) * 200){
+        //v1 (only if < 200 nozzle� (for a 0.4 nozzle, it's 32 mm� ~ 0.32 cm� ~ a 5mmx5mm cube on a notebook)
+        //TODO: also use the v1 if the surface is too narrow (no 5x5mm cube can fit inside)
+        
+        // a (more than) complete perimeter overlap (no extrusion anyway)
+        Surface surfaceIncr(*surface);
+        Polygons paths = offset(surfaceIncr.expolygon.contour, scale_(this->spacing)); 
+        surfaceIncr.expolygon.contour = paths[0];
+        
+        if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
+            ! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
+            printf("FillSmooth::fill_surface() failed to fill a region.\n");
+        } 
+        
+        if (polylines_out.empty())
+            return;
+        
+        out.entities.push_back(create_extrusions(1.f, 0.f, polylines_out, polylines_outNoExtrud, flow));
+    }else{
+        //v2
+        
+         //a small overlap
+        Surface surfaceIncr(*surface);
+        Polygons paths = offset(surfaceIncr.expolygon.contour, scale_((float)this->spacing * 0.25f));
+        surfaceIncr.expolygon.contour = paths[0];
+        
+        if (! fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out) ||
+            ! fill_surface_by_lines(&surfaceIncr, params2, float(M_PI/2), 0.f, polylines_outNoExtrud)) {
+            printf("FillSmooth::fill_surface() failed to fill a region.\n");
+        } 
+        
+        if (polylines_out.empty())
+            return;
+        
+        out.entities.push_back(create_extrusions(0.95f, 0.15f, polylines_out, polylines_outNoExtrud, flow));
+    }
+    
 }
 
 ExtrusionEntityCollection* FillSmooth::create_extrusions(const float flowThickP, const float flowThinP, Polylines &polylines_thick, Polylines &polylines_thin, const Flow &flow){
-	
-	ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
-	//you don't want to sort the extrusions: big infill first, quick weak second
-	eecroot->no_sort = true;
-	
-	// Save into layer.
-	ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
-	eecroot->entities.push_back(eec);
-	eec->no_sort = true;
-	// print thick
-	extrusion_entities_append_paths(
-		eec->entities, STDMOVE(polylines_thick),
-		flow.bridge ? erBridgeInfill : erTopSolidInfill,
-		flow.mm3_per_mm()*flowThickP, (float)flow.width*1.f, (float)flow.height);
-		//note: the flow.width*0.9 is here only for the gui (visual) , the flow.mm3_per_mm() is the real one
-		
-	// Save into layer smoothing path.
-	eec = new ExtrusionEntityCollection();
-	eecroot->entities.push_back(eec);
-	eec->no_sort = true;
-	// print thin
-	extrusion_entities_append_paths(
-		eec->entities, STDMOVE(polylines_thin),
-		erInternalInfill, //speedy (it's generally the most speedy)
-		flow.mm3_per_mm()*flowThinP, (float)flow.width*0.15f, (float)flow.height);
-	
-	return eecroot;
+    
+    ExtrusionEntityCollection *eecroot = new ExtrusionEntityCollection();
+    //you don't want to sort the extrusions: big infill first, quick weak second
+    eecroot->no_sort = true;
+    
+    // Save into layer.
+    ExtrusionEntityCollection *eec = new ExtrusionEntityCollection();
+    eecroot->entities.push_back(eec);
+    eec->no_sort = true;
+    // print thick
+    extrusion_entities_append_paths(
+        eec->entities, STDMOVE(polylines_thick),
+        flow.bridge ? erBridgeInfill : erTopSolidInfill,
+        flow.mm3_per_mm()*flowThickP, (float)flow.width*1.f, (float)flow.height);
+        //note: the flow.width*0.9 is here only for the gui (visual) , the flow.mm3_per_mm() is the real one
+        
+    // Save into layer smoothing path.
+    eec = new ExtrusionEntityCollection();
+    eecroot->entities.push_back(eec);
+    eec->no_sort = true;
+    // print thin
+    extrusion_entities_append_paths(
+        eec->entities, STDMOVE(polylines_thin),
+        erInternalInfill, //speedy (it's generally the most speedy)
+        flow.mm3_per_mm()*flowThinP, (float)flow.width*0.15f, (float)flow.height);
+    
+    return eecroot;
 }
 
 } // namespace Slic3r

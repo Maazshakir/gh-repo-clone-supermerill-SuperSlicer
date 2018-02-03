@@ -94,8 +94,8 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     // set infill angle
     float out_angle = this->angle;
 
-	if (out_angle == FLT_MAX) {
-		//FIXME Vojtech: Add a warning?
+    if (out_angle == FLT_MAX) {
+        //FIXME Vojtech: Add a warning?
         printf("Using undefined infill angle\n");
         out_angle = 0.f;
     }
@@ -103,7 +103,7 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     // Bounding box is the bounding box of a perl object Slic3r::Print::Object (c++ object Slic3r::PrintObject)
     // The bounding box is only undefined in unit tests.
     Point out_shift = empty(this->bounding_box) ? 
-    	surface->expolygon.contour.bounding_box().center() : 
+        surface->expolygon.contour.bounding_box().center() : 
         this->bounding_box.center();
 
 #if 0
@@ -115,8 +115,8 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
 #endif
 
     if (surface->bridge_angle >= 0) {
-	    // use bridge angle
-		//FIXME Vojtech: Add a debugf?
+        // use bridge angle
+        //FIXME Vojtech: Add a debugf?
         // Slic3r::debugf "Filling bridge with angle %d\n", rad2deg($surface->bridge_angle);
 #ifdef SLIC3R_DEBUG
         printf("Filling bridge with angle %f\n", surface->bridge_angle);
@@ -126,7 +126,7 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
         // alternate fill direction
         out_angle += this->_layer_angle(this->layer_id / surface->thickness_layers);
     } else {
-//    	printf("Layer_ID undefined!\n");
+//        printf("Layer_ID undefined!\n");
     }
 
     out_angle += float(M_PI/2.);

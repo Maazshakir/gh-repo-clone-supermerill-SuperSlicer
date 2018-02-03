@@ -492,18 +492,18 @@ sub Render {
 
 sub _draw {
     my ($self, $object, $print_z, $path) = @_;
-	
-	if($path->isa('Slic3r::ExtrusionPath::Collection')){
-		$self->_draw($object, $print_z, $_) for @{$path};
-	}else{
     
-		my @paths = ($path->isa('Slic3r::ExtrusionLoop') || $path->isa('Slic3r::ExtrusionMultiPath'))
-			? @$path
-			: ($path);
-		
-		$self->_draw_path($object, $print_z, $_) for @paths;
-		
-	}
+    if($path->isa('Slic3r::ExtrusionPath::Collection')){
+        $self->_draw($object, $print_z, $_) for @{$path};
+    }else{
+    
+        my @paths = ($path->isa('Slic3r::ExtrusionLoop') || $path->isa('Slic3r::ExtrusionMultiPath'))
+            ? @$path
+            : ($path);
+        
+        $self->_draw_path($object, $print_z, $_) for @paths;
+        
+    }
 }
 
 sub _draw_path {
@@ -537,8 +537,8 @@ sub _draw_path {
             glVertex2f(@{$line->a});
             glVertex2f(@{$line->b});
             glEnd();
-		}
-	}
+        }
+    }
 }
 
 sub _simulate_extrusion {

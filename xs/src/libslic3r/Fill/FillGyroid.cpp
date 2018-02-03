@@ -10,68 +10,68 @@
 namespace Slic3r {
 
 Polyline FillGyroid::makeLineVert(double xPos, double yPos, double width, double height, double currentXBegin, double segmentSize, coord_t scaleFactor, 
-		double zCs, double zSn, bool flip, double decal){
-	
-	double maxSlope = abs(abs(zCs)-abs(zSn));
-	Polyline polyline;
-	polyline.points.push_back(Point(coord_t((std::max(std::min(currentXBegin, xPos+width),xPos) + decal) * scaleFactor), coord_t(yPos * scaleFactor)));
-	for(double y=yPos;y<yPos+height+segmentSize;y+=segmentSize){
-		if(y>yPos+height) y = yPos+height;
-		double ySn = sin(y +(zCs<0?3.14:0) + 3.14);
-		double yCs = cos(y +(zCs<0?3.14:0) + 3.14+(!flip?0:3.14));
+        double zCs, double zSn, bool flip, double decal){
+    
+    double maxSlope = abs(abs(zCs)-abs(zSn));
+    Polyline polyline;
+    polyline.points.push_back(Point(coord_t((std::max(std::min(currentXBegin, xPos+width),xPos) + decal) * scaleFactor), coord_t(yPos * scaleFactor)));
+    for(double y=yPos;y<yPos+height+segmentSize;y+=segmentSize){
+        if(y>yPos+height) y = yPos+height;
+        double ySn = sin(y +(zCs<0?3.14:0) + 3.14);
+        double yCs = cos(y +(zCs<0?3.14:0) + 3.14+(!flip?0:3.14));
 
-		double a = ySn;
-		double b = -zCs;
-		double res = zSn*yCs;
-		double r = sqrt(a*a + b*b);
-		double x = asin(a/r) + asin(res/r) +3.14;
-		x += currentXBegin;
+        double a = ySn;
+        double b = -zCs;
+        double res = zSn*yCs;
+        double r = sqrt(a*a + b*b);
+        double x = asin(a/r) + asin(res/r) +3.14;
+        x += currentXBegin;
 
-		if(x < xPos){
-			// needNewLine= true;
-			x = xPos;
-		}
-		if(x > xPos+width){
-			// needNewLine= true;
-			x = xPos+width;
-		}
-		{
-			double ydeviation = 0.5*(flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
-			polyline.points.push_back(Point(coord_t((x+decal-ydeviation/2) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
-		}
-	}
-	
-	return polyline;
+        if(x < xPos){
+            // needNewLine= true;
+            x = xPos;
+        }
+        if(x > xPos+width){
+            // needNewLine= true;
+            x = xPos+width;
+        }
+        {
+            double ydeviation = 0.5*(flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
+            polyline.points.push_back(Point(coord_t((x+decal-ydeviation/2) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
+        }
+    }
+    
+    return polyline;
 }
 
 Polyline FillGyroid::makeLineHori(double xPos, double yPos, double width, double height, double currentYBegin, double segmentSize, coord_t scaleFactor, 
-		double zCs, double zSn, bool flip, double decal){
-	double maxSlope = abs(abs(zCs)-abs(zSn));
-	Polyline polyline;
-	polyline.points.push_back(Point(coord_t(xPos * scaleFactor), coord_t((std::max(std::min(currentYBegin, yPos+height),yPos)+decal) * scaleFactor)));
-	for(double x=xPos;x<xPos+width+segmentSize;x+=segmentSize){
-		if(x>xPos+width) x = xPos+width;
-		double xSn = sin(x +(zSn<0?3.14:0) +(flip?0:3.14));
-		double xCs = cos(x +(zSn<0?3.14:0) );
-		double a = xCs;
-		double b = -zSn;
-		double res = zCs*xSn;
-		double r = sqrt(a*a + b*b);
-		double y = asin(a/r) + asin(res/r) +3.14/2;
-		y += currentYBegin;
-		double xdeviation = 0.5*(flip?-1:1)*(zCs>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
-		polyline.points.push_back(Point(coord_t((x + xdeviation) * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal-xdeviation/2) * scaleFactor)));
-	}
-	
-	return polyline;
+        double zCs, double zSn, bool flip, double decal){
+    double maxSlope = abs(abs(zCs)-abs(zSn));
+    Polyline polyline;
+    polyline.points.push_back(Point(coord_t(xPos * scaleFactor), coord_t((std::max(std::min(currentYBegin, yPos+height),yPos)+decal) * scaleFactor)));
+    for(double x=xPos;x<xPos+width+segmentSize;x+=segmentSize){
+        if(x>xPos+width) x = xPos+width;
+        double xSn = sin(x +(zSn<0?3.14:0) +(flip?0:3.14));
+        double xCs = cos(x +(zSn<0?3.14:0) );
+        double a = xCs;
+        double b = -zSn;
+        double res = zCs*xSn;
+        double r = sqrt(a*a + b*b);
+        double y = asin(a/r) + asin(res/r) +3.14/2;
+        y += currentYBegin;
+        double xdeviation = 0.5*(flip?-1:1)*(zCs>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
+        polyline.points.push_back(Point(coord_t((x + xdeviation) * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal-xdeviation/2) * scaleFactor)));
+    }
+    
+    return polyline;
 }
 
 inline void FillGyroid::correctOrderAndAdd(const int num, Polyline &poly, Polylines &array){
-	if(num%2==0){
-		Points temp(poly.points.rbegin(), poly.points.rend());
-		poly.points.assign(temp.begin(),temp.end());
-	}
-	array.push_back(poly);
+    if(num%2==0){
+        Points temp(poly.points.rbegin(), poly.points.rend());
+        poly.points.assign(temp.begin(),temp.end());
+    }
+    array.push_back(poly);
 }
 
 // Generate a set of curves (array of array of 2d points) that describe a
@@ -79,135 +79,135 @@ inline void FillGyroid::correctOrderAndAdd(const int num, Polyline &poly, Polyli
 // grid square size.
 Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width, double layer_height, size_t gridWidth, size_t gridHeight, size_t curveType)
 {
-	
+    
     coord_t  scaleFactor = coord_t(scale_(layer_width) / density);
     Polylines result;
-	Polyline *polyline2;
-	double segmentSize = density/2;
-	double decal = layer_width*density;
-	double xPos = 0, yPos=0, width=gridWidth, height=gridHeight;
-	 //scale factor for 5% : 8 712 388
-	 // 1z = 10^-6 mm ?
-	double z = gridZ/(1.0 * scaleFactor);
-	// std::cout<<"gridZ= "<<gridZ<<", z? "<<z<<", scaleFactor= "<<scaleFactor<<", segmentSize= "<<segmentSize<<", decal= "<<decal<<" scale:"<<scale_(1)<<std::endl;
-	double zSn = sin(z);
-	double zCs = cos(z);
-	double maxSlope = abs(abs(zCs)-abs(zSn));
-	//be sure to don't be too near each other)
-	while(maxSlope<0.05){
-		// move away
-		bool sameSign = zCs*zSn>=0;
-		bool absCosGtAbsSin = abs(zCs)>abs(zSn);
-		if(sameSign && !absCosGtAbsSin || !sameSign && absCosGtAbsSin){
-			// then add
-			z += 0.001;
-		}else{
-			// then remove
-			z -= 0.001;
-		}
-		zSn = sin(z);
-		zCs = cos(z);
-		maxSlope = abs(abs(zCs)-abs(zSn));
-		for(int i=0;i<100000000;i++){i%2==0?density+=0.001:density-=0.001;}
-	}
-	
+    Polyline *polyline2;
+    double segmentSize = density/2;
+    double decal = layer_width*density;
+    double xPos = 0, yPos=0, width=gridWidth, height=gridHeight;
+     //scale factor for 5% : 8 712 388
+     // 1z = 10^-6 mm ?
+    double z = gridZ/(1.0 * scaleFactor);
+    // std::cout<<"gridZ= "<<gridZ<<", z? "<<z<<", scaleFactor= "<<scaleFactor<<", segmentSize= "<<segmentSize<<", decal= "<<decal<<" scale:"<<scale_(1)<<std::endl;
+    double zSn = sin(z);
+    double zCs = cos(z);
+    double maxSlope = abs(abs(zCs)-abs(zSn));
+    //be sure to don't be too near each other)
+    while(maxSlope<0.05){
+        // move away
+        bool sameSign = zCs*zSn>=0;
+        bool absCosGtAbsSin = abs(zCs)>abs(zSn);
+        if(sameSign && !absCosGtAbsSin || !sameSign && absCosGtAbsSin){
+            // then add
+            z += 0.001;
+        }else{
+            // then remove
+            z -= 0.001;
+        }
+        zSn = sin(z);
+        zCs = cos(z);
+        maxSlope = abs(abs(zCs)-abs(zSn));
+        for(int i=0;i<100000000;i++){i%2==0?density+=0.001:density-=0.001;}
+    }
+    
 
-	int numLine = 0;
-	//nbLines depends of layer_width, layer_height, density and maxSlope 
-	int nbLines = wall_nb_lines;
-	if(wall_nb_lines<=0){
-		if(density>0.6){
-			nbLines = 2;
-		}else{
-			//compute the coverage of the current layer
-			double nbLineMore = 1 + (1 - maxSlope);
-			nbLineMore = pow(nbLineMore,5);
-			nbLineMore = nbLineMore -1;
-			nbLineMore *= 0.1 * layer_height / (layer_width * sqrt(density));
-			nbLines = (int)(nbLineMore - wall_nb_lines);
-			// std::cout<<"|maxSlope="<<maxSlope<<"; nbLineMore= "<<nbLineMore<<std::endl;
-		}
-	}
-	
-	if(abs(zSn)<=abs(zCs)){
-		//vertical
-		//begin to first one
-		int iter = 1;
-		double currentXBegin = xPos - PI/2;
-		currentXBegin = PI*(int)(currentXBegin/PI -1);
-		iter = (int)(currentXBegin/PI +1)%2;
-		bool flip = iter%2==1;
-		// bool needNewLine =false;
-		while(currentXBegin<xPos+width-PI/2){
-			
-			for(int num=0;num<nbLines;num++){
-				double movex = -decal * (nbLines-1) + num*decal*2;
-				correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
-				numLine++;
-			}
-			
-			//then, return by the other side
-			iter++;
-			currentXBegin = currentXBegin + PI;
-			flip = iter%2==1;
-			
-			if(currentXBegin < xPos+width-PI/2){
-				
-				for(int num=0;num<nbLines;num++){
-					double movex = -decal * (nbLines-1) + num*decal*2;
-					correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
-					numLine++;
-				}
+    int numLine = 0;
+    //nbLines depends of layer_width, layer_height, density and maxSlope 
+    int nbLines = wall_nb_lines;
+    if(wall_nb_lines<=0){
+        if(density>0.6){
+            nbLines = 2;
+        }else{
+            //compute the coverage of the current layer
+            double nbLineMore = 1 + (1 - maxSlope);
+            nbLineMore = pow(nbLineMore,5);
+            nbLineMore = nbLineMore -1;
+            nbLineMore *= 0.1 * layer_height / (layer_width * sqrt(density));
+            nbLines = (int)(nbLineMore - wall_nb_lines);
+            // std::cout<<"|maxSlope="<<maxSlope<<"; nbLineMore= "<<nbLineMore<<std::endl;
+        }
+    }
+    
+    if(abs(zSn)<=abs(zCs)){
+        //vertical
+        //begin to first one
+        int iter = 1;
+        double currentXBegin = xPos - PI/2;
+        currentXBegin = PI*(int)(currentXBegin/PI -1);
+        iter = (int)(currentXBegin/PI +1)%2;
+        bool flip = iter%2==1;
+        // bool needNewLine =false;
+        while(currentXBegin<xPos+width-PI/2){
+            
+            for(int num=0;num<nbLines;num++){
+                double movex = -decal * (nbLines-1) + num*decal*2;
+                correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+                numLine++;
+            }
+            
+            //then, return by the other side
+            iter++;
+            currentXBegin = currentXBegin + PI;
+            flip = iter%2==1;
+            
+            if(currentXBegin < xPos+width-PI/2){
+                
+                for(int num=0;num<nbLines;num++){
+                    double movex = -decal * (nbLines-1) + num*decal*2;
+                    correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+                    numLine++;
+                }
 
-				// relance
-				iter++;
-				currentXBegin = currentXBegin + PI;
-				flip = iter%2==1;
-			}
-		}
-	}else{
-		//horizontal
-		
+                // relance
+                iter++;
+                currentXBegin = currentXBegin + PI;
+                flip = iter%2==1;
+            }
+        }
+    }else{
+        //horizontal
+        
 
-		//begin to first one
-		int iter = 1;
-		//search first line output
-		double currentYBegin = yPos ;
-		currentYBegin = PI*(int)(currentYBegin/PI -0);
-		iter = (int)(currentYBegin/PI +1)%2;
-		
-		bool flip = iter%2==1;
-		
-		
-		while(currentYBegin < yPos+width){
+        //begin to first one
+        int iter = 1;
+        //search first line output
+        double currentYBegin = yPos ;
+        currentYBegin = PI*(int)(currentYBegin/PI -0);
+        iter = (int)(currentYBegin/PI +1)%2;
+        
+        bool flip = iter%2==1;
+        
+        
+        while(currentYBegin < yPos+width){
 
-			for(int num=0;num<nbLines;num++){
-				double movex = -decal * (nbLines-1) + num*decal*2;
-				correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
-				numLine++;
-			}
-		
-			//then, return by the other side
-			iter++;
-			currentYBegin = currentYBegin + PI;
-			flip = iter%2==1;
-			
-			if(currentYBegin<yPos+width){
-				
-				for(int num=0;num<nbLines;num++){
-					double movex = -decal * (nbLines-1) + num*decal*2;
-					correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
-					numLine++;
-				}
-				
-				//relance
-				iter++;
-				currentYBegin = currentYBegin + PI;
-				flip = iter%2==1;
-			}
-		}
-	}
-	
+            for(int num=0;num<nbLines;num++){
+                double movex = -decal * (nbLines-1) + num*decal*2;
+                correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+                numLine++;
+            }
+        
+            //then, return by the other side
+            iter++;
+            currentYBegin = currentYBegin + PI;
+            flip = iter%2==1;
+            
+            if(currentYBegin<yPos+width){
+                
+                for(int num=0;num<nbLines;num++){
+                    double movex = -decal * (nbLines-1) + num*decal*2;
+                    correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, movex), result);
+                    numLine++;
+                }
+                
+                //relance
+                iter++;
+                currentYBegin = currentYBegin + PI;
+                flip = iter%2==1;
+            }
+        }
+    }
+    
     return result;
 }
 
@@ -222,7 +222,7 @@ void FillGyroid::_fill_surface_single(
     BoundingBox bb = expolygon.contour.bounding_box();
     coord_t     distance = coord_t(scale_(this->spacing) / (params.density*scaling));
 
-	// align bounding box to a multiple of our grid module
+    // align bounding box to a multiple of our grid module
     bb.merge(_align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
     
     // generate pattern
@@ -230,7 +230,7 @@ void FillGyroid::_fill_surface_single(
         (coord_t)scale_(this->z),
         params.density*scaling,
         this->spacing,
-		this->layer_height,
+        this->layer_height,
         (size_t)(ceil(bb.size().x / distance) + 1),
         (size_t)(ceil(bb.size().y / distance) + 1),
         (size_t)(((this->layer_id/thickness_layers) % 2) + 1) );
@@ -238,7 +238,7 @@ void FillGyroid::_fill_surface_single(
     // move pattern in place
     for (Polylines::iterator it = polylines.begin(); it != polylines.end(); ++ it)
         it->translate(bb.min.x, bb.min.y);
-	
+    
 
     // clip pattern to boundaries
     polylines = intersection_pl(polylines, (Polygons)expolygon);
@@ -270,8 +270,8 @@ void FillGyroid::_fill_surface_single(
                 const Point &last_point = pts_end.back();
                 // TODO: we should also check that both points are on a fill_boundary to avoid 
                 // connecting paths on the boundaries of internal regions
-				// TODO: avoid crossing current infill path, a bug somewhere?
-				if (first_point.distance_to(last_point) <= 5 * distance && 
+                // TODO: avoid crossing current infill path, a bug somewhere?
+                if (first_point.distance_to(last_point) <= 5 * distance && 
                     expolygon_off.contains(Line(last_point, first_point))) {
                     // Append the polyline.
                     pts_end.insert(pts_end.end(), it_polyline->points.begin(), it_polyline->points.end());

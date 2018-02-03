@@ -155,9 +155,9 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "first_layer_height"
             || opt_key == "raft_layers") {
             steps.emplace_back(posSlice);
-			this->reset_layer_height_profile();
-		}
-		else if (
+            this->reset_layer_height_profile();
+        }
+        else if (
                opt_key == "clip_multipart_objects"
             || opt_key == "elefant_foot_compensation"
             || opt_key == "support_material_contact_distance" 
@@ -236,8 +236,8 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             // these options only affect G-code export, so nothing to invalidate
         } else {
             // for legacy, if we can't handle this option let's invalidate all steps
-			this->reset_layer_height_profile();
-			this->invalidate_all_steps();
+            this->reset_layer_height_profile();
+            this->invalidate_all_steps();
             invalidated = true;
         }
     }
@@ -750,8 +750,8 @@ void PrintObject::discover_vertical_shells()
                     PROFILE_BLOCK(discover_vertical_shells_region_layer);
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
-        			static size_t debug_idx = 0;
-        			++ debug_idx;
+                    static size_t debug_idx = 0;
+                    ++ debug_idx;
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 
                     Layer       *layer               = this->layers[idx_layer];
@@ -776,13 +776,13 @@ void PrintObject::discover_vertical_shells()
 #if 0
 // #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
                         {
-        					Slic3r::SVG svg_cummulative(debug_out_path("discover_vertical_shells-perimeters-before-union-run%d.svg", debug_idx), this->bounding_box());
+                            Slic3r::SVG svg_cummulative(debug_out_path("discover_vertical_shells-perimeters-before-union-run%d.svg", debug_idx), this->bounding_box());
                             for (int n = (int)idx_layer - n_extra_bottom_layers; n <= (int)idx_layer + n_extra_top_layers; ++ n) {
                                 if (n < 0 || n >= (int)this->layers.size())
                                     continue;
                                 ExPolygons &expolys = this->layers[n]->perimeter_expolygons;
                                 for (size_t i = 0; i < expolys.size(); ++ i) {
-        							Slic3r::SVG svg(debug_out_path("discover_vertical_shells-perimeters-before-union-run%d-layer%d-expoly%d.svg", debug_idx, n, i), get_extents(expolys[i]));
+                                    Slic3r::SVG svg(debug_out_path("discover_vertical_shells-perimeters-before-union-run%d-layer%d-expoly%d.svg", debug_idx, n, i), get_extents(expolys[i]));
                                     svg.draw(expolys[i]);
                                     svg.draw_outline(expolys[i].contour, "black", scale_(0.05));
                                     svg.draw_outline(expolys[i].holes, "blue", scale_(0.05));
@@ -822,7 +822,7 @@ void PrintObject::discover_vertical_shells()
                             }
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
                         {
-        					Slic3r::SVG svg(debug_out_path("discover_vertical_shells-perimeters-before-union-%d.svg", debug_idx), get_extents(shell));
+                            Slic3r::SVG svg(debug_out_path("discover_vertical_shells-perimeters-before-union-%d.svg", debug_idx), get_extents(shell));
                             svg.draw(shell);
                             svg.draw_outline(shell, "black", scale_(0.05));
                             svg.Close(); 
@@ -949,8 +949,8 @@ void PrintObject::discover_vertical_shells()
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
                     {
                         SVG::export_expolygons(debug_out_path("discover_vertical_shells-new_internal-%d.svg", debug_idx), get_extents(shell), new_internal, "black", "blue", scale_(0.05));
-        				SVG::export_expolygons(debug_out_path("discover_vertical_shells-new_internal_void-%d.svg", debug_idx), get_extents(shell), new_internal_void, "black", "blue", scale_(0.05));
-        				SVG::export_expolygons(debug_out_path("discover_vertical_shells-new_internal_solid-%d.svg", debug_idx), get_extents(shell), new_internal_solid, "black", "blue", scale_(0.05));
+                        SVG::export_expolygons(debug_out_path("discover_vertical_shells-new_internal_void-%d.svg", debug_idx), get_extents(shell), new_internal_void, "black", "blue", scale_(0.05));
+                        SVG::export_expolygons(debug_out_path("discover_vertical_shells-new_internal_solid-%d.svg", debug_idx), get_extents(shell), new_internal_solid, "black", "blue", scale_(0.05));
                     }
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 
@@ -965,11 +965,11 @@ void PrintObject::discover_vertical_shells()
         BOOST_LOG_TRIVIAL(debug) << "Discovering vertical shells for region " << idx_region << " in parallel - end";
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
-		for (size_t idx_layer = 0; idx_layer < this->layers.size(); ++idx_layer) {
-			LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
-			layerm->export_region_slices_to_svg_debug("4_discover_vertical_shells-final");
-			layerm->export_region_fill_surfaces_to_svg_debug("4_discover_vertical_shells-final");
-		}
+        for (size_t idx_layer = 0; idx_layer < this->layers.size(); ++idx_layer) {
+            LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
+            layerm->export_region_slices_to_svg_debug("4_discover_vertical_shells-final");
+            layerm->export_region_fill_surfaces_to_svg_debug("4_discover_vertical_shells-final");
+        }
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
     } // for each region
 
@@ -1254,8 +1254,8 @@ void PrintObject::_slice()
                 goto end;
         delete layer;
         this->layers.pop_back();
-		if (! this->layers.empty())
-			this->layers.back()->upper_layer = nullptr;
+        if (! this->layers.empty())
+            this->layers.back()->upper_layer = nullptr;
     }
 end:
     ;
@@ -1282,11 +1282,11 @@ end:
                     // Multiple regions, growing, shrinking or just clipping one region by the other.
                     // When clipping the regions, priority is given to the first regions.
                     Polygons processed;
-        			for (size_t region_id = 0; region_id < layer->regions.size(); ++ region_id) {
+                    for (size_t region_id = 0; region_id < layer->regions.size(); ++ region_id) {
                         LayerRegion *layerm = layer->regions[region_id];
-        				ExPolygons slices = to_expolygons(std::move(layerm->slices.surfaces));
-        				if (scale)
-        					slices = offset_ex(slices, delta);
+                        ExPolygons slices = to_expolygons(std::move(layerm->slices.surfaces));
+                        if (scale)
+                            slices = offset_ex(slices, delta);
                         if (region_id > 0 && clip) 
                             // Trim by the slices of already processed regions.
                             slices = diff_ex(to_polygons(std::move(slices)), processed);
@@ -1437,8 +1437,8 @@ void PrintObject::_make_perimeters()
 {
     if (this->state.is_done(posPerimeters)) return;
     this->state.set_started(posPerimeters);
-	
-	
+    
+    
 
     BOOST_LOG_TRIVIAL(info) << "Generating perimeters...";
     
@@ -1449,16 +1449,16 @@ void PrintObject::_make_perimeters()
         this->typed_slices = false;
         this->state.invalidate(posPrepareInfill);
     }
-	
-	//if we want only one perimeter for each top surface, we need to know who is a top surface before the infill
-	// ! detect_surfaces_type is done is every case in the infill() call chain.
-	if(_print->default_region_config.only_one_perimeter_top){
-		// This will assign a type (top/bottom/internal) to $layerm->slices.
-		// Then the classifcation of $layerm->slices is transfered onto 
-		// the $layerm->fill_surfaces by clipping $layerm->fill_surfaces
-		// by the cummulative area of the previous $layerm->fill_surfaces.
-		this->detect_surfaces_type();
-	}
+    
+    //if we want only one perimeter for each top surface, we need to know who is a top surface before the infill
+    // ! detect_surfaces_type is done is every case in the infill() call chain.
+    if(_print->default_region_config.only_one_perimeter_top){
+        // This will assign a type (top/bottom/internal) to $layerm->slices.
+        // Then the classifcation of $layerm->slices is transfered onto 
+        // the $layerm->fill_surfaces by clipping $layerm->fill_surfaces
+        // by the cummulative area of the previous $layerm->fill_surfaces.
+        this->detect_surfaces_type();
+    }
     
     // compare each layer to the one below, and mark those slices needing
     // one additional inner perimeter, like the top of domed objects-
@@ -1832,7 +1832,7 @@ void PrintObject::discover_horizontal_shells()
                             // Use an existing surface as a template, it carries the bridge angle etc.
                             *group.front());
                 }
-		EXTERNAL:;
+        EXTERNAL:;
             } // foreach type (stTop, stBottom, stBottomBridge)
         } // for each layer
     } // for each region
@@ -1893,12 +1893,12 @@ void PrintObject::combine_infill()
         // loop through layers to which we have assigned layers to combine
         for (size_t layer_idx = 0; layer_idx < this->layers.size(); ++ layer_idx) {
             size_t num_layers = combine[layer_idx];
-			if (num_layers <= 1)
+            if (num_layers <= 1)
                 continue;
             // Get all the LayerRegion objects to be combined.
             std::vector<LayerRegion*> layerms;
             layerms.reserve(num_layers);
-			for (size_t i = layer_idx + 1 - num_layers; i <= layer_idx; ++ i)
+            for (size_t i = layer_idx + 1 - num_layers; i <= layer_idx; ++ i)
                 layerms.emplace_back(this->layers[i]->regions[region_id]);
             // We need to perform a multi-layer intersection, so let's split it in pairs.
             // Initialize the intersection with the candidates of the lowest layer.
@@ -1968,7 +1968,7 @@ void PrintObject::reset_layer_height_profile()
 {
     // Reset the layer_heigth_profile.
     this->layer_height_profile.clear();
-	this->layer_height_profile_valid = false;
+    this->layer_height_profile_valid = false;
     // Reset the source layer_height_profile if it exists at the ModelObject.
     this->model_object()->layer_height_profile.clear();
     this->model_object()->layer_height_profile_valid = false;
