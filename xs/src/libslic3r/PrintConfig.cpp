@@ -251,7 +251,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
     def->enum_labels.push_back("Rectilinear");
-    def->enum_labels.push_back("Smooth");
+    def->enum_labels.push_back("Ironing");
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
@@ -265,7 +265,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = "Infill";
     def->tooltip = "Fill pattern for bottom infill. This only affects the bottom external visible layer, and not its adjacent solid shells.";
     def->cli = "bottom-fill-pattern|solid-fill-pattern=s";
-    def->enum_keys_map = ConfigOptionEnum<InfillPattern>::get_enum_values();
+    def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values.push_back("rectilinear");
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("hilbertcurve");
@@ -576,8 +576,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("honeycomb");
     def->enum_values.push_back("3dhoneycomb");
     def->enum_values.push_back("gyroid");
-    def->enum_values.push_back("gyroidthin");
-    def->enum_values.push_back("gyroidthick");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
     def->enum_values.push_back("octagramspiral");
@@ -591,8 +589,6 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("Honeycomb");
     def->enum_labels.push_back("3D Honeycomb");
     def->enum_labels.push_back("Gyroid");
-    def->enum_labels.push_back("Thin Gyroid");
-    def->enum_labels.push_back("Thick Gyroid");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
@@ -1974,9 +1970,13 @@ std::string FullPrintConfig::validate()
     if (! print_config_def.get("fill_pattern")->has_enum_value(this->fill_pattern.serialize()))
         return "Invalid value for --fill-pattern";
     
-    // --external-fill-pattern
-    if (! print_config_def.get("external_fill_pattern")->has_enum_value(this->external_fill_pattern.serialize()))
-        return "Invalid value for --external-fill-pattern";
+    // --top-fill-pattern
+    if (! print_config_def.get("top_fill_pattern")->has_enum_value(this->top_fill_pattern.serialize()))
+        return "Invalid value for --top-fill-pattern";
+    
+    // --bottom-fill-pattern
+    if (! print_config_def.get("bottom_fill_pattern")->has_enum_value(this->bottom_fill_pattern.serialize()))
+        return "Invalid value for --bottom-fill-pattern";
 
     // --fill-density
     if (fabs(this->fill_density.value - 100.) < EPSILON &&
