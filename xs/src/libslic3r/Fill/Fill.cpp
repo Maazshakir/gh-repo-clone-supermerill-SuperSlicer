@@ -241,30 +241,9 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             flow = Flow::new_from_spacing(f->spacing, flow.nozzle_diameter, h, is_bridge || f->use_bridge_flow());
         }
         
-        //check if the infill want to be able to create the whole extrusion or we can do the standard work.
-        if(f->can_create_extrusion_entity_collection()){
-            flow.bridge = is_bridge; //i'm not 100% sure of that line [merill]
-            f->fill_surface_extrusion(&surface, params, flow, out);
-        }else{
-            Polylines polylines = f->fill_surface(&surface, params);
-            if (polylines.empty())
-                continue;
+        flow.bridge = is_bridge; //i'm not 100% sure of that line [merill]
+        f->fill_surface_extrusion(&surface, params, flow, out);
 
-
-            // Save into layer.
-            auto *eec = new ExtrusionEntityCollection();
-            out.entities.push_back(eec);
-            // Only concentric fills are not sorted.
-            eec->no_sort = f->no_sort();
-            extrusion_entities_append_paths(
-                eec->entities, STDMOVE(polylines),
-                is_bridge ?
-                    erBridgeInfill :
-                    (surface.is_solid() ?
-                        ((surface.surface_type == stTop) ? erTopSolidInfill : erSolidInfill) :
-                        erInternalInfill),
-                flow.mm3_per_mm(), flow.width, flow.height);
-        }
     }
 
     // add thin fill regions
