@@ -22,7 +22,7 @@ public:
 
 protected:
     
-	// mult of density, to have a good %of weight for each density parameter
+    // mult of density, to have a good %of weight for each density parameter
     float scaling;
 
 

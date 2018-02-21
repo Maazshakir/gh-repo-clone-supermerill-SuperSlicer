@@ -25,9 +25,9 @@ Polyline FillGyroid::makeLineVert(double xPos, double yPos, double width, double
         double r = sqrt(a*a + b*b);
         double x = asin(a/r) + asin(res/r) +3.14;
         x += currentXBegin;
-		
-		double ydeviation = 0.5*(flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
-		polyline.points.push_back(Point(coord_t((std::max(std::min(x, xPos+width),xPos)+decal-ydeviation/2) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
+        
+        double ydeviation = 0.5*(flip?-1:1)*(zSn>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
+        polyline.points.push_back(Point(coord_t((std::max(std::min(x, xPos+width),xPos)+decal-ydeviation/2) * scaleFactor), coord_t((y + ydeviation) * scaleFactor)));
     }
     
     return polyline;
@@ -42,14 +42,14 @@ Polyline FillGyroid::makeLineHori(double xPos, double yPos, double width, double
         if(x>xPos+width) x = xPos+width;
         double xSn = sin(x +(zSn<0?3.14:0) +(flip?0:3.14));
         double xCs = cos(x +(zSn<0?3.14:0) );
-		
+        
         double a = xCs;
         double b = -zSn;
         double res = zCs*xSn;
         double r = sqrt(a*a + b*b);
         double y = asin(a/r) + asin(res/r) +3.14/2;
         y += currentYBegin;
-		
+        
         double xdeviation = 0.5*(flip?-1:1)*(zCs>0?-1:1)*decal*(1-maxSlope)*(res/r - a/r);
         polyline.points.push_back(Point(coord_t((x + xdeviation) * scaleFactor), coord_t((std::max(std::min(y, yPos+height),yPos)+decal-xdeviation/2) * scaleFactor)));
     }
@@ -96,8 +96,8 @@ Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width
         // bool needNewLine =false;
         while(currentXBegin<xPos+width-PI/2){
             
-			correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-			numLine++;
+            correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
+            numLine++;
             
             //then, return by the other side
             iter++;
@@ -106,8 +106,8 @@ Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width
             
             if(currentXBegin < xPos+width-PI/2){
                 
-				correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-				numLine++;
+                correctOrderAndAdd(numLine, makeLineVert(xPos, yPos, width, height, currentXBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
+                numLine++;
 
                 // relance
                 iter++;
@@ -131,8 +131,8 @@ Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width
         
         while(currentYBegin < yPos+width){
 
-			correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-			numLine++;
+            correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
+            numLine++;
         
             //then, return by the other side
             iter++;
@@ -141,8 +141,8 @@ Polylines FillGyroid::makeGrid(coord_t gridZ, double density, double layer_width
             
             if(currentYBegin<yPos+width){
                 
-				correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
-				numLine++;
+                correctOrderAndAdd(numLine, makeLineHori(xPos, yPos, width, height, currentYBegin, segmentSize, scaleFactor, zCs, zSn, flip, 0), result);
+                numLine++;
                 
                 //relance
                 iter++;
