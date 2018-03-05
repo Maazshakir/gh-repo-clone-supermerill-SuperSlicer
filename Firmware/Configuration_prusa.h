@@ -80,9 +80,12 @@ const bool Z_MIN_ENDSTOP_INVERTING = false; // set to true to invert the logic o
 #define SILENT_MAX_FEEDRATE 172  //max feedrate in mm/s, because mode switched to normal for homming , this value limits also homing, it should be greater (172mm/s=9600mm/min>2700mm/min)
 
 //Normal mode limits
-#define NORMAL_MAX_ACCEL 2500 // Y-axis max axxeleration in normal mode in mm/s^2
-#define NORMAL_MAX_ACCEL_ST (100*NORMAL_MAX_ACCEL) // max accel in steps/s^2
-#define NORMAL_MAX_FEEDRATE 200  //max feedrate in mm/s, because mode switched to normal for homming , this value limits also homing, it should be greater (172mm/s=9600mm/min>2700mm/min)
+//#define FULL_POWER_MODE_LIMITS
+#ifdef FULL_POWER_MODE_LIMITS
+	#define NORMAL_MAX_ACCEL 2500 // Y-axis max axxeleration in normal mode in mm/s^2
+	#define NORMAL_MAX_ACCEL_ST (100*NORMAL_MAX_ACCEL) // max accel in steps/s^2
+	#define NORMAL_MAX_FEEDRATE 200  //max feedrate in mm/s, because mode switched to normal for homming , this value limits also homing, it should be greater (172mm/s=9600mm/min>2700mm/min)
+#endif /* FULL_POWER_MODE_LIMITS */
 
 //#define SIMPLE_ACCEL_LIMIT          //new limitation method for normal/silent
 

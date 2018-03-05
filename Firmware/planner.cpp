@@ -962,11 +962,13 @@ Having the real displacement of the head, we can calculate the total movement le
 			if (max_fr > SILENT_MAX_FEEDRATE)
 				max_fr = SILENT_MAX_FEEDRATE;
 		}
+#ifdef FULL_POWER_MODE_LIMITS
 		else
 		{
 			if (max_fr > NORMAL_MAX_FEEDRATE)
 				max_fr = NORMAL_MAX_FEEDRATE;
 		}
+#endif /* FULL_POWER_MODE_LIMITS */
 	}
     if(fabs(current_speed[i]) > max_fr)
       speed_factor = min(speed_factor, max_fr / fabs(current_speed[i]));
@@ -1005,11 +1007,13 @@ Having the real displacement of the head, we can calculate the total movement le
 		if (block->steps_x.wide || block->steps_y.wide)
 			if (block->acceleration_st > SILENT_MAX_ACCEL_ST) block->acceleration_st = SILENT_MAX_ACCEL_ST;
 	}
+#ifdef FULL_POWER_MODE_LIMITS
 	else
 	{
 		if (block->steps_x.wide || block->steps_y.wide)
 			if (block->acceleration_st > NORMAL_MAX_ACCEL_ST) block->acceleration_st = NORMAL_MAX_ACCEL_ST;
 	}
+#endif /* FULL_POWER_MODE_LIMITS */
 	if (block->steps_x.wide && (block->acceleration_st > axis_steps_per_sqr_second[X_AXIS])) block->acceleration_st = axis_steps_per_sqr_second[X_AXIS];
 	if (block->steps_y.wide && (block->acceleration_st > axis_steps_per_sqr_second[Y_AXIS])) block->acceleration_st = axis_steps_per_sqr_second[Y_AXIS];
 	if (block->steps_z.wide && (block->acceleration_st > axis_steps_per_sqr_second[Z_AXIS])) block->acceleration_st = axis_steps_per_sqr_second[Z_AXIS];
@@ -1020,11 +1024,13 @@ Having the real displacement of the head, we can calculate the total movement le
 		if ((block->steps_x.wide > block->step_event_count.wide / 2) || (block->steps_y.wide > block->step_event_count.wide / 2))
 			if (block->acceleration_st > SILENT_MAX_ACCEL_ST) block->acceleration_st = SILENT_MAX_ACCEL_ST;
 	}
+#ifdef FULL_POWER_MODE_LIMITS
 	else
 	{
 		if ((block->steps_x.wide > block->step_event_count.wide / 2) || (block->steps_y.wide > block->step_event_count.wide / 2))
 			if (block->acceleration_st > NORMAL_MAX_ACCEL_ST) block->acceleration_st = NORMAL_MAX_ACCEL_ST;
 	}
+#endif /* FULL_POWER_MODE_LIMITS */
     if(((float)block->acceleration_st * (float)block->steps_x.wide / (float)block->step_event_count.wide) > axis_steps_per_sqr_second[X_AXIS])
       block->acceleration_st = axis_steps_per_sqr_second[X_AXIS];
     if(((float)block->acceleration_st * (float)block->steps_y.wide / (float)block->step_event_count.wide) > axis_steps_per_sqr_second[Y_AXIS])
