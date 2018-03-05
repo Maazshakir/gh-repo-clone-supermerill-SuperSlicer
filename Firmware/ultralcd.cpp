@@ -1585,13 +1585,17 @@ static void lcd_menu_fails_stats()
 
 
 #ifdef DEBUG_BUILD
+#ifdef DEBUG_STACK_MONITOR
 extern uint16_t SP_min;
 extern char* __malloc_heap_start;
 extern char* __malloc_heap_end;
+#endif //DEBUG_STACK_MONITOR
 
 static void lcd_menu_debug()
 {
+#ifdef DEBUG_STACK_MONITOR
 	fprintf_P(lcdout, PSTR(ESC_H(1,1)"RAM statistics"ESC_H(5,1)"SP_min: 0x%04x"ESC_H(1,2)"heap_start: 0x%04x"ESC_H(3,3)"heap_end: 0x%04x"), SP_min, __malloc_heap_start, __malloc_heap_end);
+#endif //DEBUG_STACK_MONITOR
 
 	if (lcd_clicked())
     {
@@ -3949,6 +3953,7 @@ static void lcd_selftest_()
 	lcd_selftest();
 }
 
+#ifdef EXPERIMENTAL_FEATURES
 
 static void lcd_experimantal_menu();
 static void lcd_homing_accuracy_menu();
@@ -4160,6 +4165,7 @@ static void lcd_experimantal_menu()
 	MENU_ITEM(submenu, PSTR("uStep linearity"), lcd_ustep_linearity_menu);
 	END_MENU();
 }
+#endif //EXPERIMENTAL_FEATURES
 
 
 static void lcd_calibration_menu()
@@ -5371,7 +5377,10 @@ static void lcd_main_menu()
 	#endif
 	MENU_ITEM(submenu, MSG_SETTINGS, lcd_settings_menu);
     if(!isPrintPaused) MENU_ITEM(submenu, MSG_MENU_CALIBRATION, lcd_calibration_menu);
+
+#ifdef EXPERIMENTAL_FEATURES
 	MENU_ITEM(submenu, PSTR("Experimantal"), lcd_experimantal_menu);
+#endif //EXPERIMENTAL_FEATURES
   }
 
   if (!is_usb_printing && (lcd_commands_type != LCD_COMMAND_V2_CAL))
@@ -5840,10 +5849,10 @@ static void lcd_selftest_v()
 	(void)lcd_selftest();
 }
 
-static bool lcd_selftest()
+bool lcd_selftest()
 {
 	int _progress = 0;
-	bool _result = false;
+	bool _result = true;
 	lcd_wait_for_cool_down();
 	lcd_implementation_clear();
 	lcd.setCursor(0, 0); lcd_printPGM(MSG_SELFTEST_START);
@@ -5852,8 +5861,12 @@ static bool lcd_selftest()
 	#endif // TMC2130
 	delay(2000);
 	KEEPALIVE_STATE(IN_HANDLER);
-	_progress = lcd_selftest_screen(-1, _progress, 3, true, 2000);
-	_result = lcd_selftest_fan_dialog(0);
+
+	if (_result)
+	{
+		_progress = lcd_selftest_screen(-1, _progress, 3, true, 2000);
+		_result = lcd_selftest_fan_dialog(0);
+	}
 	
 	if (_result)
 	{
@@ -5932,8 +5945,20 @@ static bool lcd_selftest()
 		_result = lcd_selfcheck_axis(2, Z_MAX_POS);
 		if (eeprom_read_byte((uint8_t*)EEPROM_WIZARD_ACTIVE) != 1) {
 			enquecommand_P(PSTR("G28 W"));
-			enquecommand_P(PSTR("G1 Z15"));
+			enquecommand_P(PSTR("G1 Z15 F1000"));
 		}
+	}
+
+	if (_result)
+	{
+		_progress = lcd_selftest_screen(13, 0, 2, true, 0);
+		bool bres = tmc2130_home_calibrate(X_AXIS);
+		_progress = lcd_selftest_screen(13, 1, 2, true, 0);
+		bres &= tmc2130_home_calibrate(Y_AXIS);
+		_progress = lcd_selftest_screen(13, 2, 2, true, 0);
+		if (bres)
+			eeprom_update_byte((uint8_t*)EEPROM_TMC2130_HOME_ENABLED, 1);
+		_result = bres;
 	}
 
 	if (_result)
@@ -6719,6 +6744,7 @@ static int lcd_selftest_screen(int _step, int _progress, int _progress_scale, bo
 	if (_step == 10) lcd_printPGM(MSG_SELFTEST_CHECK_FSENSOR);
 	if (_step == 11) lcd_printPGM(MSG_SELFTEST_CHECK_ALLCORRECT);
 	if (_step == 12) lcd_printPGM(MSG_SELFTEST_FAILED);
+	if (_step == 13) lcd_printPGM(PSTR("Calibrating home"));
 
 	lcd.setCursor(0, 1);
 	lcd.print("--------------------");

@@ -1033,6 +1033,7 @@ void setup()
 	    MYSERIAL.println("CrashDetect DISABLED");
 	}
 
+#ifdef TMC2130_LINEARITY_CORRECTION
 	tmc2130_wave_fac[X_AXIS] = eeprom_read_byte((uint8_t*)EEPROM_TMC2130_WAVE_X_FAC);
 	tmc2130_wave_fac[Y_AXIS] = eeprom_read_byte((uint8_t*)EEPROM_TMC2130_WAVE_Y_FAC);
 	tmc2130_wave_fac[Z_AXIS] = eeprom_read_byte((uint8_t*)EEPROM_TMC2130_WAVE_Z_FAC);
@@ -1041,7 +1042,9 @@ void setup()
 	if (tmc2130_wave_fac[Y_AXIS] == 0xff) tmc2130_wave_fac[Y_AXIS] = 0;
 	if (tmc2130_wave_fac[Z_AXIS] == 0xff) tmc2130_wave_fac[Z_AXIS] = 0;
 	if (tmc2130_wave_fac[E_AXIS] == 0xff) tmc2130_wave_fac[E_AXIS] = 0;
+#endif //TMC2130_LINEARITY_CORRECTION
 
+#ifdef TMC2130_VARIABLE_RESOLUTION
 	tmc2130_mres[X_AXIS] = eeprom_read_byte((uint8_t*)EEPROM_TMC2130_X_MRES);
 	tmc2130_mres[Y_AXIS] = eeprom_read_byte((uint8_t*)EEPROM_TMC2130_Y_MRES);
 	tmc2130_mres[Z_AXIS] = eeprom_read_byte((uint8_t*)EEPROM_TMC2130_Z_MRES);
@@ -1054,6 +1057,12 @@ void setup()
 	eeprom_update_byte((uint8_t*)EEPROM_TMC2130_Y_MRES, tmc2130_mres[Y_AXIS]);
 	eeprom_update_byte((uint8_t*)EEPROM_TMC2130_Z_MRES, tmc2130_mres[Z_AXIS]);
 	eeprom_update_byte((uint8_t*)EEPROM_TMC2130_E_MRES, tmc2130_mres[E_AXIS]);
+#else //TMC2130_VARIABLE_RESOLUTION
+	tmc2130_mres[X_AXIS] = tmc2130_usteps2mres(TMC2130_USTEPS_XY);
+	tmc2130_mres[Y_AXIS] = tmc2130_usteps2mres(TMC2130_USTEPS_XY);
+	tmc2130_mres[Z_AXIS] = tmc2130_usteps2mres(TMC2130_USTEPS_Z);
+	tmc2130_mres[E_AXIS] = tmc2130_usteps2mres(TMC2130_USTEPS_E);
+#endif //TMC2130_VARIABLE_RESOLUTION
 
 #endif //TMC2130
 
@@ -1128,6 +1137,51 @@ void setup()
 	// Force SD card update. Otherwise the SD card update is done from loop() on card.checkautostart(false), 
 	// but this times out if a blocking dialog is shown in setup().
 	card.initsd();
+#ifdef DEBUG_SD_SPEED_TEST
+	if (card.cardOK)
+	{
+		uint8_t* buff = (uint8_t*)block_buffer;
+		uint32_t block = 0;
+		uint32_t sumr = 0;
+		uint32_t sumw = 0;
+		for (int i = 0; i < 1024; i++)
+		{
+			uint32_t u = micros();
+			bool res = card.card.readBlock(i, buff);
+			u = micros() - u;
+			if (res)
+			{
+				printf_P(PSTR("readBlock %4d 512 bytes %lu us\n"), i, u);
+				sumr += u;
+				u = micros();
+				res = card.card.writeBlock(i, buff);
+				u = micros() - u;
+				if (res)
+				{
+					printf_P(PSTR("writeBlock %4d 512 bytes %lu us\n"), i, u);
+					sumw += u;
+				}
+				else
+				{
+					printf_P(PSTR("writeBlock %4d error\n"), i);
+					break;
+				}
+			}
+			else
+			{
+				printf_P(PSTR("readBlock %4d error\n"), i);
+				break;
+			}
+		}
+		uint32_t avg_rspeed = (1024 * 1000000) / (sumr / 512);
+		uint32_t avg_wspeed = (1024 * 1000000) / (sumw / 512);
+		printf_P(PSTR("avg read speed %lu bytes/s\n"), avg_rspeed);
+		printf_P(PSTR("avg write speed %lu bytes/s\n"), avg_wspeed);
+	}
+	else
+		printf_P(PSTR("Card NG!\n"));
+#endif DEBUG_SD_SPEED_TEST
+
 	if (eeprom_read_byte((uint8_t*)EEPROM_POWER_COUNT) == 0xff) eeprom_write_byte((uint8_t*)EEPROM_POWER_COUNT, 0);
 	if (eeprom_read_byte((uint8_t*)EEPROM_CRASH_COUNT_X) == 0xff) eeprom_write_byte((uint8_t*)EEPROM_CRASH_COUNT_X, 0);
 	if (eeprom_read_byte((uint8_t*)EEPROM_CRASH_COUNT_Y) == 0xff) eeprom_write_byte((uint8_t*)EEPROM_CRASH_COUNT_Y, 0);
@@ -1218,6 +1272,12 @@ void setup()
 		  // Show the message.
 		  lcd_show_fullscreen_message_and_wait_P(MSG_FOLLOW_CALIBRATION_FLOW);
 	  }
+  }
+
+  if (force_selftest_if_fw_version() && calibration_status() < CALIBRATION_STATUS_ASSEMBLED ) {
+	  lcd_show_fullscreen_message_and_wait_P(MSG_FORCE_SELFTEST);
+	  update_current_firmware_version_to_eeprom();
+	  lcd_selftest();
   }
   KEEPALIVE_STATE(IN_PROCESS);
 #endif //DEBUG_DISABLE_STARTMSGS
@@ -1833,6 +1893,7 @@ void homeaxis(int axis, uint8_t cnt, uint8_t* pstep)
         // for the stall guard to work.
         current_position[axis] = 0;
         plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+		set_destination_to_current();
 //        destination[axis] = 11.f;
         destination[axis] = 3.f;
         plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
@@ -6457,6 +6518,11 @@ void get_coordinates()
 		if (next_feedrate > MAX_SILENT_FEEDRATE) next_feedrate = MAX_SILENT_FEEDRATE;
 #endif //MAX_SILENT_FEEDRATE
     if(next_feedrate > 0.0) feedrate = next_feedrate;
+	if (!seen[0] && !seen[1] && !seen[2] && seen[3])
+	{
+//		float e_max_speed = 
+//		printf_P(PSTR("E MOVE speed %7.3f\n"), feedrate / 60)
+	}
   }
 }
 
@@ -6960,11 +7026,14 @@ void save_statistics(unsigned long _total_filament_used, unsigned long _total_pr
 }
 
 float calculate_extruder_multiplier(float diameter) {
-  bool  enabled = volumetric_enabled && diameter > 0;
-  float area    = enabled ? (M_PI * pow(diameter * .5, 2)) : 0;
-	return (extrudemultiply == 100) ? 
-    (enabled ? (1.f / area) : 1.f) :
-    (enabled ? ((float(extrudemultiply) * 0.01f) / area) : 1.f);
+  float out = 1.f;
+  if (volumetric_enabled && diameter > 0.f) {
+    float area = M_PI * diameter * diameter * 0.25;
+    out = 1.f / area;
+  }
+  if (extrudemultiply != 100)
+    out *= float(extrudemultiply) * 0.01f;
+  return out;
 }
 
 void calculate_extruder_multipliers() {
