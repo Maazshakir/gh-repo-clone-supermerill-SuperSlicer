@@ -22,16 +22,16 @@ PrintConfigDef::PrintConfigDef()
     // Maximum extruder temperature, bumped to 1500 to support printing of glass.
     const int max_temp = 1500;
 
-	def = this->add("avoid_crossing_perimeters", coBool);
+    def = this->add("avoid_crossing_perimeters", coBool);
     def->label = L("Avoid crossing perimeters");
-	def->tooltip = L("Optimize travel moves in order to minimize the crossing of perimeters. "
+    def->tooltip = L("Optimize travel moves in order to minimize the crossing of perimeters. "
                    "This is mostly useful with Bowden extruders which suffer from oozing. "
                    "This feature slows down both the print and the G-code generation.");
     def->cli = "avoid-crossing-perimeters!";
     def->default_value = new ConfigOptionBool(false);
 
     def = this->add("bed_shape", coPoints);
-	def->label = L("Bed shape");
+    def->label = L("Bed shape");
     def->default_value = new ConfigOptionPoints { Pointf(0,0), Pointf(200,0), Pointf(200,200), Pointf(0,200) };
     
     def = this->add("bed_temperature", coInts);
@@ -88,7 +88,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = L("Bridging angle override. If left to zero, the bridging angle will be calculated "
                    "automatically. Otherwise the provided angle will be used for all bridges. "
                    "Use 180° for zero angle.");
-	def->sidetext = L("°");
+    def->sidetext = L("°");
     def->cli = "bridge-angle=f";
     def->min = 0;
     def->default_value = new ConfigOptionFloat(0.);
@@ -120,8 +120,8 @@ PrintConfigDef::PrintConfigDef()
                    "with cooling (use a fan) before tweaking this.");
     def->cli = "bridge-flow-ratio=f";
     def->min = 0;
-	def->max = 2;
-	def->default_value = new ConfigOptionFloat(1);
+    def->max = 2;
+    def->default_value = new ConfigOptionFloat(1);
 
     def = this->add("over_bridge_flow_ratio", coFloat);
     def->label = L("Above the bridges");
@@ -129,7 +129,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = L("This factor affects the amount of plastic to overextrude "
                    "when we are filling on top of a bridge surface."
                    "With a number >1, we can retrieve a correct z-height "
-				   "even if the bridged layer has fallen a bit. "
+                   "even if the bridged layer has fallen a bit. "
                    "It's useful if you want to have a nice flat top layer.");
     def->cli = "over-bridge-flow-ratio=f";
     def->min = 0;
@@ -302,18 +302,18 @@ PrintConfigDef::PrintConfigDef()
     def->enum_values.push_back("concentric");
     def->enum_values.push_back("hilbertcurve");
     def->enum_values.push_back("archimedeanchords");
-	def->enum_values.push_back("octagramspiral");
-	def->enum_values.push_back("smooth");
-	def->enum_values.push_back("smoothtriple");
-	def->enum_values.push_back("smoothhilbert");
+    def->enum_values.push_back("octagramspiral");
+    def->enum_values.push_back("smooth");
+    def->enum_values.push_back("smoothtriple");
+    def->enum_values.push_back("smoothhilbert");
     def->enum_labels.push_back("Rectilinear");
     def->enum_labels.push_back("Concentric");
     def->enum_labels.push_back("Hilbert Curve");
     def->enum_labels.push_back("Archimedean Chords");
     def->enum_labels.push_back("Octagram Spiral");
-	def->enum_labels.push_back("Ironing");
-	def->enum_labels.push_back("Ironing (triple)");
-	def->enum_labels.push_back("Ironing (hilbert)");
+    def->enum_labels.push_back("Ironing");
+    def->enum_labels.push_back("Ironing (triple)");
+    def->enum_labels.push_back("Ironing (hilbert)");
     // solid_fill_pattern is an obsolete equivalent to top_fill_pattern/bottom_fill_pattern.
     def->aliases.push_back("solid_fill_pattern");
     def->default_value = new ConfigOptionEnum<InfillPattern>(ipRectilinear);
@@ -557,7 +557,7 @@ PrintConfigDef::PrintConfigDef()
     def->tooltip = L("This string is edited by RammingDialog and contains ramming specific parameters ");
     def->cli = "filament-ramming-parameters=s@";
     def->default_value = new ConfigOptionStrings { "120 100 6.6 6.8 7.2 7.6 7.9 8.2 8.7 9.4 9.9 10.0|"
-	   " 0.05 6.6 0.45 6.8 0.95 7.8 1.45 8.3 1.95 9.7 2.45 10 2.95 7.6 3.45 7.6 3.95 7.6 4.45 7.6 4.95 7.6" };
+       " 0.05 6.6 0.45 6.8 0.95 7.8 1.45 8.3 1.95 9.7 2.45 10 2.95 7.6 3.45 7.6 3.95 7.6 4.45 7.6 4.95 7.6" };
 
     def = this->add("filament_diameter", coFloats);
     def->label = L("Diameter");
@@ -637,36 +637,6 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "fill-density=s";
     def->min = 0;
     def->max = 100;
-	/*
-    def->enum_values.push_back("0");
-    def->enum_values.push_back("5");
-    def->enum_values.push_back("10");
-    def->enum_values.push_back("15");
-    def->enum_values.push_back("20");
-    def->enum_values.push_back("25");
-    def->enum_values.push_back("30");
-    def->enum_values.push_back("40");
-    def->enum_values.push_back("50");
-    def->enum_values.push_back("60");
-    def->enum_values.push_back("70");
-    def->enum_values.push_back("80");
-    def->enum_values.push_back("90");
-    def->enum_values.push_back("100");
-    def->enum_labels.push_back("0%");
-    def->enum_labels.push_back("5%");
-    def->enum_labels.push_back("10%");
-    def->enum_labels.push_back("15%");
-    def->enum_labels.push_back("20%");
-    def->enum_labels.push_back("25%");
-    def->enum_labels.push_back("30%");
-    def->enum_labels.push_back("40%");
-    def->enum_labels.push_back("50%");
-    def->enum_labels.push_back("60%");
-    def->enum_labels.push_back("70%");
-    def->enum_labels.push_back("80%");
-    def->enum_labels.push_back("90%");
-    def->enum_labels.push_back("100%");
-	*/
     def->enum_values.push_back("0");
     def->enum_values.push_back("4");
     def->enum_values.push_back("5.5");
@@ -693,7 +663,7 @@ PrintConfigDef::PrintConfigDef()
     def->enum_labels.push_back("55");
     def->enum_labels.push_back("75");
     def->enum_labels.push_back("100");
-    def->default_value = new ConfigOptionPercent(20);
+    def->default_value = new ConfigOptionPercent(18);
 
     def = this->add("fill_pattern", coEnum);
     def->label = L("Inside");
@@ -850,12 +820,59 @@ PrintConfigDef::PrintConfigDef()
     def->label = L("Combine infill every");
     def->category = L("Infill");
     def->tooltip = L("This feature allows to combine infill and speed up your print by extruding thicker "
-                   "infill layers while preserving thin perimeters, thus accuracy.");
+        "infill layers while preserving thin perimeters, thus accuracy.");
     def->sidetext = L("layers");
     def->cli = "infill-every-layers=i";
     def->full_label = L("Combine infill every n layers");
     def->min = 1;
     def->default_value = new ConfigOptionInt(1);
+    
+    def = this->add("infill_dense_layers", coInt);
+    def->label = L("Number of dense layers");
+    def->category = L("Infill");
+    def->tooltip = L("Set the number of denser infill layer you want between the normal sparse infill and the top layers. 0 to disable");
+    def->sidetext = L("layers");
+    def->cli = "infill-dense-layers=i";
+    def->min = 0;
+    def->default_value = new ConfigOptionInt(0);
+
+    def = this->add("infill_dense_density", coPercent);
+    def->gui_type = "f_enum_open";
+    def->gui_flags = "show_value";
+    def->label = L("Dense fill density");
+    def->category = L("Infill");
+    def->tooltip = L("Density of the dense internal infill, expressed in the range 0% - 100%.");
+    def->sidetext = L("%");
+    def->cli = "infill-dense-density=s";
+    def->min = 0;
+    def->max = 100;
+    def->enum_values.push_back("0");
+    def->enum_values.push_back("4");
+    def->enum_values.push_back("5.5");
+    def->enum_values.push_back("7.5");
+    def->enum_values.push_back("10");
+    def->enum_values.push_back("13");
+    def->enum_values.push_back("18");
+    def->enum_values.push_back("23");
+    def->enum_values.push_back("31");
+    def->enum_values.push_back("42");
+    def->enum_values.push_back("55");
+    def->enum_values.push_back("75");
+    def->enum_values.push_back("100");
+    def->enum_labels.push_back("0");
+    def->enum_labels.push_back("4");
+    def->enum_labels.push_back("5.5");
+    def->enum_labels.push_back("7.5");
+    def->enum_labels.push_back("10");
+    def->enum_labels.push_back("13");
+    def->enum_labels.push_back("18");
+    def->enum_labels.push_back("23");
+    def->enum_labels.push_back("31");
+    def->enum_labels.push_back("42");
+    def->enum_labels.push_back("55");
+    def->enum_labels.push_back("75");
+    def->enum_labels.push_back("100");
+    def->default_value = new ConfigOptionPercent(42);
 
     def = this->add("infill_extruder", coInt);
     def->label = L("Infill extruder");
@@ -1197,8 +1214,8 @@ PrintConfigDef::PrintConfigDef()
     def->gui_flags = "serialized";
     def->multiline = true;
     def->full_width = true;
-	def->height = 60;
-	def->default_value = new ConfigOptionStrings();
+    def->height = 60;
+    def->default_value = new ConfigOptionStrings();
 
     def = this->add("printer_model", coString);
     def->label = L("Printer type");
@@ -1537,7 +1554,7 @@ PrintConfigDef::PrintConfigDef()
     def->label = L("Temperature variation");
     def->tooltip = L("Temperature difference to be applied when an extruder is not active. "
                    "Enables a full-height \"sacrificial\" skirt on which the nozzles are periodically wiped.");
-	def->sidetext = "∆°C";
+    def->sidetext = "∆°C";
     def->cli = "standby-temperature-delta=i";
     def->min = -max_temp;
     def->max = max_temp;
@@ -2189,8 +2206,8 @@ std::string FullPrintConfig::validate()
     // --fill-density
     if (fabs(this->fill_density.value - 100.) < EPSILON &&
         (! print_config_def.get("top_fill_pattern")->has_enum_value(this->fill_pattern.serialize())
-		|| ! print_config_def.get("bottom_fill_pattern")->has_enum_value(this->fill_pattern.serialize())
-		))
+        || ! print_config_def.get("bottom_fill_pattern")->has_enum_value(this->fill_pattern.serialize())
+        ))
         return "The selected fill pattern is not supposed to work at 100% density";
     
     // --infill-every-layers
