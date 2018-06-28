@@ -609,28 +609,26 @@ void PrintObject::detect_surfaces_type()
                 } // for each layer of a region
             });
         BOOST_LOG_TRIVIAL(debug) << "Detecting solid surfaces for region " << idx_region << " - clipping in parallel - end";
-        printf("count how many surface there are on each one region: %d \n", idx_region);
+
         //count how many surface there are on each one
         LayerRegion *previousOne = NULL;
         if (this->layers.size() > 1) previousOne = this->layers[this->layers.size() - 1]->get_region(idx_region);
-        for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
-            printf("idx_layer: %d \n", idx_layer);
-            LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
-            for (Surface &surf : layerm->fill_surfaces.surfaces){
-                if (!surf.is_top()){
-                    surf.maxNbLayersOnTop = 65000;
-                    //find the surface which intersect with the smalle maxNb possible
-                    for (Surface &upp : previousOne->fill_surfaces.surfaces){
-                        if (upp.expolygon.overlaps(surf.expolygon)){
-                            printf("has on top : %d \n", upp.maxNbLayersOnTop);
-                            surf.maxNbLayersOnTop = std::min(surf.maxNbLayersOnTop, (unsigned short)(upp.maxNbLayersOnTop + 1));
+        if (previousOne != NULL && previousOne->region()->config.infill_dense_layers.getInt() > 0){
+            for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
+                LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
+                for (Surface &surf : layerm->fill_surfaces.surfaces){
+                    if (!surf.is_top()){
+                        surf.maxNbLayersOnTop = 65000;
+                        //find the surface which intersect with the smalle maxNb possible
+                        for (Surface &upp : previousOne->fill_surfaces.surfaces){
+                            if (upp.expolygon.overlaps(surf.expolygon)){
+                                surf.maxNbLayersOnTop = std::min(surf.maxNbLayersOnTop, (unsigned short)(upp.maxNbLayersOnTop + 1));
+                            }
                         }
                     }
                 }
-                else
-                    printf("is top \n");
+                previousOne = layerm;
             }
-            previousOne = layerm;
         }
 
     } // for each this->print->region_count

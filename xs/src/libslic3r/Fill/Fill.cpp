@@ -235,8 +235,6 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         params.dont_adjust = false;
         params.fill_exactly = layerm.region()->config.enforce_full_fill_volume.getBool();
 
-        printf("Filling a surface with nbUpp = %d \n", surface.maxNbLayersOnTop);
-
         // calculate actual flow from spacing (which might have been adjusted by the infill
         // pattern generator)
         if (using_internal_flow) {
