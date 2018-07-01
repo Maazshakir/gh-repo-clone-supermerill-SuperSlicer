@@ -1924,23 +1924,24 @@ void PrintObject::discover_horizontal_shells()
                 // This does not contain the areas covered by perimeters!
                 Polygons solid;
                 for (const Surface &surface : layerm->slices.surfaces)
-                    if (surface.surface_type == type)
+                    if (surface.surface_type == type || idx_surface_type == 0 && surface.surface_type == stTopOverBridge)
                         polygons_append(solid, to_polygons(surface.expolygon));
                 // Infill areas (slices without the perimeters).
                 for (const Surface &surface : layerm->fill_surfaces.surfaces)
-                    if (surface.surface_type == type)
+                    if (surface.surface_type == type || idx_surface_type == 0 && surface.surface_type == stTopOverBridge)
                         polygons_append(solid, to_polygons(surface.expolygon));
                 if (solid.empty())
                     continue;
 //                Slic3r::debugf "Layer %d has %s surfaces\n", $i, ($type == S_TYPE_TOP) ? 'top' : 'bottom';
                 
-                size_t solid_layers = (type == stTop || type == stTopOverBridge) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;                
-                for (int n = (type == stTop || type == stTopOverBridge) ? i-1 : i+1; std::abs(n - i) < solid_layers; (type == stTop || type == stTopOverBridge) ? -- n : ++ n) {
+                size_t solid_layers = (type == stTop) ? region_config.top_solid_layers.value : region_config.bottom_solid_layers.value;                
+                for (int n = (type == stTop) ? i-1 : i+1; std::abs(n - i) < solid_layers; (type == stTop) ? -- n : ++ n) {
                     if (n < 0 || n >= int(this->layers.size()))
                         continue;
 //                    Slic3r::debugf "  looking for neighbors on layer %d...\n", $n;                  
                     // Reference to the lower layer of a TOP surface, or an upper layer of a BOTTOM surface.
                     LayerRegion *neighbor_layerm = this->layers[n]->regions[region_id];
+                    printf("layer %d\n", n);
                     
                     // find intersection between neighbor and current layer's surfaces
                     // intersections have contours and holes
@@ -1955,8 +1956,11 @@ void PrintObject::discover_horizontal_shells()
                     Polygons new_internal_solid;
                     {
                         Polygons internal;
+                        printf("nbSurf %d\n", neighbor_layerm->fill_surfaces.surfaces.size());
                         for (const Surface &surface : neighbor_layerm->fill_surfaces.surfaces)
-                            if (surface.surface_type == stInternal || surface.surface_type == stInternalSolid)
+                            printf(" surf type %d\n", surface.surface_type);
+                        for (const Surface &surface : neighbor_layerm->fill_surfaces.surfaces)
+                            if (surface.surface_type == stInternal || surface.surface_type == stInternalSolid || surface.surface_type == stInternalBridge)
                                 polygons_append(internal, to_polygons(surface.expolygon));
                         new_internal_solid = intersection(solid, internal, true);
                     }
@@ -2028,7 +2032,11 @@ void PrintObject::discover_horizontal_shells()
                             solid = new_internal_solid;
                         }
                     }
-                    
+
+                    printf("2 nbSurf %d\n", neighbor_layerm->fill_surfaces.surfaces.size());
+                    for (const Surface &surface : neighbor_layerm->fill_surfaces.surfaces)
+                        printf("2 surf type %d\n", surface.surface_type);
+
                     // internal-solid are the union of the existing internal-solid surfaces
                     // and new ones
                     SurfaceCollection backup = std::move(neighbor_layerm->fill_surfaces);
@@ -2046,7 +2054,7 @@ void PrintObject::discover_horizontal_shells()
                     neighbor_layerm->fill_surfaces.append(internal, stInternal);
                     polygons_append(polygons_internal, to_polygons(std::move(internal)));
                     // assign top and bottom surfaces to layer
-                    SurfaceType surface_types_solid[] = { stTop, stBottom, stBottomBridge };
+                    SurfaceType surface_types_solid[] = { stTop, stBottom, stBottomBridge, stInternalBridge };
                     backup.keep_types(surface_types_solid, 3);
                     std::vector<SurfacesPtr> top_bottom_groups;
                     backup.group(&top_bottom_groups);

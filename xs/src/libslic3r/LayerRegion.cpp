@@ -126,10 +126,10 @@ void LayerRegion::process_external_surfaces(const Layer* lower_layer)
                 // Collect the top surfaces, inflate them and trim them by the bottom surfaces.
                 // This gives the priority to bottom surfaces.
                 surfaces_append(top, offset_ex(surface.expolygon, float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
-            } else if (surface.surface_type == stBottom || (surface.surface_type == stBottomBridge && lower_layer == NULL)) {
+            } else if (surface.surface_type == stBottom || (surface.is_bridge() && lower_layer == NULL)) {
                 // Grown by 3mm.
                 surfaces_append(bottom, offset_ex(surface.expolygon, float(margin), EXTERNAL_SURFACES_OFFSET_PARAMETERS), surface);
-            } else if (surface.surface_type == stBottomBridge) {
+            } else if (surface.is_bridge()) {
                 if (! surface.empty())
                     bridges.push_back(surface);
             }
@@ -364,7 +364,11 @@ LayerRegion::prepare_fill_surfaces()
     if (this->region()->config.bottom_solid_layers == 0) {
         for (Surfaces::iterator surface = this->fill_surfaces.surfaces.begin(); surface != this->fill_surfaces.surfaces.end(); ++surface) {
             if (surface->is_bottom())
-                surface->surface_type = stInternal;
+                if (surface->is_bridge())
+                    surface->surface_type = stInternalBridge;
+                else
+                    surface->surface_type = stInternal;
+
         }
     }
         
