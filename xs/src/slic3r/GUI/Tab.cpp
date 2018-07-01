@@ -870,7 +870,10 @@ void TabPrint::build()
         line.append_option(optgroup->get_option("fill_angle"));
         line.append_option(optgroup->get_option("bridge_angle"));
         optgroup->append_line(line);
-        optgroup->append_single_option_line("external_infill_margin");
+        line = { _(L("Anchor solid infill by X mm")), "" };
+        line.append_option(optgroup->get_option("external_infill_margin"));
+        line.append_option(optgroup->get_option("bridged_infill_margin"));
+        optgroup->append_line(line);
         optgroup->append_single_option_line("only_retract_when_crossing_perimeters");
         optgroup->append_single_option_line("infill_first");
 
