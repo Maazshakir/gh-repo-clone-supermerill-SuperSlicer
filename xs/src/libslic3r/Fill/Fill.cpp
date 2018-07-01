@@ -165,7 +165,9 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 (surface.is_top() ? layerm.region()->config.top_fill_pattern.value : layerm.region()->config.bottom_fill_pattern.value) :
                 ipRectilinear;
         } else {
-            if (surface.maxNbLayersOnTop - layerm.region()->config.top_solid_layers.getInt() < layerm.region()->config.infill_dense_layers.getInt()){
+            if (layerm.region()->config.infill_dense_layers.getInt() > 0 
+                && surface.maxNbLayersOnTop < layerm.region()->config.infill_dense_layers.getInt() + layerm.region()->config.top_solid_layers.getInt()
+                && surface.maxNbLayersOnTop >= layerm.region()->config.top_solid_layers.getInt()){
                 density = layerm.region()->config.infill_dense_density.getFloat();
             }
             if (density <= 0)

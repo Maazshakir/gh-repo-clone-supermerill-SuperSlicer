@@ -260,7 +260,7 @@ PrintConfigDef::PrintConfigDef()
                    "to compensate for the 1st layer squish aka an Elephant Foot effect. (must be negative = inwards)");
     def->sidetext = L("mm");
     def->cli = "elefant-foot-compensation=f";
-    def->min = 0;
+    def->max = 0;
     def->default_value = new ConfigOptionFloat(0);
 
     def = this->add("end_gcode", coString);

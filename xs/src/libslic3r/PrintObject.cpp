@@ -376,6 +376,10 @@ void PrintObject::_prepare_infill()
     // combine fill surfaces to honor the "infill every N layers" option
     this->combine_infill();
 
+    // count the distance from the nearest top surface, to allow to use denser infill
+    // if neded and if infill_dense_layers is positive.
+    this->count_distance_top();
+
     
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
     for (size_t region_id = 0; region_id < this->print()->regions.size(); ++ region_id) {
@@ -390,6 +394,38 @@ void PrintObject::_prepare_infill()
         layer->export_region_fill_surfaces_to_svg_debug("9_prepare_infill-final");
     } // for each layer
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
+}
+
+void PrintObject::count_distance_top(){
+
+    for (int idx_region = 0; idx_region < this->_print->regions.size(); ++idx_region) {
+
+        //count how many surface there are on each one
+        LayerRegion *previousOne = NULL;
+        if (this->layers.size() > 1) previousOne = this->layers[this->layers.size() - 1]->get_region(idx_region);
+        if (previousOne != NULL && previousOne->region()->config.infill_dense_layers.getInt() > 0){
+            for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
+                LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
+                for (Surface &surf : layerm->fill_surfaces.surfaces){
+                    if (!surf.is_top()){
+                        surf.maxNbLayersOnTop = 65000;
+                        //find the surface which intersect with the smalle maxNb possible
+                        for (Surface &upp : previousOne->fill_surfaces.surfaces){
+                            // i'm using that because the result is better & different than 
+                            // upp.expolygon.overlaps(surf.expolygon), surf.expolygon.overlaps(upp.expolygon)
+                            if (intersection_ex(surf, upp).size() > 0){
+                                surf.maxNbLayersOnTop = std::min(surf.maxNbLayersOnTop, (unsigned short)(upp.maxNbLayersOnTop + 1));
+                            }
+                        }
+                    }else{
+                        surf.maxNbLayersOnTop = 0;
+                    }
+                }
+                previousOne = layerm;
+            }
+        }
+    }
+
 }
 
 // This function analyzes slices of a region (SurfaceCollection slices).
@@ -609,27 +645,6 @@ void PrintObject::detect_surfaces_type()
                 } // for each layer of a region
             });
         BOOST_LOG_TRIVIAL(debug) << "Detecting solid surfaces for region " << idx_region << " - clipping in parallel - end";
-
-        //count how many surface there are on each one
-        LayerRegion *previousOne = NULL;
-        if (this->layers.size() > 1) previousOne = this->layers[this->layers.size() - 1]->get_region(idx_region);
-        if (previousOne != NULL && previousOne->region()->config.infill_dense_layers.getInt() > 0){
-            for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
-                LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
-                for (Surface &surf : layerm->fill_surfaces.surfaces){
-                    if (!surf.is_top()){
-                        surf.maxNbLayersOnTop = 65000;
-                        //find the surface which intersect with the smalle maxNb possible
-                        for (Surface &upp : previousOne->fill_surfaces.surfaces){
-                            if (upp.expolygon.overlaps(surf.expolygon)){
-                                surf.maxNbLayersOnTop = std::min(surf.maxNbLayersOnTop, (unsigned short)(upp.maxNbLayersOnTop + 1));
-                            }
-                        }
-                    }
-                }
-                previousOne = layerm;
-            }
-        }
 
     } // for each this->print->region_count
 
@@ -1022,6 +1037,7 @@ void PrintObject::discover_vertical_shells()
                 } // for each layer
             }); 
         BOOST_LOG_TRIVIAL(debug) << "Discovering vertical shells for region " << idx_region << " in parallel - end";
+
 
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
         for (size_t idx_layer = 0; idx_layer < this->layers.size(); ++idx_layer) {

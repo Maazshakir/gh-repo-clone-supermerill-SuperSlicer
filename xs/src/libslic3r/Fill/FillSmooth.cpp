@@ -77,7 +77,6 @@ namespace Slic3r {
 				for (auto pline = polylines_layer1.begin(); pline != polylines_layer1.end(); ++pline){
 					Lines lines = pline->lines();
 					for (auto line = lines.begin(); line != lines.end(); ++line){
-						printf("line length = %f, scaled:%f, unscaled:%f \n", line->length(), scale_(line->length()), unscale(line->length()));
 						lengthTot += unscale(line->length());
 						nbLines++;
 					}
@@ -97,17 +96,7 @@ namespace Slic3r {
 				double extrudedVolume = flow.mm3_per_mm() * lengthTot;
 				volumeToOccupy += poylineVolume;
 
-				printf("FillSmooth: request extruding of %f length, with mm3_per_mm of %f =volume=> %f / %f (%f) %s\n",
-					lengthTot,
-					flow.mm3_per_mm(),
-					flow.mm3_per_mm() * lengthTot,
-					flow.height*unscale(unscale(surfaceNoOverlap.area())),
-					(flow.mm3_per_mm() * lengthTot) / (flow.height*unscale(unscale(surfaceNoOverlap.area()))),
-                    params.fill_exactly ? "ready" : "only for info"
-					);
-				printf("FillSmooth: extruding flow mult %f vs old: %f\n", percentFlow[0] * poylineVolume / extrudedVolume, percentFlow[0] / percentWidth[0]);
-
-				eec = new ExtrusionEntityCollection();
+                eec = new ExtrusionEntityCollection();
 				eecroot->entities.push_back(eec);
 				eec->no_sort = false; //can be sorted inside the pass
 				extrusion_entities_append_paths(
@@ -149,21 +138,12 @@ namespace Slic3r {
 				for (auto pline = polylines_layer2.begin(); pline != polylines_layer2.end(); ++pline){
 					Lines lines = pline->lines();
 					for (auto line = lines.begin(); line != lines.end(); ++line){
-						//printf("line length = %f, scaled:%f, unscaled:%f \n", line->length(), scale_(line->length()), unscale(line->length()));
 						lengthTot += unscale(line->length());
 						nbLines++;
 					}
 				}
 				double extrudedVolume = flow.mm3_per_mm() * lengthTot;
-				if (extrudedVolume != 0){
-					printf("FillSmooth: extruding flow of 2nd layer increased by %f\n", volumeToOccupy / extrudedVolume); 
-					printf("FillSmooth: extruding flow of 2nd layer mult %f vs old: %f\n", percentFlow[1] * volumeToOccupy / extrudedVolume, percentFlow[1] / percentWidth[1]);
-
-				}
-				else{
-					printf("FillSmooth: extruding flow of 2nd layer increased by INFINITE \n");
-					extrudedVolume = 1;
-				}
+				if (extrudedVolume == 0) extrudedVolume = 1;
 
 				// Save into layer smoothing path.
 				eec = new ExtrusionEntityCollection();
@@ -211,14 +191,11 @@ namespace Slic3r {
 				for (auto pline = polylines_layer3.begin(); pline != polylines_layer3.end(); ++pline){
 					Lines lines = pline->lines();
 					for (auto line = lines.begin(); line != lines.end(); ++line){
-						printf("line length3");
-						//printf("line length = %f, scaled:%f, unscaled:%f \n", line->length(), scale_(line->length()), unscale(line->length()));
 						lengthTot += unscale(line->length());
 						nbLines++;
 					}
 				}
 				double extrudedVolume = flow.mm3_per_mm() * lengthTot;
-				printf("FillSmooth: extruding flow of 3nd layer mult %f vs old: %f\n", percentFlow[2] * volumeToOccupy / extrudedVolume, percentFlow[2] / percentWidth[2]);
 
 				// Save into layer smoothing path. layer 3
 				eec = new ExtrusionEntityCollection();
