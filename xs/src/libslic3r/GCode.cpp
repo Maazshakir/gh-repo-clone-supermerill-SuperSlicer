@@ -1361,7 +1361,7 @@ void GCode::process_layer(
             int copy_idx = 0;
             for (const Point &copy : copies) {
                 if (this->config().gcode_comments){
-                    gcode += ((std::ostringstream&)(std::ostringstream() << "; printing object " << layer_id << " copy " << copy_idx << "\n")).str();
+                    gcode += ((std::ostringstream&)(std::ostringstream() << "; printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_idx << "\n")).str();
                 }
                 // When starting a new object, use the external motion planner for the first travel move.
                 std::pair<const PrintObject*, Point> this_object_copy(print_object, copy);
@@ -1396,7 +1396,7 @@ void GCode::process_layer(
                 }
 
                 if (this->config().gcode_comments){
-                    gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << layer_id << " copy " << copy_idx << "\n")).str();
+                    gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_idx << "\n")).str();
                 }
                 copy_idx++;
             }
