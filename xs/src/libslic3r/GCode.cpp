@@ -1457,6 +1457,9 @@ void GCode::process_layer(
 
                 unsigned int copy_id = 0;
                 for (const Point &copy : copies) {
+                    if (this->config().gcode_comments){
+                        gcode += ((std::ostringstream&)(std::ostringstream() << "; printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
+                    }
                     // When starting a new object, use the external motion planner for the first travel move.
                     std::pair<const PrintObject*, Point> this_object_copy(print_object, copy);
                     if (m_last_obj_copy != this_object_copy)
@@ -1480,6 +1483,9 @@ void GCode::process_layer(
                             gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[layer_id]);
                             gcode += this->extrude_infill(print,by_region_specific);
                         }
+                    }
+                    if (this->config().gcode_comments){
+               	        gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_idx << "\n")).str();
                     }
                     ++copy_id;
                 }
@@ -2456,6 +2462,10 @@ std::string GCode::retract(bool toolchange)
     
     if (m_writer.extruder() == nullptr)
         return gcode;
+
+    // We need to reset e before any extrusion or wipe to allow the reset to happen at the real 
+    // begining of an object gcode
+    gcode += m_writer.reset_e();
     
     // wipe (if it's enabled for this extruder and we have a stored wipe path)
     if (EXTRUDER_CONFIG(wipe) && m_wipe.has_path()) {
@@ -2469,7 +2479,6 @@ std::string GCode::retract(bool toolchange)
         length is honored in case wipe path was too short.  */
     gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
     
-    gcode += m_writer.reset_e();
     if (m_writer.extruder()->retract_length() > 0 || m_config.use_firmware_retraction)
         gcode += m_writer.lift();
     
