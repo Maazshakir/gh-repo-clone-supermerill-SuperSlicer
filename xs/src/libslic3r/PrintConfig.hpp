@@ -410,6 +410,7 @@ public:
     ConfigOptionFloat               infill_speed;
     ConfigOptionInt                 infill_dense_layers;
     ConfigOptionPercent             infill_dense_density;
+    ConfigOptionBool                infill_first;
     ConfigOptionBool                overhangs;
     ConfigOptionInt                 perimeter_extruder;
     ConfigOptionFloatOrPercent      perimeter_extrusion_width;
@@ -454,6 +455,7 @@ protected:
         OPT_PTR(infill_every_layers);
         OPT_PTR(infill_overlap);
         OPT_PTR(infill_speed);
+        OPT_PTR(infill_first);
         OPT_PTR(infill_dense_layers);
         OPT_PTR(infill_dense_density);
         OPT_PTR(overhangs);
@@ -619,7 +621,6 @@ public:
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionInts                first_layer_temperature;
     ConfigOptionFloat               infill_acceleration;
-    ConfigOptionBool                infill_first;
     ConfigOptionInts                max_fan_speed;
     ConfigOptionFloats              max_layer_height;
     ConfigOptionInts                min_fan_speed;
@@ -689,7 +690,6 @@ protected:
         OPT_PTR(first_layer_speed);
         OPT_PTR(first_layer_temperature);
         OPT_PTR(infill_acceleration);
-        OPT_PTR(infill_first);
         OPT_PTR(max_fan_speed);
         OPT_PTR(max_layer_height);
         OPT_PTR(min_fan_speed);
