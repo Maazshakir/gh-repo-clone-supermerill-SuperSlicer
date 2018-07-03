@@ -84,16 +84,19 @@ void PerimeterGenerator::process()
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
+                        
+                        Polygons no_thin_zone = offset(offsets, ext_perimeter_width / 2);
                         ExPolygons expp = offset2_ex(
                             // medial axis requires non-overlapping geometry
                             diff_ex(to_polygons(last),
-                                    offset(offsets, ext_perimeter_width / 2),
+                                    no_thin_zone,
                                     true),
-                            - min_width / 2, min_width / 2);
+                                    -min_width / 2, min_width / 2);
                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                        for (ExPolygon &ex : expp)
+                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, min_width)), no_thin_zone, true);
+                        for (ExPolygon &ex : _clipper_ex(ClipperLib::ctUnion, to_polygons(expp), to_polygons(anchor), true))
                             ex.medial_axis(ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls);
-                        }
+                    }
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
                     // from the line width of the infill?
