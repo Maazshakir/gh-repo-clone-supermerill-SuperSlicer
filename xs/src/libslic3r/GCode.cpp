@@ -1246,7 +1246,8 @@ void GCode::process_layer(
                             point_inside_surface(i, perimeter_coll->first_point())) {
                             if (islands[i].by_region.empty())
                                 islands[i].by_region.assign(print.regions.size(), ObjectByExtruder::Island::Region());
-                            islands[i].by_region[region_id].perimeters.append(perimeter_coll->entities);
+                            //islands[i].by_region[region_id].perimeters.append(perimeter_coll->entities);
+                            islands[i].by_region[region_id].perimeters.append(perimeter_coll->flattenIfSortable().entities);
                             break;
                         }
                 }
@@ -1992,7 +1993,16 @@ std::string GCode::extrude_entity(const ExtrusionEntity &entity, std::string des
         return this->extrude_multi_path(*multipath, description, speed);
     else if (const ExtrusionLoop* loop = dynamic_cast<const ExtrusionLoop*>(&entity))
         return this->extrude_loop(*loop, description, speed, lower_layer_edge_grid);
-    else {
+    else if (const ExtrusionEntityCollection* loop = dynamic_cast<const ExtrusionEntityCollection*>(&entity)){
+        std::string gcode;
+        ExtrusionEntityCollection chained;
+        if (loop->no_sort) chained = *loop;
+        else chained = loop->chained_path_from(m_last_pos, false);
+        for (ExtrusionEntity *next_entity : chained.entities) {
+            gcode += extrude_entity(*next_entity, description, speed, lower_layer_edge_grid);
+        }
+        return gcode;
+    } else {
         CONFESS("Invalid argument supplied to extrude()");
         return "";
     }
@@ -2020,6 +2030,7 @@ std::string GCode::extrude_perimeters(const Print &print, const ObjectByExtruder
             gcode += this->extrude_entity(*ee, "perimeter", -1., &lower_layer_edge_grid);
     return gcode;
 }
+
 
 // Chain the paths hierarchically by a greedy algorithm to minimize a travel distance.
 std::string GCode::extrude_infill(const Print &print, const ObjectByExtruder::Island::Region &region)

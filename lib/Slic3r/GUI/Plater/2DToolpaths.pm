@@ -465,11 +465,13 @@ sub Render {
         foreach my $layerm (@{$layer->regions}) {
             if ($object->step_done(STEP_PERIMETERS)) {
                 $self->color([0.7, 0, 0]);
+		print "PERI\n";
                 $self->_draw($object, $print_z, $_) for map @$_, @{$layerm->perimeters};
             }
             
             if ($object->step_done(STEP_INFILL)) {
                 $self->color([0, 0, 0.7]);
+		print "INFILL\n";
                 $self->_draw($object, $print_z, $_) for map @$_, @{$layerm->fills};
             }
         }
@@ -488,7 +490,14 @@ sub Render {
 
 sub _draw {
     my ($self, $object, $print_z, $path) = @_;
-    
+	
+    if ($path->isa('Slic3r::ExtrusionPath::Collection')){
+		print "coll\n";}
+    if ($path->isa('Slic3r::ExtrusionLoop')){
+		print "loop\n";}
+    if ($path->isa('Slic3r::ExtrusionMultiPath')){
+		print "multi\n";}
+	
 	if ($path->isa('Slic3r::ExtrusionPath::Collection')) {
         $self->_draw($object, $print_z, $_) for @{$path};
 	}else{
@@ -502,6 +511,12 @@ sub _draw {
 
 sub _draw_path {
     my ($self, $object, $print_z, $path) = @_;
+    if ($path->isa('Slic3r::ExtrusionPath::Collection')){
+		print "coll2\n";}
+    if ($path->isa('Slic3r::ExtrusionLoop')){
+		print "loop2\n";}
+    if ($path->isa('Slic3r::ExtrusionMultiPath')){
+		print "multi2\n";}
 	
     return if $print_z - $path->height > $self->z - epsilon;
     

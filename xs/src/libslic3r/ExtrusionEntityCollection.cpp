@@ -113,13 +113,15 @@ void ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEnt
     
     // if we're asked to return the original indices, build a map
     std::map<ExtrusionEntity*,size_t> indices_map;
-    
+    std::cout << " sort entities : bad! " << this->entities.size() << "\n";
     ExtrusionEntitiesPtr my_paths;
     for (ExtrusionEntitiesPtr::const_iterator it = this->entities.begin(); it != this->entities.end(); ++it) {
         if (role != erMixed) {
+            std::cout << " role " << role << "!= erMixed " << erMixed << " \n";
             // The caller wants only paths with a specific extrusion role.
-            auto role2 = (*it)->role();
+            ExtrusionRole role2 = (*it)->role();
             if (role != role2) {
+                std::cout << " CACA " << role2<<" \n";
                 // This extrusion entity does not match the role asked.
                 assert(role2 != erMixed);
                 continue;
@@ -138,6 +140,8 @@ void ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEnt
         } else {
             endpoints.push_back((*it)->last_point());
         }
+        std::cout << "first point : " << unscale((*it)->first_point().x) << ", " << unscale((*it)->first_point().y) << "\n";
+        std::cout << "last_point : " << unscale((*it)->last_point().x) << ", " << unscale((*it)->last_point().y) << "\n";
     }
     
     while (!my_paths.empty()) {

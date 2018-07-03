@@ -217,6 +217,14 @@ ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polyl
     ThickPolylines pp;
     ma.build(&pp);
     
+
+    for (Lines lines : ma.lines){
+        cout << "lines " << lines.size() << ": ";
+        for (Line line : lines){
+            cout << ",  " << unscale(line.a.x) << ":" << unscale(line.a.y) << "->" << unscale(line.b.x) << ":" << unscale(line.b.y);
+        }
+    }
+    cout << "\n";
     /*
     SVG svg("medial_axis.svg");
     svg.draw(*this);
@@ -235,50 +243,56 @@ ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polyl
     bool removed = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
-        
+        std::cout << "ThickPolyline " << polyline.points.size() << ": ";
+        for (int i = 0; i < polyline.points.size() && i < 10; i++){
+            std::cout << "->" << unscale(polyline.points[i].x) << ":" << unscale(polyline.points[i].y);
+        }
+        std::cout << "\n";
+
         // extend initial and final segments of each polyline if they're actual endpoints
         /* We assign new endpoints to temporary variables because in case of a single-line
            polyline, after we extend the start point it will be caught by the intersection()
            call, so we keep the inner point until we perform the second intersection() as well */
         Point new_front = polyline.points.front();
-        Point new_back  = polyline.points.back();
+        Point new_back = polyline.points.back();
         if (polyline.endpoints.first && !this->has_boundary_point(new_front)) {
+            std::cout << "ThickPolyline extend(1)?\n";
             Line line(polyline.points.front(), polyline.points[1]);
-            
+
             // prevent the line from touching on the other side, otherwise intersection() might return that solution
             if (polyline.points.size() == 2) line.b = line.midpoint();
-            
+
             line.extend_start(max_width);
             (void)this->contour.intersection(line, &new_front);
+            std::cout << "NEW 1 ThickPolyline " << polyline.points.size() << ": ";
+            for (int i = 0; i < polyline.points.size() && i < 10; i++){
+                std::cout << "->" << unscale(polyline.points[i].x) << ":" << unscale(polyline.points[i].y);
+            }
+            std::cout << "\n";
         }
         if (polyline.endpoints.second && !this->has_boundary_point(new_back)) {
+            std::cout << "ThickPolyline extend(1)?\n";
             Line line(
                 *(polyline.points.end() - 2),
                 polyline.points.back()
-            );
-            
+                );
+
             // prevent the line from touching on the other side, otherwise intersection() might return that solution
             if (polyline.points.size() == 2) line.a = line.midpoint();
             line.extend_end(max_width);
-            
+
             (void)this->contour.intersection(line, &new_back);
+            std::cout << "NEW 2 ThickPolyline " << polyline.points.size() << ": ";
+            for (int i = 0; i < polyline.points.size() && i < 10; i++){
+                std::cout << "->" << unscale(polyline.points[i].x) << ":" << unscale(polyline.points[i].y);
+            }
+            std::cout << "\n";
         }
         polyline.points.front() = new_front;
-        polyline.points.back()  = new_back;
-        
-        /*  remove too short polylines
-            (we can't do this check before endpoints extension and clipping because we don't
-            know how long will the endpoints be extended since it depends on polygon thickness
-            which is variable - extension will be <= max_width/2 on each side)  */
-        if ((polyline.endpoints.first || polyline.endpoints.second)
-            && polyline.length() < max_w*2) {
-            pp.erase(pp.begin() + i);
-            --i;
-            removed = true;
-            continue;
-        }
+        polyline.points.back() = new_back;
+
     }
-    
+
     /*  If we removed any short polylines we now try to connect consecutive polylines
         in order to allow loop detection. Note that this algorithm is greedier than 
         MedialAxis::process_edge_neighbors() as it will connect random pairs of 
@@ -286,7 +300,8 @@ ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polyl
         drawbacks since we optimize later using nearest-neighbor which would do the 
         same, but should we use a more sophisticated optimization algorithm we should
         not connect polylines when more than two meet.  */
-    if (removed) {
+    //FIXME: try to merge with the segment that is the most "aligned" with me, ie strait lines.
+    if (true || removed) {
         for (size_t i = 0; i < pp.size(); ++i) {
             ThickPolyline& polyline = pp[i];
             if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
@@ -304,6 +319,16 @@ ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polyl
                 } else if (!polyline.last_point().coincides_with(other.first_point())) {
                     continue;
                 }
+                std::cout << "FUSION (1) ThickPolyline " << polyline.points.size() << ": ";
+                for (int i = 0; i < polyline.points.size() && i < 10; i++){
+                    std::cout << "->" << unscale(polyline.points[i].x) << ":" << unscale(polyline.points[i].y);
+                }
+                std::cout << "\n";
+                std::cout << "FUSION (2) ThickPolyline " << other.points.size() << ": ";
+                for (int i = 0; i < other.points.size() && i < 10; i++){
+                    std::cout << "->" << unscale(other.points[i].x) << ":" << unscale(other.points[i].y);
+                }
+                std::cout << "\n";
                 
                 polyline.points.insert(polyline.points.end(), other.points.begin() + 1, other.points.end());
                 polyline.width.insert(polyline.width.end(), other.width.begin(), other.width.end());
@@ -311,10 +336,41 @@ ExPolygon::medial_axis(double max_width, double min_width, ThickPolylines* polyl
                 assert(polyline.width.size() == polyline.points.size()*2 - 2);
                 
                 pp.erase(pp.begin() + j);
+                std::cout << "FUSION (res) ThickPolyline " << polyline.points.size() << ": ";
+                for (int i = 0; i < polyline.points.size() && i < 10; i++){
+                    std::cout << "->" << unscale(polyline.points[i].x) << ":" << unscale(polyline.points[i].y);
+                }
+                std::cout << "\n";
                 j = i;  // restart search from i+1
             }
         }
     }
+
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+
+
+        /*  remove too short polylines
+        (we can't do this check before endpoints extension and clipping because we don't
+        know how long will the endpoints be extended since it depends on polygon thickness
+        which is variable - extension will be <= max_width/2 on each side)  */
+        //FIXME: try to merge it with an other thick polyline before erasing it.
+        if ((polyline.endpoints.first || polyline.endpoints.second)
+            && polyline.length() < max_w * 2) {
+            pp.erase(pp.begin() + i);
+            --i;
+            removed = true;
+            std::cout << "ThickPolyline DELETED!!\n";
+            continue;
+        }
+        std::cout << "END ThickPolyline " << polyline.points.size() << ": ";
+        for (int i = 0; i < polyline.points.size() && i < 10; i++){
+            std::cout << "->" << unscale(polyline.points[i].x) << ":" << unscale(polyline.points[i].y);
+        }
+        std::cout << "\n";
+
+    }
+
     
     polylines->insert(polylines->end(), pp.begin(), pp.end());
 }

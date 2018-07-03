@@ -348,11 +348,13 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     }
     
     // append thin walls to the nearest-neighbor search (only for first iteration)
+    std::cout << "call thin wall var wi : " << coll.entities.size() << "\n";
     if (!thin_walls.empty()) {
         ExtrusionEntityCollection tw = this->_variable_width
             (thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
         
         coll.append(tw.entities);
+        std::cout << "vcar width exit2 : " << tw.entities.size()<< "->"<< coll.entities.size() << "\n";
         thin_walls.clear();
     }
     
@@ -403,6 +405,11 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
         ExtrusionPaths paths;
         ExtrusionPath path(role);
         ThickLines lines = p.thicklines();
+        std::cout << "peri path : ";
+        for (int iiii = 0; iiii < p.points.size(); iiii++){
+            std::cout << "->" << unscale(p.points[iiii].x) << ":" << unscale(p.points[iiii].y);
+        }
+        std::cout << "\n";
         
         for (int i = 0; i < (int)lines.size(); ++i) {
             const ThickLine& line = lines[i];
@@ -477,13 +484,21 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
             paths.emplace_back(std::move(path));        
         // Append paths to collection.
         if (!paths.empty()) {
-            if (paths.front().first_point().coincides_with(paths.back().last_point()))
+            if (paths.front().first_point().coincides_with(paths.back().last_point())){
+                std::cout << "add loop\n";
                 coll.append(ExtrusionLoop(paths));
-            else
-                coll.append(paths);
+            } else {
+                //not a loop : avoid to "sort" it.
+                std::cout << "add coll de paths.count=" << paths.size() << " , collsize=" << coll.entities.size();
+                ExtrusionEntityCollection unsortable_coll(paths);
+                unsortable_coll.no_sort = true;
+                coll.append(unsortable_coll);
+                std::cout <<", and now="<< coll.entities.size()<< "\n";
+            }
         }
     }
-    
+
+    std::cout << "vcar width exit : " << coll.entities.size()<<"\n";
     return coll;
 }
 
