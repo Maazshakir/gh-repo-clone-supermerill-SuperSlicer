@@ -1993,11 +1993,11 @@ std::string GCode::extrude_entity(const ExtrusionEntity &entity, std::string des
         return this->extrude_multi_path(*multipath, description, speed);
     else if (const ExtrusionLoop* loop = dynamic_cast<const ExtrusionLoop*>(&entity))
         return this->extrude_loop(*loop, description, speed, lower_layer_edge_grid);
-    else if (const ExtrusionEntityCollection* loop = dynamic_cast<const ExtrusionEntityCollection*>(&entity)){
+    else if (const ExtrusionEntityCollection* coll = dynamic_cast<const ExtrusionEntityCollection*>(&entity)){
         std::string gcode;
         ExtrusionEntityCollection chained;
-        if (loop->no_sort) chained = *loop;
-        else chained = loop->chained_path_from(m_last_pos, false);
+        if (coll->no_sort) chained = *coll;
+        else chained = coll->chained_path_from(m_last_pos, false);
         for (ExtrusionEntity *next_entity : chained.entities) {
             gcode += extrude_entity(*next_entity, description, speed, lower_layer_edge_grid);
         }
@@ -2037,7 +2037,7 @@ std::string GCode::extrude_infill(const Print &print, const ObjectByExtruder::Is
 {
     std::string gcode;
     ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
-    gcode += extrude_infill(print, chained);
+    gcode += extrude_entity(chained, "infill");
     return gcode;
 }
 
@@ -2045,7 +2045,7 @@ std::string GCode::extrude_infill(const Print &print, const ObjectByExtruder::Is
 std::string GCode::extrude_infill(const Print &print, const ExtrusionEntityCollection &collection)
 {
 	std::string gcode;
-
+/*
 	ExtrusionEntityCollection chained;
 	if (collection.no_sort) chained = collection;
 	else chained = collection.chained_path_from(m_last_pos, false);
@@ -2056,7 +2056,8 @@ std::string GCode::extrude_infill(const Print &print, const ExtrusionEntityColle
 		} else {
 			gcode += this->extrude_entity(*fill, "infill");
         }
-    }
+    }*/
+    gcode += "CACA";
     return gcode;
 }
 

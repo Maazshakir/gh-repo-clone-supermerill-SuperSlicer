@@ -92,10 +92,19 @@ void PerimeterGenerator::process()
                                     no_thin_zone,
                                     true),
                                     -min_width / 2, min_width / 2);
-                        // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, min_width)), no_thin_zone, true);
-                        for (ExPolygon &ex : _clipper_ex(ClipperLib::ctUnion, to_polygons(expp), to_polygons(anchor), true))
-                            ex.medial_axis(ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls);
+                        std::cout << "LAYER =" << this->layer_id << "\n";
+                        // compute a bit of overlap to anchor thin walls inside the print.
+                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, ext_perimeter_width / 2)), no_thin_zone, true);
+                        for (ExPolygon &ex : expp) {
+                            ExPolygons &bounds = _clipper_ex(ClipperLib::ctUnion, to_polygons(ex), to_polygons(anchor), true);
+                            for (ExPolygon &bound : bounds) {
+                                if (!intersection_ex(ex, bound).empty()) {
+                                    // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
+                                    ex.medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls);
+                                    continue;
+                                }
+                            }
+                        }
                     }
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
@@ -238,7 +247,7 @@ void PerimeterGenerator::process()
                 true);
             ThickPolylines polylines;
             for (const ExPolygon &ex : gaps_ex)
-                ex.medial_axis(max, min, &polylines);
+                ex.medial_axis(ex, max, min, &polylines);
             if (!polylines.empty()) {
                 ExtrusionEntityCollection gap_fill = this->_variable_width(polylines, 
                     erGapFill, this->solid_infill_flow);

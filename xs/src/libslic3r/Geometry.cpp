@@ -839,7 +839,16 @@ void
 MedialAxis::build(ThickPolylines* polylines)
 {
     construct_voronoi(this->lines.begin(), this->lines.end(), &this->vd);
-    
+
+
+   std::cout << "VORONOI : ";
+    for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
+        if (edge->is_infinite() || edge->is_secondary()) continue;
+        std::cout << ", " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y());
+        std::cout << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y());
+        std::cout << " sec:"<<edge->is_secondary() <<"\n";
+        ++edge; 
+    }
     /*
     // DEBUG: dump all Voronoi edges
     {
@@ -860,6 +869,7 @@ MedialAxis::build(ThickPolylines* polylines)
     
     // collect valid edges (i.e. prune those not belonging to MAT)
     // note: this keeps twins, so it inserts twice the number of the valid edges
+    std::set<const VD::edge_type*> cout_edges;
     this->valid_edges.clear();
     {
         std::set<const VD::edge_type*> seen_edges;
@@ -876,9 +886,16 @@ MedialAxis::build(ThickPolylines* polylines)
             if (!this->validate_edge(&*edge)) continue;
             this->valid_edges.insert(&*edge);
             this->valid_edges.insert(edge->twin());
+            cout_edges.insert(&*edge);
         }
     }
     this->edges = this->valid_edges;
+    std::cout << "VORONOI filtered : ";
+    for (auto edge : cout_edges) {
+        std::cout << ", " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y());
+        std::cout << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y());
+        std::cout << " sec:" << edge->is_secondary() << "\n";
+    }
     
     // iterate through the valid edges to build polylines
     while (!this->edges.empty()) {
@@ -890,6 +907,9 @@ MedialAxis::build(ThickPolylines* polylines)
         polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
         polyline.width.push_back(this->thickness[edge].first);
         polyline.width.push_back(this->thickness[edge].second);
+
+        std::cout << "start polyline : " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y())
+            << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y()) << "\n";
         
         // remove this edge and its twin from the available edges
         (void)this->edges.erase(edge);
@@ -965,6 +985,9 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
             
             // break if this is a closed loop
             if (this->edges.count(neighbor) == 0) return;
+
+            std::cout << "add to polyline : " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y())
+                << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y()) << "\n";
             
             Point new_point(neighbor->vertex1()->x(), neighbor->vertex1()->y());
             polyline->points.push_back(new_point);
@@ -974,9 +997,12 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
             (void)this->edges.erase(neighbor->twin());
             edge = neighbor;
         } else if (neighbors.size() == 0) {
+            std::cout << "end of polyline \n";
             polyline->endpoints.second = true;
             return;
-        } else {
+        }
+        else {
+            std::cout << "nothing \n";
             // T-shaped or star-shaped joint
             return;
         }
