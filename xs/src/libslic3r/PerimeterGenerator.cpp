@@ -74,7 +74,7 @@ void PerimeterGenerator::process()
 
                 //store surface for bridge infill to avoid unsupported perimeters (but the first one, this one is always good)
                 if (this->config->no_perimeter_unsupported && i == this->config->min_perimeter_unsupported
-                    && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()) {
+                        && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()) {
                     //note: i don't know where to use the safety offset or not, so if you know, please modify the block.
 
                     //split the polygons with bottom/notbottom
@@ -90,7 +90,7 @@ void PerimeterGenerator::process()
                             ExPolygon hull;
                             hull.contour = coll_last.convex_hull();
                             unsupported = intersection_ex(unsupported, ExPolygons() = { hull });
-                            if (this->config->noperi_bridge_only && !unsupported.empty()){
+                            if (this->config->noperi_bridge_only && !unsupported.empty()) {
                                 //only consider the part that can be bridged (really, by the bridge algorithm)
                                 BridgeDetector detector(unsupported,
                                     *this->lower_slices,
@@ -110,6 +110,29 @@ void PerimeterGenerator::process()
                                 stored = union_ex(stored, unsupported);
                                 last = intersection_ex(supported, last);
                             }
+                        }
+                    }
+                }
+
+                // We can add more perimeters if there are uncovered overhangs
+                // improvement for future: find a way to add perimeters only where it's needed.
+                // It's hard to do, so here is a simple version.
+                bool may_add_more_perimeters = false;
+                if (this->config->extra_perimeters && i > loop_number && !last.empty()
+                    && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()){
+                    //split the polygons with bottom/notbottom
+                    ExPolygons support(this->lower_slices->expolygons);
+                    ExPolygons unsupported = diff_ex(last, support, true);
+                    if (!unsupported.empty()) {
+                        //only consider overhangs and let bridges alone
+                        // it's more reliable than the BridgeDetector
+                        ExPolygonCollection coll_last(support);
+                        ExPolygon hull;
+                        hull.contour = coll_last.convex_hull();
+                        unsupported = diff_ex(unsupported, ExPolygons() = { hull });
+                        if (!unsupported.empty()) {
+                            //add fake perimeters here
+                            may_add_more_perimeters = true;
                         }
                     }
                 }
@@ -189,8 +212,14 @@ void PerimeterGenerator::process()
                     last.clear();
                     break;
                 } else if (i > loop_number) {
-                    // If i > loop_number, we were looking just for gaps.
-                    break;
+                    if (may_add_more_perimeters) {
+                        loop_number++;
+                        contours.emplace_back();
+                        holes.emplace_back();
+                    } else {
+                        // If i > loop_number, we were looking just for gaps.
+                        break;
+                    }
                 }
 
                 for (const ExPolygon &expolygon : next_onion) {
@@ -204,7 +233,7 @@ void PerimeterGenerator::process()
                 last = std::move(next_onion);
                     
                 //store surface for top infill if only_one_perimeter_top
-                if(i==0 && config->only_one_perimeter_top && this->upper_slices != NULL){
+                if(i==0 && config->only_one_perimeter_top && this->upper_slices != NULL) {
                     //split the polygons with top/not_top
                     ExPolygons upper_polygons(this->upper_slices->expolygons);
                     ExPolygons top_polygons = diff_ex(last, (upper_polygons), true);
@@ -213,8 +242,6 @@ void PerimeterGenerator::process()
                     stored = union_ex(stored, intersection_ex(offset_ex(top_polygons, (float)(perimeter_spacing / 2)), last));
                     last = intersection_ex(offset_ex(inner_polygons, (float)(perimeter_spacing / 2)), last);
                 }
-
-                
 
             }
             
