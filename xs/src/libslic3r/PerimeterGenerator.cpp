@@ -51,10 +51,11 @@ void PerimeterGenerator::process()
     
     // we need to process each island separately because we might have different
     // extra perimeters for each one
+    int surface_idx = 0;
     for (const Surface &surface : this->slices->surfaces) {
         // detect how many perimeters must be generated for this island
         int        loop_number = this->config->perimeters + surface.extra_perimeters - 1;  // 0-indexed loops
-
+        surface_idx++;
         
         if (this->config->only_one_perimeter_top && this->upper_slices == NULL){
             loop_number = 0;
@@ -77,38 +78,73 @@ void PerimeterGenerator::process()
                         && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()) {
                     //note: i don't know where to use the safety offset or not, so if you know, please modify the block.
 
-                    //split the polygons with bottom/notbottom
-                    ExPolygons support(this->lower_slices->expolygons);
-                    ExPolygons unsupported = diff_ex(last, support, true);
+                    //compute our unsupported surface
+                    ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
                     if (!unsupported.empty()) {
+                        ExPolygons to_draw;
                         //remove small overhangs
-                        unsupported = offset2_ex(unsupported, -(float)(perimeter_spacing), (float)(perimeter_spacing));
-                        if (!unsupported.empty()) {
-                            //only consider the part that can be bridged (inside the convex hull)
-                            // it's more reliable than the BridgeDetector (and i think quicker)
-                            ExPolygonCollection coll_last(support);
-                            ExPolygon hull;
-                            hull.contour = coll_last.convex_hull();
-                            unsupported = intersection_ex(unsupported, ExPolygons() = { hull });
+                        ExPolygons unsupported_filtered = offset2_ex(unsupported, -(float)(perimeter_spacing), (float)(perimeter_spacing));
+                        if (!unsupported_filtered.empty()) {
+                            //to_draw.insert(to_draw.end(), last.begin(), last.end());
+                            //extract only the useful part of the lower layer. The safety offset is really needed here.
+                            ExPolygons support = diff_ex(last, unsupported, true);
                             if (this->config->noperi_bridge_only && !unsupported.empty()) {
                                 //only consider the part that can be bridged (really, by the bridge algorithm)
-                                BridgeDetector detector(unsupported,
-                                    *this->lower_slices,
-                                    ext_perimeter_width);
-                                detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value));
-                                Polygons bridgeable = detector.coverage();
-                                unsupported = intersection_ex(unsupported, union_ex(bridgeable));
+                                //first, separate into islands (ie, each ExPlolygon)
+                                int numploy = 0;
+                                //only consider the bottom layer that intersect unsupported, to be sure it's only on our island.
+                                ExPolygonCollection lower_island(support);
+                                BridgeDetector detector(unsupported_filtered,
+                                    lower_island,
+                                    perimeter_spacing);
+                                if (detector.detect_angle(Geometry::deg2rad(this->config->bridge_angle.value))) {
+                                    ExPolygons bridgeable = union_ex(detector.coverage(-1, true));
+                                    if (!bridgeable.empty()) {
+                                        //simplify to avoid most of artefacts from printing lines.
+                                        ExPolygons bridgeable_simplified;
+                                        for (ExPolygon &poly : bridgeable) {
+                                            poly.simplify(perimeter_spacing/4, &bridgeable_simplified);
+                                        }
+                                        //offset by perimeter spacing because the simplify may have reduced it a bit.
+                                        //it's not dangerous as it will be intersected by 'unsupported' later
+                                        to_draw.insert(to_draw.end(), bridgeable.begin(), bridgeable.end());
+                                        // add overlap (perimeter_spacing/4 was good in test, ie 25%)
+                                        coord_t overlap = scale_(this->config->get_abs_value("infill_overlap", perimeter_spacing));
+                                        unsupported_filtered = intersection_ex(unsupported_filtered, offset_ex(bridgeable_simplified, overlap));
+                                    } else {
+                                        unsupported_filtered.clear();
+                                    }
+                                } else {
+                                    unsupported_filtered.clear();
+                                }
+                            } else {
+                                //only consider the part that can be 'bridged' (inside the convex hull)
+                                // it's not as precise as the bridge detector, but it's better than nothing, and quicker.
+                                ExPolygonCollection coll_last(support);
+                                ExPolygon hull;
+                                hull.contour = coll_last.convex_hull();
+                                unsupported_filtered = intersection_ex(unsupported_filtered, ExPolygons() = { hull });
                             }
-                            if (!unsupported.empty()) {
+                            if (!unsupported_filtered.empty()) {
+                                std::cout << "stepX" << "\n";
+                                        //to_draw.insert(to_draw.end(), detector._anchor_regions.begin(), detector._anchor_regions.end());
                                 //and we want at least 1 perimeter of overlap
-                                unsupported = intersection_ex(offset_ex(unsupported, (float)(perimeter_spacing)), last);
+                                ExPolygons bridge = unsupported_filtered;
+                                unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing)), last);
                                 // unsupported need to be offset_ex by -(float)(perimeter_spacing/2) for the hole to be flush
-                                ExPolygons supported = diff_ex(last, offset_ex(unsupported, -(float)(perimeter_spacing / 2)), true);
+                                ExPolygons supported = diff_ex(last, unsupported_filtered); //offset_ex(unsupported_filtered, -(float)(perimeter_spacing / 2)), true);
+                                ExPolygons bridge_and_support = union_ex(bridge, support);
+                                //to_draw.insert(to_draw.end(), support.begin(), support.end());
                                 // make him flush with perimeter area
-                                unsupported = intersection_ex(offset_ex(unsupported, (float)(perimeter_spacing / 2)), last);
+                                unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing / 2)), bridge_and_support);
                                 // store the results
-                                stored = union_ex(stored, unsupported);
-                                last = intersection_ex(supported, last);
+                                last = supported;
+
+                                //add this directly to the infill list.
+                                // this will avoid to throw wrong offsets into a good polygons
+                                this->fill_surfaces->append(
+                                    unsupported_filtered,
+                                    stInternal);
                             }
                         }
                     }
@@ -121,15 +157,16 @@ void PerimeterGenerator::process()
                 if (this->config->extra_perimeters && i > loop_number && !last.empty()
                     && this->lower_slices != NULL && !this->lower_slices->expolygons.empty()){
                     //split the polygons with bottom/notbottom
-                    ExPolygons support(this->lower_slices->expolygons);
-                    ExPolygons unsupported = diff_ex(last, support, true);
+                    ExPolygons unsupported = diff_ex(last, this->lower_slices->expolygons, true);
+                    //remove small ovehangs
+                    //unsupported = offset2_ex(unsupported, -(float)(perimeter_spacing), (float)(perimeter_spacing));
                     if (!unsupported.empty()) {
                         //only consider overhangs and let bridges alone
-                        // it's more reliable than the BridgeDetector
-                        ExPolygonCollection coll_last(support);
+                        //TODO: use BridgeDetector like for no_perimeter_unsupported
+                        ExPolygonCollection coll_last(intersection_ex(last, offset_ex(this->lower_slices->expolygons, -(3*perimeter_spacing)/2)));
                         ExPolygon hull;
                         hull.contour = coll_last.convex_hull();
-                        unsupported = diff_ex(unsupported, ExPolygons() = { hull });
+                        unsupported = diff_ex(offset_ex(unsupported, (3 * perimeter_spacing)/2), ExPolygons() = { hull });
                         if (!unsupported.empty()) {
                             //add fake perimeters here
                             may_add_more_perimeters = true;

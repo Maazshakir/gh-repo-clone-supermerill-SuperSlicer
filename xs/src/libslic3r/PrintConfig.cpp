@@ -1172,7 +1172,7 @@ PrintConfigDef::PrintConfigDef()
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Only remove perimeters over area marked as 'bridge'. Can be useful to let perimeter run over overhangs, but it's not very reliable.");
     def->cli = "noperi-bridge-only!";
-    def->default_value = new ConfigOptionBool(false);
+    def->default_value = new ConfigOptionBool(true);
 
     def = this->add("parking_pos_retraction", coFloat);
     def->label = L("Filament parking position");
