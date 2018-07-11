@@ -830,9 +830,10 @@ void TabPrint::build()
         optgroup = page->new_optgroup(_(L("Reducing printing time")));
         optgroup->append_single_option_line("infill_every_layers");
         optgroup->append_single_option_line("infill_only_where_needed");
-        line = { _(L("Use denser infill below top layers")), "" };
+        line = { _(L("Use denser infill below solid layers")), "" };
         line.append_option(optgroup->get_option("infill_dense_layers"));
         line.append_option(optgroup->get_option("infill_dense_density"));
+        // line.append_option(optgroup->get_option("infill_dense_pattern"));
         optgroup->append_line(line);
 
         optgroup = page->new_optgroup(_(L("Advanced")));

@@ -194,6 +194,7 @@ bool PrintObject::invalidate_state_by_config_options(const std::vector<t_config_
             || opt_key == "solid_infill_every_layers"
             || opt_key == "infill_dense_layers"
             || opt_key == "infill_dense_density"
+            // || opt_key == "infill_dense_pattern"
             || opt_key == "bottom_solid_layers"
             || opt_key == "top_solid_layers"
             || opt_key == "solid_infill_below_area"
@@ -382,7 +383,7 @@ void PrintObject::_prepare_infill()
 
     // count the distance from the nearest top surface, to allow to use denser infill
     // if neded and if infill_dense_layers is positive.
-    this->count_distance_top();
+    this->count_distance_solid();
 
     
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
@@ -400,29 +401,45 @@ void PrintObject::_prepare_infill()
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 }
 
-void PrintObject::count_distance_top(){
+void PrintObject::count_distance_solid(){
 
     for (int idx_region = 0; idx_region < this->_print->regions.size(); ++idx_region) {
 
         //count how many surface there are on each one
         LayerRegion *previousOne = NULL;
         if (this->layers.size() > 1) previousOne = this->layers[this->layers.size() - 1]->get_region(idx_region);
-        if (previousOne != NULL && previousOne->region()->config.infill_dense_layers.getInt() > 0){
+        if (previousOne != NULL && previousOne->region()->config.infill_dense_layers.getInt() > 0) {
+            for (Surface &surf : previousOne->fill_surfaces.surfaces) {
+                if (!surf.is_solid()) {
+                    std::cout << "find top pas top" << "\n";
+                } else {
+                    std::cout << "find top top" << "\n";
+                    surf.maxNbSolidLayersOnTop = 0;
+                }
+            }
             for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
+                std::cout << "create for layer" << idx_layer << "\n";
                 LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
                 for (Surface &surf : layerm->fill_surfaces.surfaces){
-                    if (!surf.is_top()){
-                        surf.maxNbLayersOnTop = 65000;
+                    if (!surf.is_solid()){
+                        std::cout << "find ";
+                        surf.maxNbSolidLayersOnTop = 65000;
                         //find the surface which intersect with the smalle maxNb possible
                         for (Surface &upp : previousOne->fill_surfaces.surfaces){
-                            // i'm using that because the result is better & different than 
-                            // upp.expolygon.overlaps(surf.expolygon), surf.expolygon.overlaps(upp.expolygon)
-                            if (intersection_ex(surf, upp).size() > 0){
-                                surf.maxNbLayersOnTop = std::min(surf.maxNbLayersOnTop, (unsigned short)(upp.maxNbLayersOnTop + 1));
+                            // i'm using intersection_ex because the result different than 
+                            // upp.expolygon.overlaps(surf.expolygon) or surf.expolygon.overlaps(upp.expolygon)
+                            if (!intersection_ex(surf, upp, true).empty()){
+                                surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, (unsigned short)(upp.maxNbSolidLayersOnTop + 1));
+                                std::cout << " " << upp.maxNbSolidLayersOnTop;
                             }
                         }
-                    }else{
-                        surf.maxNbLayersOnTop = 0;
+                        if (surf.maxNbSolidLayersOnTop == 65000)
+                            std::cout << " not top and nothing above him ... type=" << surf.surface_type << ", area=" << unscale(unscale(surf.area()))<< "\n";
+                        else
+                            std::cout << " => " << surf.maxNbSolidLayersOnTop << "\n";
+                    } else {
+                        std::cout << "find top"  << "\n";
+                        surf.maxNbSolidLayersOnTop = 0;
                     }
                 }
                 previousOne = layerm;
