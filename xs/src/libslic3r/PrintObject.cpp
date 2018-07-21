@@ -572,22 +572,6 @@ void PrintObject::detect_surfaces_type()
                             surface.surface_type = surface_type_bottom_1st;
                     }
                     
-                    // Any surface lying on the void is a true bottom bridge (an overhang) 
-                    // and we have to conpensate if we are over that
-                    // Surfaces bottomOverBridge;
-                    // if(under_lower_layer){
-                        // surfaces_append(
-                            // bottomOverBridge,
-                            // offset2_ex(
-                                // diff(layerm_slices_surfaces, to_polygons(under_lower_layer->slices), true), 
-                                // -offset, offset),
-                            // stInternalOverBridge);
-                        // std::cout<<idx_layer<<" under_lower_layer "<<under_lower_layer->slices.expolygons.size()<<" > "<<bottomOverBridge.size()<<", bot="<<bottom.size()<<"\n";
-                        // for(int i=0;i<under_lower_layer->slices.expolygons.size();i++) std::cout<<" area of under_lower_layer "<<under_lower_layer->slices.expolygons[i].area()<<"\n";
-                        // for(int i=0;i<bottom.size();i++) std::cout<<" area of bottom "<<bottom[i].area()<<"\n";
-                        // for(int i=0;i<bottomOverBridge.size();i++) std::cout<<" area of overbridge "<<bottomOverBridge[i].area()<<"\n";
-                    // }
-                    
                     // now, if the object contained a thin membrane, we could have overlapping bottom
                     // and top surfaces; let's do an intersection to discover them and consider them
                     // as bottom surfaces (to allow for bridge detection)
@@ -622,12 +606,6 @@ void PrintObject::detect_surfaces_type()
                     {
                         Polygons topbottom = to_polygons(top);
                         polygons_append(topbottom, to_polygons(bottom));
-                        // ExPolygons overExPolygons = diff_ex(to_polygons(bottomOverBridge), topbottom, false);
-                        // surfaces_append(surfaces_out,
-                            // overExPolygons,
-                            // stInternalOverBridge);
-                        // for(int i=0;i<overExPolygons.size();i++) std::cout<<" area of overExPolygons "<<overExPolygons[i].area()<<"\n";
-                        // polygons_append(topbottom, to_polygons(bottomOverBridge));
                         surfaces_append(surfaces_out,
                             diff_ex(layerm_slices_surfaces, topbottom, false),
                             stInternal);
