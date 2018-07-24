@@ -41,7 +41,7 @@ public:
     unsigned short  thickness_layers;   // in layers
     double          bridge_angle;       // in radians, ccw, 0 = East, only 0+ (negative means undefined)
     unsigned short  extra_perimeters;
-    unsigned short    maxNbSolidLayersOnTop;
+    uint16_t        maxNbSolidLayersOnTop;
     
     Surface(const Slic3r::Surface &rhs)
         : surface_type(rhs.surface_type), expolygon(rhs.expolygon),

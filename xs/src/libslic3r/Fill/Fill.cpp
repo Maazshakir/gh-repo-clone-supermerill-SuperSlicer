@@ -33,7 +33,6 @@ struct SurfaceGroupAttrib
 void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 {    
 //    Slic3r::debugf "Filling layer %d:\n", $layerm->layer->id;
-    std::cout << "START fill layer " << layerm.layer()->id() << "\n";
     
     double  fill_density           = layerm.region()->config.fill_density;
     Flow    infill_flow            = layerm.flow(frInfill);
@@ -63,24 +62,16 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
             SurfacesPtr *denseGroup = NULL;
             const uint32_t nbGroups = groups.size();
             for (uint32_t num_group = 0; num_group < nbGroups; ++num_group) {
-                std::cout << "see group " << num_group << "/" << nbGroups << "\n";
                 for (uint32_t num_srf = 0; num_srf < groups[num_group].size(); ++num_srf) {
-                    std::cout << "see srf " << num_srf << "/" << groups[num_group].size() <<", "<< groups[num_group][num_srf]->surface_type<< "\n";
                     Surface *srf = groups[num_group][num_srf];
                     //if solid, wrong group
                     if (srf->is_solid()) break;
-                    std::cout << "good srf " << srf->maxNbSolidLayersOnTop << " ?<"
-                        << layerm.region()->config.infill_dense_layers.getInt() + layerm.region()->config.top_solid_layers.getInt()
-                        << " ?>=" << layerm.region()->config.top_solid_layers.getInt()
-                        <<", type " << srf->surface_type << ", " << srf->is_solid() << "\n";
                     //find surface that can be used as dense infill
-                    if (srf->maxNbSolidLayersOnTop < layerm.region()->config.infill_dense_layers.getInt()
+                    if (srf->maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
                         && srf->maxNbSolidLayersOnTop > 0) {
                         //remove from the group
-                        std::cout << "remove srf " << num_srf<<"\n";
                         groups[num_group].erase(groups[num_group].begin() + num_srf);
                         --num_srf;
-                        std::cout << "now srf =" << num_srf << " / " << groups[num_group].size();
                         //add to the "dense" group
                         if (denseGroup == NULL) {
                             groups.resize(groups.size() + 1);
@@ -138,11 +129,7 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                     union_p = diff(union_p, polygons_bridged, true);
                 // subtract any other surface already processed
                 //FIXME Vojtech: Because the bridge surfaces came first, they are subtracted twice!
-                for (Surface * srf : group) {
-                    std::cout << "destroy srf " << srf->maxNbSolidLayersOnTop << ", type" << srf->surface_type << ", " << srf->is_solid() << "\n";
-                }
                 // Using group.front() as a template.
-                std::cout << "With template " << (group.front())->maxNbSolidLayersOnTop << ", nb=" << diff_ex(union_p, to_polygons(surfaces)).size() << "\n";
                 surfaces_append(surfaces, diff_ex(union_p, to_polygons(surfaces), true), *group.front());
                 
             }
@@ -199,7 +186,6 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         bool is_bridge = layerm.layer()->id() > 0 && surface.is_bridge();
         bool is_denser = false;
 
-        std::cout << "fill surface with ontop=" << surface.maxNbSolidLayersOnTop << "\n";
         if (surface.is_solid()) {
             density = 100.;
             fill_pattern = (surface.is_external() && ! is_bridge) ? 
@@ -207,12 +193,11 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
                 ipRectilinear;
         } else {
             if (layerm.region()->config.infill_dense_layers.getInt() > 0 
-                && surface.maxNbSolidLayersOnTop < layerm.region()->config.infill_dense_layers.getInt()
+                && surface.maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
                 && surface.maxNbSolidLayersOnTop > 0) {
                 density = layerm.region()->config.infill_dense_density.getFloat();
-                std::cout << "Dense!\n";
                 is_denser = true;
-                //fill_pattern = layerm.region()->config.infill_dense_pattern.value;
+                fill_pattern = layerm.region()->config.infill_dense_pattern.value;
             }
             if (density <= 0)
                 continue;
@@ -267,13 +252,12 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
 
         f->layer_id = layerm.layer()->id();
         f->z = layerm.layer()->print_z;
-        if (is_denser) f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value + 45));
+        if (is_denser)f->angle = float(Geometry::deg2rad(layerm.region()->config.infill_dense_angle.value));
         else f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value));
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f->loop_clipping = scale_(flow.nozzle_diameter) * LOOP_CLIPPING_LENGTH_OVER_NOZZLE_DIAMETER;
-//        f->layer_height = h;
         //give the overlap size, it's not the real value (it can depend of the external_perimeter_extrusion_width)
         f->overlap = layerm.region()->config.infill_overlap.get_abs_value(flow.nozzle_diameter);
         // apply half spacing using this flow's own spacing and generate infill
@@ -294,12 +278,12 @@ void make_fill(LayerRegion &layerm, ExtrusionEntityCollection &out)
         
         float flow_percent = 1;
         if(surface.is_overBridge()){
-            params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
+            params.density = layerm.region()->config.over_bridge_flow_ratio;
+            //params.flow_mult = layerm.region()->config.over_bridge_flow_ratio;
         }
         
         f->fill_surface_extrusion(&surface, params, flow, out);
     }
-    std::cout << "END fill layer " << layerm.layer()->id() << "\n";
 
     // add thin fill regions
     // thin_fills are of C++ Slic3r::ExtrusionEntityCollection, perl type Slic3r::ExtrusionPath::Collection
