@@ -451,20 +451,30 @@ void PrintObject::count_distance_solid() {
                                     if (surf.area() > area_intersect * 3 && 
                                         surf.maxNbSolidLayersOnTop > layerm->region()->config.infill_dense_layers.getInt()) {
                                         //split in two
-                                        //grew a bit
-                                        ExPolygons intersect_bigger = offset2_ex(intersect,
-                                            -layerm->flow(frInfill).scaled_width(),
-                                            layerm->flow(frInfill).scaled_width()*2);
-                                        ExPolygons sparse_surfaces = offset2_ex( 
-                                            diff_ex(sparse_polys, intersect_bigger, true),
-                                            -layerm->flow(frInfill).scaled_width(), 
-                                            layerm->flow(frInfill).scaled_width());
-                                        ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
-                                        //assign (copy)
-                                        sparse_polys.clear();
-                                        sparse_polys.insert(sparse_polys.begin(), sparse_surfaces.begin(), sparse_surfaces.end());
-                                        dense_polys.insert(dense_polys.end(), dense_surfaces.begin(), dense_surfaces.end());
-                                        dense_dist = std::min(dense_dist, dist);
+                                        if (dist == 1) {
+                                            //if just under the solid area, we can expand a bit
+                                            //remove too small sections and grew a bit to anchor it into the part
+                                            intersect = offset2_ex(intersect,
+                                                -layerm->flow(frInfill).scaled_width(),
+                                                layerm->flow(frInfill).scaled_width() + scale_(layerm->region()->config.external_infill_margin));
+                                        } else {
+                                            //just remove too small sections
+                                            intersect = offset2_ex(intersect,
+                                                -layerm->flow(frInfill).scaled_width(),
+                                                layerm->flow(frInfill).scaled_width());
+                                        }
+                                        if (!intersect.empty()) {
+                                            ExPolygons sparse_surfaces = offset2_ex(
+                                                diff_ex(sparse_polys, intersect, true),
+                                                -layerm->flow(frInfill).scaled_width(),
+                                                layerm->flow(frInfill).scaled_width());
+                                            ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
+                                            //assign (copy)
+                                            sparse_polys.clear();
+                                            sparse_polys.insert(sparse_polys.begin(), sparse_surfaces.begin(), sparse_surfaces.end());
+                                            dense_polys.insert(dense_polys.end(), dense_surfaces.begin(), dense_surfaces.end());
+                                            dense_dist = std::min(dense_dist, dist);
+                                        }
                                     } else {
                                         surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
                                     }
