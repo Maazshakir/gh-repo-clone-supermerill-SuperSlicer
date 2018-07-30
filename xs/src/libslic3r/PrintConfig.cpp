@@ -727,6 +727,24 @@ PrintConfigDef::PrintConfigDef()
     def->ratio_over = "perimeter_extrusion_width";
     def->default_value = new ConfigOptionFloatOrPercent(55, true);
 
+    def = this->add("external_infill_margin", coFloat);
+    def->label = "Default";
+    def->category = "Infill";
+    def->tooltip = "This parameter grow the top/bottom/solid layers by some mm to anchor them into the part. Put 0 to deactivate it.";
+    def->sidetext = "mm";
+    def->cli = "top-layer-anchor=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(3);
+
+    def = this->add("bridged_infill_margin", coFloat);
+    def->label = "Bridged";
+    def->category = "Infill";
+    def->tooltip = "This parameter grow the bridged solid infill layers by some mm to anchor them into the part. Put 0 to deactivate it.";
+    def->sidetext = "mm";
+    def->cli = "top-layer-anchor=f";
+    def->min = 0;
+    def->default_value = new ConfigOptionFloat(3);
+
     def = this->add("infill_speed", coFloat);
     def->label = "Infill";
     def->gui_type = "f_enum_open";

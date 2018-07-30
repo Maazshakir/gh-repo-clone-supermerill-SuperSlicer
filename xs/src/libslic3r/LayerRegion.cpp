@@ -144,7 +144,9 @@ LayerRegion::process_external_surfaces()
             }
         }
         
-        const ExPolygons grown = offset_ex(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN);
+        // Grown by bridged_infill_margin.
+	std::cout<<this->layer()->id()<<" grow bridge by "<<this->region()->config.bridged_infill_margin.getFloat()<<"\n";
+        const ExPolygons grown = offset_ex(surface.expolygon, scale_(this->region()->config.bridged_infill_margin.getFloat()));
         Surface templ = surface;
         templ.bridge_angle = angle;
         bottom.append(grown, templ);
@@ -154,9 +156,10 @@ LayerRegion::process_external_surfaces()
     for (const Surface &surface : surfaces) {
         if (surface.surface_type != stTop) continue;
         
+	std::cout<<this->layer()->id()<<" grow top by "<<this->region()->config.external_infill_margin.getFloat()<<"\n";
         // give priority to bottom surfaces
         ExPolygons grown = diff_ex(
-            offset(surface.expolygon, +SCALED_EXTERNAL_INFILL_MARGIN),
+            offset(surface.expolygon, scale_(this->region()->config.external_infill_margin.getFloat())),
             (Polygons)bottom
         );
         top.append(grown, surface);

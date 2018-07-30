@@ -474,6 +474,7 @@ sub options {
         external_perimeter_extrusion_width infill_extrusion_width solid_infill_extrusion_width 
         top_infill_extrusion_width support_material_extrusion_width
         support_material_interface_extrusion_width infill_overlap bridge_flow_ratio
+        external_infill_margin bridged_infill_margin
         xy_size_compensation resolution shortcuts compatible_printers
         print_settings_id
     )
@@ -698,6 +699,14 @@ sub build {
         {
             my $optgroup = $page->new_optgroup('Overlap');
             $optgroup->append_single_option_line('infill_overlap');
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label => 'External infill overlap',
+                );
+                $line->append_option($optgroup->get_option('external_infill_margin'));
+                $line->append_option($optgroup->get_option('bridged_infill_margin'));
+                $optgroup->append_line($line);
+            }
         }
         {
             my $optgroup = $page->new_optgroup('Flow');

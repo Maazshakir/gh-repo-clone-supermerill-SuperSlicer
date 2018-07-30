@@ -256,7 +256,9 @@ PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
             || opt_key == "dont_support_bridges") {
             steps.insert(posSupportMaterial);
         } else if (opt_key == "interface_shells"
-            || opt_key == "infill_only_where_needed") {
+            || opt_key == "infill_only_where_needed"
+			|| opt_key == "external_infill_margin"
+            || opt_key == "bridged_infill_margin") {
             steps.insert(posPrepareInfill);
         } else if (opt_key == "seam_position"
             || opt_key == "support_material_speed") {
