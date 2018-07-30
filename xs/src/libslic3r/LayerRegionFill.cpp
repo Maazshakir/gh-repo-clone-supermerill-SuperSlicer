@@ -54,18 +54,19 @@ LayerRegion::make_fill()
         // FIXME: Use some smart heuristics to merge similar surfaces to eliminate tiny regions.
         std::vector<SurfacesConstPtr> groups;
         this->fill_surfaces.group(&groups);
-        
+        /*
+	std::cout<<"donsegroup begin\n";
         //if internal infill can be dense, place it on his own group
-        if (layerm.region()->config.infill_dense_layers.getInt() > 0) {
-            SurfacesPtr *denseGroup = NULL;
+        if (this->region()->config.infill_dense_layers.getInt() > 0) {
+            SurfacesConstPtr *denseGroup = NULL;
             const uint32_t nbGroups = groups.size();
             for (uint32_t num_group = 0; num_group < nbGroups; ++num_group) {
                 for (uint32_t num_srf = 0; num_srf < groups[num_group].size(); ++num_srf) {
-                    Surface *srf = groups[num_group][num_srf];
+                    const Surface *srf = groups[num_group][num_srf];
                     //if solid, wrong group
                     if (srf->is_solid()) break;
                     //find surface that can be used as dense infill
-                    if (srf->maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
+                    if (srf->maxNbSolidLayersOnTop <= this->region()->config.infill_dense_layers.getInt()
                         && srf->maxNbSolidLayersOnTop > 0) {
                         //remove from the group
                         groups[num_group].erase(groups[num_group].begin() + num_srf);
@@ -80,6 +81,7 @@ LayerRegion::make_fill()
                 }
             }
         }
+	std::cout<<"donsegroup end\n";*/
 		
         // merge compatible solid groups (we can generate continuous infill for them)
         {
@@ -205,13 +207,13 @@ LayerRegion::make_fill()
                 : (surface.is_bottom() && !is_bridge)      ? this->region()->config.bottom_infill_pattern.value
                 : ipRectilinear;
         } else {
-            if (layerm.region()->config.infill_dense_layers.getInt() > 0 
-                && surface.maxNbSolidLayersOnTop <= layerm.region()->config.infill_dense_layers.getInt()
+           /* if (this->region()->config.infill_dense_layers.getInt() > 0 
+                && surface.maxNbSolidLayersOnTop <= this->region()->config.infill_dense_layers.getInt()
                 && surface.maxNbSolidLayersOnTop > 0) {
-                density = layerm.region()->config.infill_dense_density.getFloat();
+                density = this->region()->config.infill_dense_density.getFloat();
                 is_denser = true;
-                fill_pattern = layerm.region()->config.infill_dense_pattern.value;
-            }
+                fill_pattern = this->region()->config.infill_dense_pattern.value;
+            }*/
             if (density <= 0)
                 continue;
         }
@@ -270,8 +272,8 @@ LayerRegion::make_fill()
 
         f->layer_id = this->layer()->id();
         f->z        = this->layer()->print_z;
-        if (is_denser)f->angle = float(Geometry::deg2rad(layerm.region()->config.infill_dense_angle.value));
-        else f->angle = float(Geometry::deg2rad(layerm.region()->config.fill_angle.value));
+        if (is_denser)f->angle = float(Geometry::deg2rad(this->region()->config.infill_dense_angle.value));
+        else f->angle = float(Geometry::deg2rad(this->region()->config.fill_angle.value));
         
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = (!is_bridge && density > 80)

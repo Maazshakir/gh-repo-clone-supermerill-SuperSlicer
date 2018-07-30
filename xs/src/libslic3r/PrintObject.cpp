@@ -1194,13 +1194,14 @@ PrintObject::prepare_infill()
 
     // count the distance from the nearest top surface, to allow to use denser infill
     // if needed and if infill_dense_layers is positive.
-    this->count_distance_solid();
+//    this->count_distance_solid();
 
     this->state.set_done(posPrepareInfill);
 }
 
 void PrintObject::count_distance_solid() {
 
+	std::cout<<"count_distance_solid begin\n";
     for (int idx_region = 0; idx_region < this->_print->regions.size(); ++idx_region) {
         //count how many surface there are on each one
         LayerRegion *previousOne = NULL;
@@ -1212,6 +1213,7 @@ void PrintObject::count_distance_solid() {
                 }
             }
             for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
+		std::cout<<"count_distance_solid region "<<idx_region<<" and layer "<<idx_layer<<"\n";
                 LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
                 Surfaces surf_to_add;
                 for (auto it_surf = layerm->fill_surfaces.surfaces.begin(); it_surf != layerm->fill_surfaces.surfaces.end(); ++it_surf) {
@@ -1306,9 +1308,11 @@ void PrintObject::count_distance_solid() {
                 layerm->fill_surfaces.surfaces.clear();
                 layerm->fill_surfaces.surfaces.insert(layerm->fill_surfaces.surfaces.begin(), surf_to_add.begin(), surf_to_add.end());
                 previousOne = layerm;
+		std::cout<<"count_distance_solid region "<<idx_region<<" and layer "<<idx_layer<<" END\n";
             }
         }
     }
+	std::cout<<"count_distance_solid end\n";
 }
 
 void
