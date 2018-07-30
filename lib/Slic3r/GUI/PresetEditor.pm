@@ -443,6 +443,7 @@ sub options {
         seam_position external_perimeters_first
         fill_density fill_pattern top_infill_pattern bottom_infill_pattern fill_gaps
         infill_every_layers infill_only_where_needed
+		infill_dense_layers infill_dense_density infill_dense_pattern infill_dense_angle
         solid_infill_every_layers fill_angle solid_infill_below_area 
         only_retract_when_crossing_perimeters infill_first
         max_print_speed max_volumetric_speed
@@ -570,6 +571,16 @@ sub build {
             my $optgroup = $page->new_optgroup('Reducing printing time');
             $optgroup->append_single_option_line('infill_every_layers');
             $optgroup->append_single_option_line('infill_only_where_needed');
+            {
+                my $line = Slic3r::GUI::OptionsGroup::Line->new(
+                    label => 'Denser infill below solid layers',
+                );
+                $line->append_option($optgroup->get_option('infill_dense_layers'));
+                $line->append_option($optgroup->get_option('infill_dense_density'));
+                $line->append_option($optgroup->get_option('infill_dense_pattern'));
+                $line->append_option($optgroup->get_option('infill_dense_angle'));
+                $optgroup->append_line($line);
+            }
         }
         {
             my $optgroup = $page->new_optgroup('Advanced');

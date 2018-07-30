@@ -27,10 +27,12 @@ class Surface
     unsigned short  thickness_layers;   // in layers
     double          bridge_angle;       // in radians, ccw, 0 = East, only 0+ (negative means undefined)
     unsigned short  extra_perimeters;
+    uint16_t        maxNbSolidLayersOnTop;
     
     Surface(SurfaceType _surface_type, const ExPolygon &_expolygon)
         : surface_type(_surface_type), expolygon(_expolygon),
-            thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0)
+            thickness(-1), thickness_layers(1), bridge_angle(-1), extra_perimeters(0),
+            maxNbSolidLayersOnTop(-1)
         {};
     operator Polygons() const;
     double area() const;

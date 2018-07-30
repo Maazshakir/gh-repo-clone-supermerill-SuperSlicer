@@ -257,6 +257,10 @@ PrintObject::invalidate_state_by_config(const PrintConfigBase &config)
             steps.insert(posSupportMaterial);
         } else if (opt_key == "interface_shells"
             || opt_key == "infill_only_where_needed"
+            || opt_key == "infill_dense_layers"
+            || opt_key == "infill_dense_angle"
+            || opt_key == "infill_dense_density"
+            || opt_key == "infill_dense_pattern"
 			|| opt_key == "external_infill_margin"
             || opt_key == "bridged_infill_margin") {
             steps.insert(posPrepareInfill);
@@ -1188,9 +1192,124 @@ PrintObject::prepare_infill()
     // combine fill surfaces to honor the "infill every N layers" option
     this->combine_infill();
 
+    // count the distance from the nearest top surface, to allow to use denser infill
+    // if needed and if infill_dense_layers is positive.
+    this->count_distance_solid();
+
     this->state.set_done(posPrepareInfill);
 }
 
+void PrintObject::count_distance_solid() {
+
+    for (int idx_region = 0; idx_region < this->_print->regions.size(); ++idx_region) {
+        //count how many surface there are on each one
+        LayerRegion *previousOne = NULL;
+        if (this->layers.size() > 1) previousOne = this->layers[this->layers.size() - 1]->get_region(idx_region);
+        if (previousOne != NULL && previousOne->region()->config.infill_dense_layers.getInt() > 0) {
+            for (Surface &surf : previousOne->fill_surfaces.surfaces) {
+                if (surf.is_solid()) {
+                    surf.maxNbSolidLayersOnTop = 0;
+                }
+            }
+            for (int idx_layer = this->layers.size() - 2; idx_layer >= 0; --idx_layer){
+                LayerRegion *layerm = this->layers[idx_layer]->get_region(idx_region);
+                Surfaces surf_to_add;
+                for (auto it_surf = layerm->fill_surfaces.surfaces.begin(); it_surf != layerm->fill_surfaces.surfaces.end(); ++it_surf) {
+                    Surface &surf = *it_surf;
+                    if (!surf.is_solid()){
+                        surf.maxNbSolidLayersOnTop = 30000;
+                        uint16_t dense_dist = 30000;
+                        ExPolygons dense_polys;
+                        ExPolygons sparse_polys = { surf.expolygon };
+                        //find the surface which intersect with the smalle maxNb possible
+                        for (Surface &upp : previousOne->fill_surfaces.surfaces) {
+                            // i'm using intersection_ex because the result different than 
+                            // upp.expolygon.overlaps(surf.expolygon) or surf.expolygon.overlaps(upp.expolygon)
+                            ExPolygons intersect = intersection_ex(sparse_polys, ExPolygons() = { upp.expolygon }, true);
+                            if (!intersect.empty()) {
+                                uint16_t dist = (uint16_t)(upp.maxNbSolidLayersOnTop + 1);
+                                if (dist <= layerm->region()->config.infill_dense_layers.getInt()) {
+                                    // it will be a dense infill, split the surface if needed
+                                    uint64_t area_intersect = 0;
+                                    for (ExPolygon poly_inter : intersect) area_intersect += poly_inter.area();
+                                    //if it's in a dense area and the current surface isn't a dense one yet and the not-dense is too small.
+                                    if (surf.area() > area_intersect * 3 && 
+                                        surf.maxNbSolidLayersOnTop > layerm->region()->config.infill_dense_layers.getInt()) {
+                                        //split in two
+                                        if (dist == 1) {
+                                            //if just under the solid area, we can expand a bit
+                                            //remove too small sections and grew a bit to anchor it into the part
+                                            intersect = offset2_ex(intersect,
+                                                -layerm->flow(frInfill).scaled_width(),
+                                                layerm->flow(frInfill).scaled_width() + scale_(layerm->region()->config.external_infill_margin));
+                                        } else {
+                                            //just remove too small sections
+                                            intersect = offset2_ex(intersect,
+                                                -layerm->flow(frInfill).scaled_width(),
+                                                layerm->flow(frInfill).scaled_width());
+                                        }
+                                        if (!intersect.empty()) {
+                                            ExPolygons sparse_surfaces = offset2_ex(
+                                                diff_ex(sparse_polys, intersect, true),
+                                                -layerm->flow(frInfill).scaled_width(),
+                                                layerm->flow(frInfill).scaled_width());
+                                            ExPolygons dense_surfaces = diff_ex(sparse_polys, sparse_surfaces, true);
+                                            //assign (copy)
+                                            sparse_polys.clear();
+                                            sparse_polys.insert(sparse_polys.begin(), sparse_surfaces.begin(), sparse_surfaces.end());
+                                            dense_polys.insert(dense_polys.end(), dense_surfaces.begin(), dense_surfaces.end());
+                                            dense_dist = std::min(dense_dist, dist);
+                                        }
+                                    } else {
+                                        surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
+                                    }
+                                } else {
+                                    surf.maxNbSolidLayersOnTop = std::min(surf.maxNbSolidLayersOnTop, dist);
+                                }
+                            }
+                        }
+                        //check if we need to split the surface
+                        if (dense_dist != 30000) {
+                            uint64_t area_dense = 0;
+                            for (ExPolygon poly_inter : dense_polys) area_dense += poly_inter.area();
+                            uint64_t area_sparse = 0;
+                            for (ExPolygon poly_inter : sparse_polys) area_sparse += poly_inter.area();
+                            if (area_sparse > area_dense * 3) {
+                                //split
+                                dense_polys = union_ex(dense_polys);
+                                for (ExPolygon dense_poly : dense_polys) {
+                                    Surface dense_surf(surf, dense_poly);
+                                    dense_surf.maxNbSolidLayersOnTop = dense_dist;
+                                    surf_to_add.push_back(dense_surf);
+                                }
+                                sparse_polys = union_ex(sparse_polys);
+                                for (ExPolygon sparse_poly : sparse_polys) {
+                                    Surface sparse_surf(surf, sparse_poly);
+                                    surf_to_add.push_back(sparse_surf);
+                                }
+                                //layerm->fill_surfaces.surfaces.erase(it_surf);
+                            } else {
+                                surf.maxNbSolidLayersOnTop = dense_dist;
+                                surf_to_add.push_back(surf);
+                            }
+                        } else {
+                            surf_to_add.push_back(surf);
+                        }
+                    } else {
+                        surf.maxNbSolidLayersOnTop = 0;
+                        surf_to_add.push_back(surf);
+                    }
+                }
+                //if (!surf_to_add.empty()) {
+                //    layerm->fill_surfaces.surfaces.insert(layerm->fill_surfaces.surfaces.begin(), surf_to_add.begin(), surf_to_add.end());
+                //}
+                layerm->fill_surfaces.surfaces.clear();
+                layerm->fill_surfaces.surfaces.insert(layerm->fill_surfaces.surfaces.begin(), surf_to_add.begin(), surf_to_add.end());
+                previousOne = layerm;
+            }
+        }
+    }
+}
 
 void
 PrintObject::combine_infill()

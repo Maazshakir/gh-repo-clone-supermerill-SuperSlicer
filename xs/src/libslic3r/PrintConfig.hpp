@@ -253,6 +253,10 @@ class PrintRegionConfig : public virtual StaticPrintConfig
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
+    ConfigOptionInt                 infill_dense_layers;
+    ConfigOptionFloat               infill_dense_angle;
+    ConfigOptionPercent             infill_dense_density;
+    ConfigOptionEnum<InfillPattern> infill_dense_pattern;
     ConfigOptionFloatOrPercent      infill_overlap;
 	ConfigOptionFloat               external_infill_margin;
     ConfigOptionFloat               bridged_infill_margin;
@@ -298,6 +302,10 @@ class PrintRegionConfig : public virtual StaticPrintConfig
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);
+        OPT_PTR(infill_dense_layers);
+        OPT_PTR(infill_dense_angle);
+        OPT_PTR(infill_dense_density);
+        OPT_PTR(infill_dense_pattern);
         OPT_PTR(infill_overlap);
         OPT_PTR(external_infill_margin);
         OPT_PTR(bridged_infill_margin);

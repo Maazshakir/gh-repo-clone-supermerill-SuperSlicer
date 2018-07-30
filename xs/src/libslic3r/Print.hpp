@@ -200,6 +200,12 @@ class PrintObject
     /// Idempotence of this method is guaranteed by the fact that we don't remove things from
     /// fill_surfaces but we only turn them into VOID surfaces, thus preserving the boundaries.
     void clip_fill_surfaces();
+	
+	/// Count the number of layer before a solid surface is finded.
+	/// only done if dense_layer is >0
+	/// also split the surfaces if there are a big difference bewteen a newly supportedf area
+	/// and a big void.
+    void count_distance_solid();
 #endif // SLIC3RXS    
     private:
     Print* _print;
