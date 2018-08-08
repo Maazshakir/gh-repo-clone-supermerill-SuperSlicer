@@ -6,6 +6,19 @@
 #include <cmath>
 #include <cassert>
 
+#include "BoundingBox.hpp"
+#include "ExPolygon.hpp"
+#include "Geometry.hpp"
+#include "Polygon.hpp"
+#include "Line.hpp"
+#include "ClipperUtils.hpp"
+#include "SVG.hpp"
+#include "polypartition.h"
+#include "poly2tri/poly2tri.h"
+#include <algorithm>
+#include <cassert>
+#include <list>
+
 namespace Slic3r {
 
 void PerimeterGenerator::process()
@@ -231,18 +244,31 @@ void PerimeterGenerator::process()
                                     true),
                                     (float)(-min_width / 2), (float)(min_width / 2));
                         // compute a bit of overlap to anchor thin walls inside the print.
-                        ExPolygons anchor = intersection_ex(to_polygons(offset_ex(expp, (float)(ext_perimeter_width / 2))), no_thin_zone, true);
+                        /*for (int id_anchor = 0; id_anchor < anchor.size(); ++id_anchor) {
+                            stringstream stri;
+                            stri << "anchor" << layer_id << "_" << id_anchor << ".svg";
+                            SVG svg(stri.str());
+                            svg.draw(anchor[id_anchor]);
+                            svg.Close();
+                        }*/
+                        int id_thin = 0;
                         for (ExPolygon &ex : expp) {
+                            ExPolygons anchor = intersection_ex(to_polygons(offset_ex(ex, (float)(ext_perimeter_width / 2))), no_thin_zone, true);
                             ExPolygons bounds = union_ex(ExPolygons() = { ex }, anchor, true);
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(ex, bound).empty()) {
-                                    std::cout << "printing thin line at layer " << layer_id << "\n";
+                                    stringstream stri;
+                                    stri << "bound" << layer_id << "_" << id_thin << ".svg";
+                                    SVG svg(stri.str());
+                                    svg.draw(bound);
+                                    svg.Close();
                                     // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                     //ExPolygons simplified_bounds = bound.simplify(SCALED_EPSILON);
                                     //ex.medial_axis(simplified_bounds.size() == 1 ? simplified_bounds[0] : bound, 
                                         //ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls, layer_id);
                                     ex.medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls, layer_id);
-                                    continue;
+                                    id_thin++;
+                                    break;
                                 }
                             }
                         }

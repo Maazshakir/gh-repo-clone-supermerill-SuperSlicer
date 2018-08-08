@@ -343,6 +343,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
 
                 //TODO: if polyline.size > best_candidate->size
                 if (polyline.points.size() != best_candidate->points.size()) {
+                    std::cout << "remove some points " << (polyline.points.size() > best_candidate->points.size() ? "poly":"candi")<< " \n";
                     int32_t objective = min(polyline.points.size(), best_candidate->points.size());
                     ThickPolyline *tofusion = polyline.points.size() > best_candidate->points.size() ?
                         &polyline :
@@ -360,6 +361,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                             }
                         }
                         // "fusion"
+                        std::cout << "remove " << (id_smallest + 1) << " / " << tofusion->points.size() << ", width = " << tofusion->get_width()[(id_smallest + 1)]<<" \n";
                         tofusion->points.erase(tofusion->points.begin() + (id_smallest + 1));
                         tofusion->get_width().erase(tofusion->get_width().begin() + (id_smallest + 1));
 
@@ -375,30 +377,54 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                 // ex2: TTTTT => -----  these 90° useless lines should be discarded
                 double dot_poly_branch = 0;
                 double dot_candidate_branch = 0;
+                bool find_main_branch = false;
+                int biggest_main_branch_id = 0;
+                int biggest_main_branch_length = 0;
                 for (size_t j = 0; j < pp.size(); ++j) {
                    ThickPolyline& other = pp[j];
-                   bool finded = false;
                     if (j == i | j == best_idx) continue;
-                    if (polyline.first_point().coincides_with(other.last_point()) && !other.endpoints.second) {
+                    if (polyline.first_point().coincides_with(other.last_point())) {
                         other.reverse();
-                        finded = true;
-                    } else if (polyline.first_point().coincides_with(other.first_point()) && !other.endpoints.first) {
-                        finded = true;
+                        if (!other.endpoints.second)
+                            find_main_branch = true;
+                        else if (biggest_main_branch_length < other.length()) {
+                            biggest_main_branch_id = j;
+                            biggest_main_branch_length = other.length();
+                        }
+                    } else if (polyline.first_point().coincides_with(other.first_point())){
+                        if (!other.endpoints.first)
+                            find_main_branch = true;
+                        else if(biggest_main_branch_length < other.length()) {
+                            biggest_main_branch_id = j;
+                            biggest_main_branch_length = other.length();
+                        }
                     }
-                    if (finded) {
-                        //compute the dot
-                        Pointf v_poly(polyline.lines().front().vector().x, polyline.lines().front().vector().y);
-                        v_poly.scale(1 / std::sqrt(v_poly.x*v_poly.x + v_poly.y*v_poly.y));
-                        Pointf v_candid(best_candidate->lines().front().vector().x, best_candidate->lines().front().vector().y);
-                        v_candid.scale(1 / std::sqrt(v_candid.x*v_candid.x + v_candid.y*v_candid.y));
-                        Pointf v_branch(-other.lines().front().vector().x, -other.lines().front().vector().y);
-                        v_branch.scale(1 / std::sqrt(v_branch.x*v_branch.x + v_branch.y*v_branch.y));
-                        dot_poly_branch = v_poly.x*v_branch.x + v_poly.y*v_branch.y;
-                        dot_candidate_branch = v_candid.x*v_branch.x + v_candid.y*v_branch.y;
+                    if (find_main_branch) {
+                        //use this variable to store the good index and break to compute it
+                        biggest_main_branch_id = j;
                         break;
                     }
                 }
-                std::cout << " dot_poly_branch=" << dot_poly_branch << ", dot_candidate_branch" << dot_candidate_branch << "\n";
+                if (!find_main_branch && biggest_main_branch_length == 0) {
+                    // nothing -> it's impossible!
+                    dot_poly_branch = 0.707;
+                    dot_candidate_branch = 0.707;
+                } else {
+                    //compute the dot (biggest_main_branch_id)
+                    std::cout << "length poly " << unscale(polyline.length()) << ", candi " << unscale(best_candidate->length()) << ", main " << unscale(pp[biggest_main_branch_id].length()) << "\n";
+                    Pointf v_poly(polyline.lines().front().vector().x, polyline.lines().front().vector().y);
+                    v_poly.scale(1 / std::sqrt(v_poly.x*v_poly.x + v_poly.y*v_poly.y));
+                    Pointf v_candid(best_candidate->lines().front().vector().x, best_candidate->lines().front().vector().y);
+                    v_candid.scale(1 / std::sqrt(v_candid.x*v_candid.x + v_candid.y*v_candid.y));
+                    Pointf v_branch(-pp[biggest_main_branch_id].lines().front().vector().x, -pp[biggest_main_branch_id].lines().front().vector().y);
+                    v_branch.scale(1 / std::sqrt(v_branch.x*v_branch.x + v_branch.y*v_branch.y));
+                    dot_poly_branch = v_poly.x*v_branch.x + v_poly.y*v_branch.y;
+                    dot_candidate_branch = v_candid.x*v_branch.x + v_candid.y*v_branch.y;
+                    if (dot_poly_branch < 0) dot_poly_branch = 0;
+                    if (dot_candidate_branch < 0) dot_candidate_branch = 0;
+                }
+                
+                std::cout << " dot_poly_branch=" << dot_poly_branch << ", dot_candidate_branch=" << dot_candidate_branch << "\n";
 
                 //iterate the points
                 // as voronoi should create symetric thing, we can iterate synchonously
@@ -416,7 +442,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                         << unscale(polyline.get_width()[idx_point])*dot_poly_branch << " - " << unscale(best_candidate->get_width()[idx_point])*dot_candidate_branch 
                         << ", min = " << min(dot_poly_branch, dot_candidate_branch)
                         << "\n";
-                    std::cout << "fusion! " << unscale(polyline.get_width()[idx_point]) << "+" << unscale(best_candidate->get_width()[idx_point])
+                    std::cout << "fusion! " << unscale(polyline.get_width()[idx_point]) << " + " << unscale(best_candidate->get_width()[idx_point])
                         << ", dist = " << unscale(polyline.points[idx_point].distance_to(best_candidate->points[idx_point]))
                         << ", (s+s)/4+dist*2 = " << unscale(
                         (polyline.get_width()[idx_point] + best_candidate->get_width()[idx_point])/4 +2 * polyline.points[idx_point].distance_to(best_candidate->points[idx_point]))
@@ -426,7 +452,9 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                     polyline.width[idx_point] += best_candidate->width[idx_point];
                     polyline.width[idx_point] /= 2;
                     polyline.width[idx_point] += polyline.points[idx_point].distance_to(best_candidate->points[idx_point]);*/
-                    //the width decrease with distance from the centerline.
+                    // The width decrease with distance from the centerline.
+                    // This formula is what works the best, even if it's not perfect (created empirically).  0->3% error on a gap fill on some tests.
+                    //If someone find  an other formula based on the properties of the voronoi algorithm used here, and it works better, please use it.
                     double value_from_current_width = polyline.get_width()[idx_point] * dot_poly_branch / max(dot_poly_branch, dot_candidate_branch);
                     value_from_current_width += best_candidate->get_width()[idx_point] * dot_candidate_branch / max(dot_poly_branch, dot_candidate_branch);
                     value_from_current_width /= 4;
@@ -687,11 +715,8 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
     }
 
     //TODO last change: reduce the flow at the intersection points ?
-
-
-    std::cout << "\n";
-    std::cout << "\n";
-
+    //TODO: ensure the volume extruded is correct for what we have been asked.
+    double surface = 0;
     for (ThickPolyline& polyline : pp) {
         std::cout << "poly end :" << unscale(polyline.length()) << " : ";
         for (Point pt : polyline.points) {
@@ -701,8 +726,16 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
         for (coord_t pt : polyline.get_width()) {
             std::cout << unscale(pt) << "-";
         }
+        for (ThickLine l : polyline.thicklines()) {
+            surface += l.length() * (l.a_width + l.b_width) / 2;
+        }
         std::cout << "\n";
     }
+    std::cout << "Medial axis : cover " << unscale(unscale(surface)) << " / " << unscale(unscale(bounds.area())) << " (opti = " << unscale(unscale(this->area()))<< ")\n";
+
+
+    std::cout << "\n";
+    std::cout << "\n";
     polylines->insert(polylines->end(), pp.begin(), pp.end());
 }
 

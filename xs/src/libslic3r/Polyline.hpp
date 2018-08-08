@@ -129,11 +129,16 @@ inline void polylines_append(Polylines &dst, Polylines &&src)
 bool remove_degenerate(Polylines &polylines);
 
 
+/// ThickPolyline : a polyline with a width for each point
+/// This calss has a vector of coordf_t, it must be the same size than points.
+/// it's used to store the size of the line at this point.
+/// Also, the endpoint let us know if the front() and back() of the polyline 
+/// join something or is a dead-end.
 class ThickPolyline : public Polyline {
     public:
-    //width size must be == point size
+    /// width size must be == point size
     std::vector<coordf_t> width2;
-    // if tru => it's an endpoint. first is at front(), second is at back()
+    /// if true => it's an endpoint, if false it join an other ThickPolyline. first is at front(), second is at back()
     std::pair<bool,bool> endpoints;
     ThickPolyline() : endpoints(std::make_pair(false, false)) {};
     ThickLines thicklines() const;
@@ -142,7 +147,7 @@ class ThickPolyline : public Polyline {
     inline std::vector<coordf_t> & get_width() { return width2; }
 };
 
-// concatenate poylines if possible and refresh the endpoints
+/// concatenate poylines if possible and refresh the endpoints
 void concatThickPolylines(ThickPolylines &polylines);
 
 class Polyline3 : public MultiPoint3
