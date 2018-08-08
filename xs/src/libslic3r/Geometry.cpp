@@ -3,6 +3,11 @@
 #include "ExPolygon.hpp"
 #include "Line.hpp"
 #include "PolylineCollection.hpp"
+#include "BoundingBox.hpp"
+#include "Polygon.hpp"
+#include "SVG.hpp"
+#include "polypartition.h"
+#include "poly2tri/poly2tri.h"
 #include "clipper.hpp"
 #include <algorithm>
 #include <cassert>
@@ -835,6 +840,9 @@ private:
     const Lines &lines;
 };
 
+int id = 0;
+int id1_5 = 0;
+int id2 = 0;
 void
 MedialAxis::build(ThickPolylines* polylines)
 {
@@ -854,12 +862,36 @@ MedialAxis::build(ThickPolylines* polylines)
         return;
     }
     */
+    stringstream stri;
+    stri << "medial_axis_voro_" << id++ << ".svg";
+    SVG svge(stri.str());
     
+    std::cout << "VORONOI : ";
+    Line l;
+    for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
+        if (edge->is_infinite() || edge->is_secondary()) continue;
+        std::cout << ", " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y());
+        std::cout << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y());
+        std::cout << " sec:" << edge->is_secondary() << "\n";
+        ++edge;
+        Line li;
+        li.a.x = edge->vertex0()->x();
+        li.a.y = edge->vertex0()->y();
+        li.b.x = edge->vertex1()->x();
+        li.b.y = edge->vertex1()->y();
+        svge.draw(li);
+    }
+    /*svg.draw(*this);
+    svg.draw(pp);
+    */
+    svge.Close();
+
     typedef const VD::vertex_type vert_t;
     typedef const VD::edge_type   edge_t;
-    
+
     // collect valid edges (i.e. prune those not belonging to MAT)
     // note: this keeps twins, so it inserts twice the number of the valid edges
+    std::set<const VD::edge_type*> cout_edges;
     this->valid_edges.clear();
     {
         std::set<const VD::edge_type*> seen_edges;
@@ -876,9 +908,26 @@ MedialAxis::build(ThickPolylines* polylines)
             if (!this->validate_edge(&*edge)) continue;
             this->valid_edges.insert(&*edge);
             this->valid_edges.insert(edge->twin());
+            cout_edges.insert(&*edge);
         }
     }
+    stringstream stri2;
+    stri2 << "medial_axis_vorofilter_" << id2++ << ".svg";
+    SVG svge2(stri2.str());
     this->edges = this->valid_edges;
+    std::cout << "VORONOI filtered : ";
+    for (auto edge : cout_edges) {
+        std::cout << ", " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y());
+        std::cout << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y());
+        std::cout << " sec:" << edge->is_secondary() << "\n";
+        Line li;
+        li.a.x = edge->vertex0()->x();
+        li.a.y = edge->vertex0()->y();
+        li.b.x = edge->vertex1()->x();
+        li.b.y = edge->vertex1()->y();
+        svge2.draw(li);
+    }
+    svge2.Close();
     
     // iterate through the valid edges to build polylines
     while (!this->edges.empty()) {
@@ -888,8 +937,8 @@ MedialAxis::build(ThickPolylines* polylines)
         ThickPolyline polyline;
         polyline.points.push_back(Point( edge->vertex0()->x(), edge->vertex0()->y() ));
         polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
-        polyline.width.push_back(this->thickness[edge].first);
-        polyline.width.push_back(this->thickness[edge].second);
+        polyline.get_width().push_back(this->thickness[edge].first);
+        polyline.get_width().push_back(this->thickness[edge].second);
         
         // remove this edge and its twin from the available edges
         (void)this->edges.erase(edge);
@@ -903,11 +952,11 @@ MedialAxis::build(ThickPolylines* polylines)
             ThickPolyline rpolyline;
             this->process_edge_neighbors(edge->twin(), &rpolyline);
             polyline.points.insert(polyline.points.begin(), rpolyline.points.rbegin(), rpolyline.points.rend());
-            polyline.width.insert(polyline.width.begin(), rpolyline.width.rbegin(), rpolyline.width.rend());
+            polyline.get_width().insert(polyline.get_width().begin(), rpolyline.get_width().rbegin(), rpolyline.get_width().rend());
             polyline.endpoints.first = rpolyline.endpoints.second;
         }
         
-        assert(polyline.width.size() == polyline.points.size()*2 - 2);
+        assert(polyline.width.size() == polyline.points.size());
         
         // prevent loop endpoints from being extended
         if (polyline.first_point().coincides_with(polyline.last_point())) {
@@ -968,8 +1017,8 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
             
             Point new_point(neighbor->vertex1()->x(), neighbor->vertex1()->y());
             polyline->points.push_back(new_point);
-            polyline->width.push_back(this->thickness[neighbor].first);
-            polyline->width.push_back(this->thickness[neighbor].second);
+            polyline->get_width().push_back(this->thickness[neighbor].second);
+            
             (void)this->edges.erase(neighbor);
             (void)this->edges.erase(neighbor->twin());
             edge = neighbor;
@@ -1049,30 +1098,30 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
         ? line.b.distance_to(segment_l)*2
         : line.b.distance_to(this->retrieve_endpoint(cell_l))*2;
     
-    if (cell_l->contains_segment() && cell_r->contains_segment()) {
-        // calculate the relative angle between the two boundary segments
-        double angle = fabs(segment_r.orientation() - segment_l.orientation());
-        if (angle > PI) angle = 2*PI - angle;
-        assert(angle >= 0 && angle <= PI);
-        
-        // fabs(angle) ranges from 0 (collinear, same direction) to PI (collinear, opposite direction)
-        // we're interested only in segments close to the second case (facing segments)
-        // so we allow some tolerance.
-        // this filter ensures that we're dealing with a narrow/oriented area (longer than thick)
-        // we don't run it on edges not generated by two segments (thus generated by one segment
-        // and the endpoint of another segment), since their orientation would not be meaningful
-        if (PI - angle > PI/8) {
-            // angle is not narrow enough
-            
-            // only apply this filter to segments that are not too short otherwise their 
-            // angle could possibly be not meaningful
-            if (w0 < SCALED_EPSILON || w1 < SCALED_EPSILON || line.length() >= this->min_width)
-                return false;
-        }
-    } else {
-        if (w0 < SCALED_EPSILON || w1 < SCALED_EPSILON)
-            return false;
-    }
+    //if (cell_l->contains_segment() && cell_r->contains_segment()) {
+    //    // calculate the relative angle between the two boundary segments
+    //    double angle = fabs(segment_r.orientation() - segment_l.orientation());
+    //    if (angle > PI) angle = 2*PI - angle;
+    //    assert(angle >= 0 && angle <= PI);
+    //    
+    //    // fabs(angle) ranges from 0 (collinear, same direction) to PI (collinear, opposite direction)
+    //    // we're interested only in segments close to the second case (facing segments)
+    //    // so we allow some tolerance.
+    //    // this filter ensures that we're dealing with a narrow/oriented area (longer than thick)
+    //    // we don't run it on edges not generated by two segments (thus generated by one segment
+    //    // and the endpoint of another segment), since their orientation would not be meaningful
+    //    if (PI - angle > PI/8) {
+    //        // angle is not narrow enough
+    //        
+    //        // only apply this filter to segments that are not too short otherwise their 
+    //        // angle could possibly be not meaningful
+    //        if (w0 < SCALED_EPSILON || w1 < SCALED_EPSILON || line.length() >= this->min_width)
+    //            return false;
+    //    }
+    //} else {
+    //    if (w0 < SCALED_EPSILON || w1 < SCALED_EPSILON)
+    //        return false;
+    //}
     
     if (w0 < this->min_width && w1 < this->min_width)
         return false;

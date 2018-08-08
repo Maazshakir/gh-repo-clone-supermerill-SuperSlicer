@@ -206,8 +206,10 @@ void ExPolygon::simplify(double tolerance, ExPolygons* expolygons) const
     append(*expolygons, this->simplify(tolerance));
 }
 
+int id = 0;
+
 void
-ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines) const
+ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines, int layer_id) const
 {
     // init helper object
     Slic3r::Geometry::MedialAxis ma(max_width, min_width, this);
@@ -216,30 +218,69 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
     // compute the Voronoi diagram and extract medial axis polylines
     ThickPolylines pp;
     ma.build(&pp);
-    
-    /*
-    SVG svg("medial_axis.svg");
+
+    //for (Lines lines : ma.lines) {
+    //    cout << "lines " << lines.size() << ": ";
+    //    for (Line line : lines) {
+    //        cout << ",  " << unscale(line.a.x) << ":" << unscale(line.a.y) << "->" << unscale(line.b.x) << ":" << unscale(line.b.y);
+    //    }
+    //    cout << "\n";
+    //}
+    //cout << "\n";
+    std::cout << " ###################### medial_axis " << layer_id << "_" << id << " #####################\n";
+    stringstream stri;
+    stri << "medial_axis" << layer_id<<"_"<<id << ".svg";
+    SVG svg(stri.str());
     svg.draw(*this);
     svg.draw(pp);
     svg.Close();
-    */
+    int id_f=0;
     
     /* Find the maximum width returned; we're going to use this for validating and 
        filtering the output segments. */
     double max_w = 0;
     for (ThickPolylines::const_iterator it = pp.begin(); it != pp.end(); ++it)
-        max_w = fmaxf(max_w, *std::max_element(it->width.begin(), it->width.end()));
+        max_w = fmaxf(max_w, *std::max_element(it->width2.begin(), it->width2.end()));
 
-    /*  Aligned fusion: Fusion the bits at the end of lines by "increasing thikness"
+    /*  Aligned fusion: Fusion the bits at the end of lines by "increasing thickness"
     *   For that, we have to find other lines,
     *   and with a next point no more distant than the max width.
     *   Then, we can merge the bit from the first point to the second by following the mean.
     */
+    //for (ThickPolyline lines : pp) {
+    //    std::cout << "lines " << lines.points.size() << ": ";
+    //    for (Point pt : lines.points) {
+    //        std::cout << unscale(pt.x) << ":" << unscale(pt.y) << "->";
+    //    }
+    //    std::cout << "\n";
+    //}
+
+    //reoder pp by length
+    std::sort(pp.begin() + 4, pp.end(), [](const ThickPolyline & a, const ThickPolyline & b) { return a.length() > b.length(); });
+    for (ThickPolyline& polyline : pp) {
+        std::cout << "poly l:" << unscale(polyline.length()) << " : ";
+        for (Point pt : polyline.points) {
+            std::cout << unscale((int)(pt.x * 100) / 100.0) << ":" << unscale((int)(pt.y * 100) / 100.0) << "->";
+        }
+        std::cout << " =W> ";
+        for (coord_t pt : polyline.get_width()) {
+            std::cout << unscale(pt) << "-";
+        }
+        std::cout << "\n";
+    }
+    concatThickPolylines(pp);
     bool changes = true;
     while (changes) {
         changes = false;
+
+
         for (size_t i = 0; i < pp.size(); ++i) {
             ThickPolyline& polyline = pp[i];
+            std::cout << "look at poly l:" << unscale(polyline.length()) << " : ";
+            for (Point pt : polyline.points) {
+                std::cout << unscale((int)(pt.x * 100) / 100.0) << ":" << unscale((int)(pt.y * 100) / 100.0) << "->";
+            }
+            std::cout << "\n";
 
             ThickPolyline* best_candidate = nullptr;
             float best_dot = -1;
@@ -262,12 +303,24 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                 } else {
                     continue;
                 }
+                std::cout << "look with poly " << other.points.size() << " : ";
+                for (Point pt : other.points) {
+                    std::cout << ",  " << unscale(pt.x) << ":" << unscale(pt.y) << "->";
+                }
 
                 //only consider the other if the next point is near us
+                std::cout << " try : " << (polyline.points.size() < 2 && other.points.size() < 2) <<
+                 (!polyline.endpoints.second || !other.endpoints.second) <<
+                 (polyline.points.back().distance_to(other.points.back()) > max_width )<<
+                 (polyline.points.size() != other.points.size()) <<
+                 (abs(polyline.length() - other.length())>max_width / 2)<<"\n";
                 if (polyline.points.size() < 2 && other.points.size() < 2) continue;
                 if (!polyline.endpoints.second || !other.endpoints.second) continue;
-                if (polyline.points.back().distance_to(other.points.back()) > max_width) continue;
-                if (polyline.points.size() != other.points.size()) continue;
+                if ( (polyline.points.back().distance_to(other.points.back()) 
+                    + (polyline.get_width().back() + other.get_width().back()) / 2)
+                        > max_width) continue;
+                //if (polyline.points.size() != other.points.size()) continue;
+                if (abs(polyline.length() - other.length())>max_width/2) continue;
 
 
                 Pointf v_poly(polyline.lines().front().vector().x, polyline.lines().front().vector().y);
@@ -275,27 +328,118 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                 Pointf v_other(other.lines().front().vector().x, other.lines().front().vector().y);
                 v_other.scale(1 / std::sqrt(v_other.x*v_other.x + v_other.y*v_other.y));
                 float other_dot = v_poly.x*v_other.x + v_poly.y*v_other.y;
-                if (other_dot > best_dot) {
+               if (other_dot > best_dot) {
                     best_candidate = &other;
                     best_idx = j;
                     best_dot = other_dot;
                 }
+               /* if (best_value > polyline.points.back().distance_to(other.points.back())) {
+                    best_candidate = &other;
+                    best_idx = j;
+                    best_value = polyline.points.back().distance_to(other.points.back());
+                }*/
             }
             if (best_candidate != nullptr) {
 
-                //TODO: witch if polyline.size > best_candidate->size
-                //doesn't matter rright now because a if in the selection process prevent this.
+                //TODO: if polyline.size > best_candidate->size
+                if (polyline.points.size() != best_candidate->points.size()) {
+                    int32_t objective = min(polyline.points.size(), best_candidate->points.size());
+                    ThickPolyline *tofusion = polyline.points.size() > best_candidate->points.size() ?
+                        &polyline :
+                        best_candidate;
+                    while (tofusion->points.size() > objective) {
+                        //fusion smallest segment together
+                        int32_t id_smallest = 0;
+                        int32_t smallest = tofusion->points[0].distance_to(tofusion->points[1]) + tofusion->points[1].distance_to(tofusion->points[2]);
+                        for (uint32_t id = 1; id < tofusion->points.size() - 2; ++id) {
+                            uint32_t newdist = tofusion->points[id].distance_to(tofusion->points[id + 1])
+                                + tofusion->points[id + 1].distance_to(tofusion->points[id + 2]);
+                            if (newdist < smallest) {
+                                id_smallest = id;
+                                smallest = newdist;
+                            }
+                        }
+                        // "fusion"
+                        tofusion->points.erase(tofusion->points.begin() + (id_smallest + 1));
+                        tofusion->get_width().erase(tofusion->get_width().begin() + (id_smallest + 1));
+
+                    }
+
+                }
+
+                //get the branch in wich we may merge, if possible
+                //with that, we can decide what is important, and how we can merge that.
+                // angle_poly - angle_candi =90° => one is useless
+                // both angle are equal => both are useful with same strength
+                // ex: Y => | both are useful to crete a nice line
+                // ex2: TTTTT => -----  these 90° useless lines should be discarded
+                double dot_poly_branch = 0;
+                double dot_candidate_branch = 0;
+                for (size_t j = 0; j < pp.size(); ++j) {
+                   ThickPolyline& other = pp[j];
+                   bool finded = false;
+                    if (j == i | j == best_idx) continue;
+                    if (polyline.first_point().coincides_with(other.last_point()) && !other.endpoints.second) {
+                        other.reverse();
+                        finded = true;
+                    } else if (polyline.first_point().coincides_with(other.first_point()) && !other.endpoints.first) {
+                        finded = true;
+                    }
+                    if (finded) {
+                        //compute the dot
+                        Pointf v_poly(polyline.lines().front().vector().x, polyline.lines().front().vector().y);
+                        v_poly.scale(1 / std::sqrt(v_poly.x*v_poly.x + v_poly.y*v_poly.y));
+                        Pointf v_candid(best_candidate->lines().front().vector().x, best_candidate->lines().front().vector().y);
+                        v_candid.scale(1 / std::sqrt(v_candid.x*v_candid.x + v_candid.y*v_candid.y));
+                        Pointf v_branch(-other.lines().front().vector().x, -other.lines().front().vector().y);
+                        v_branch.scale(1 / std::sqrt(v_branch.x*v_branch.x + v_branch.y*v_branch.y));
+                        dot_poly_branch = v_poly.x*v_branch.x + v_poly.y*v_branch.y;
+                        dot_candidate_branch = v_candid.x*v_branch.x + v_candid.y*v_branch.y;
+                        break;
+                    }
+                }
+                std::cout << " dot_poly_branch=" << dot_poly_branch << ", dot_candidate_branch" << dot_candidate_branch << "\n";
 
                 //iterate the points
                 // as voronoi should create symetric thing, we can iterate synchonously
                 unsigned int idx_point = 1;
-                while (idx_point < polyline.points.size() && polyline.points[idx_point].distance_to(best_candidate->points[idx_point]) < max_width) {
+                while (idx_point < polyline.points.size() && 
+                    polyline.points[idx_point].distance_to(best_candidate->points[idx_point]) 
+                    + (polyline.get_width()[idx_point] + best_candidate->get_width()[idx_point]) / 2 < max_width) {
                     //fusion
-                    polyline.points[idx_point].x += best_candidate->points[idx_point].x;
-                    polyline.points[idx_point].x /= 2;
-                    polyline.points[idx_point].y += best_candidate->points[idx_point].y;
-                    polyline.points[idx_point].y /= 2;
+                    double newx = polyline.points[idx_point].x * dot_poly_branch + best_candidate->points[idx_point].x * dot_candidate_branch;
+                    polyline.points[idx_point].x = newx / (dot_poly_branch + dot_candidate_branch);
+                    double newy = polyline.points[idx_point].y * dot_poly_branch + best_candidate->points[idx_point].y * dot_candidate_branch;
+                    polyline.points[idx_point].y = newy / (dot_poly_branch + dot_candidate_branch);
+                    //new width : the half of each width (the "external" part) + dist bewteen them ("inner" part)
+                    std::cout << "try other comp " << dot_poly_branch + dot_candidate_branch << ", "
+                        << unscale(polyline.get_width()[idx_point])*dot_poly_branch << " - " << unscale(best_candidate->get_width()[idx_point])*dot_candidate_branch 
+                        << ", min = " << min(dot_poly_branch, dot_candidate_branch)
+                        << "\n";
+                    std::cout << "fusion! " << unscale(polyline.get_width()[idx_point]) << "+" << unscale(best_candidate->get_width()[idx_point])
+                        << ", dist = " << unscale(polyline.points[idx_point].distance_to(best_candidate->points[idx_point]))
+                        << ", (s+s)/4+dist*2 = " << unscale(
+                        (polyline.get_width()[idx_point] + best_candidate->get_width()[idx_point])/4 +2 * polyline.points[idx_point].distance_to(best_candidate->points[idx_point]))
+                        << "\n";
+                    
+                    /*
                     polyline.width[idx_point] += best_candidate->width[idx_point];
+                    polyline.width[idx_point] /= 2;
+                    polyline.width[idx_point] += polyline.points[idx_point].distance_to(best_candidate->points[idx_point]);*/
+                    //the width decrease with distance from the centerline.
+                    double value_from_current_width = polyline.get_width()[idx_point] * dot_poly_branch / max(dot_poly_branch, dot_candidate_branch);
+                    value_from_current_width += best_candidate->get_width()[idx_point] * dot_candidate_branch / max(dot_poly_branch, dot_candidate_branch);
+                    value_from_current_width /= 4;
+                    double value_from_dist = 2 * polyline.points[idx_point].distance_to(best_candidate->points[idx_point]);
+                    value_from_dist *= (min(dot_poly_branch, dot_candidate_branch) / max(dot_poly_branch, dot_candidate_branch));
+                    std::cout << "my try value_from_current_width=" << value_from_current_width 
+                        << ", value_from_dist=" << value_from_dist
+                        << "\n";
+                    polyline.get_width()[idx_point] = value_from_current_width + value_from_dist;
+                    //we take the width at front, it's siplier and the most reliable.
+                    //polyline.get_width()[idx_point] = std::max(polyline.get_width().front(), best_candidate->get_width().front());
+                    std::cout << " == " << unscale(polyline.get_width()[idx_point]) << " ? " << unscale(polyline.get_width()[idx_point - 1])
+                        << "\n";
                     ++idx_point;
                 }
                 if (idx_point < best_candidate->points.size()) {
@@ -306,12 +450,12 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
                         pp.back().endpoints.second = best_candidate->endpoints.second;
                         for (int idx_point_new_line = idx_point; idx_point_new_line < best_candidate->points.size(); ++idx_point_new_line) {
                             pp.back().points.push_back(best_candidate->points[idx_point_new_line]);
-                            pp.back().width.push_back(best_candidate->width[idx_point_new_line]);
+                            pp.back().get_width().push_back(best_candidate->get_width()[idx_point_new_line]);
                         }
                     } else {
                         //Add last point
                         polyline.points.push_back(best_candidate->points[idx_point]);
-                        polyline.width.push_back(best_candidate->width[idx_point]);
+                        polyline.get_width().push_back(best_candidate->get_width()[idx_point]);
                         //select if an end opccur
                         polyline.endpoints.second &= best_candidate->endpoints.second;
                     }
@@ -323,21 +467,22 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
 
                 //remove points that are the same or too close each other, ie simplify
                 for (unsigned int idx_point = 1; idx_point < polyline.points.size(); ++idx_point) {
-                    //distance of 1 is on the sclaed coordinates, so it correspond to SCALE_FACTOR, so it's very small
-                    if (polyline.points[idx_point - 1].distance_to(polyline.points[idx_point]) < 1) {
+                    if (polyline.points[idx_point - 1].distance_to(polyline.points[idx_point]) < SCALED_EPSILON) {
                         if (idx_point < polyline.points.size() -1) {
                             polyline.points.erase(polyline.points.begin() + idx_point);
+                            polyline.get_width().erase(polyline.get_width().begin() + idx_point);
                         } else {
-                            polyline.points.erase(polyline.points.begin() + idx_point -1);
+                            polyline.points.erase(polyline.points.begin() + idx_point - 1);
+                            polyline.get_width().erase(polyline.get_width().begin() + idx_point - 1);
                         }
                         --idx_point;
                     }
                 }
                 //remove points that are outside of the geometry
                 for (unsigned int idx_point = 0; idx_point < polyline.points.size(); ++idx_point) {
-                    //distance of 1 is on the sclaed coordinates, so it correspond to SCALE_FACTOR, so it's very small
                     if (!bounds.contains_b(polyline.points[idx_point])) {
                         polyline.points.erase(polyline.points.begin() + idx_point);
+                        polyline.get_width().erase(polyline.get_width().begin() + idx_point);
                         --idx_point;
                     }
                 }
@@ -350,14 +495,56 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
 
                 pp.erase(pp.begin() + best_idx);
                 changes = true;
+
+                stringstream stri2;
+                stri2 << "medial_axis_fusioned_" << layer_id << "_" << id<<"_f"<<id_f++ << ".svg";
+                SVG svg2(stri2.str());
+                svg2.draw(*this);
+                svg2.draw(pp);
+                svg2.Close();
             }
         }
+        if (changes) concatThickPolylines(pp);
     }
 
 
+    changes = false;
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline& polyline = pp[i];
+
+        // remove bits with too small extrusion
+        size_t idx_point = 0;
+        while (idx_point<polyline.points.size() && polyline.get_width()[idx_point] < min_width && polyline.endpoints.first) {
+            std::cout << "too thin polyline point :" << polyline.get_width()[idx_point] << " < " << min_width << "\n";
+            polyline.points.erase(polyline.points.begin() + idx_point);
+            polyline.get_width().erase(polyline.get_width().begin() + idx_point);
+            changes = true;
+        }
+        idx_point = polyline.points.size() - 1;
+        while (idx_point >= 0 && polyline.get_width()[idx_point] < min_width && polyline.endpoints.second) {
+            std::cout << "too thin polyline point:" << polyline.get_width()[idx_point] << " < " << min_width << "\n";
+            polyline.points.erase(polyline.points.begin() + idx_point);
+            polyline.get_width().erase(polyline.get_width().begin() + idx_point);
+            idx_point--;
+            changes = true;
+        }
+        if (polyline.points.size() < 2) {
+            //remove self if too small
+            pp.erase(pp.begin() + i);
+            --i;
+        }
+    }
+    if (changes) concatThickPolylines(pp);
+
+    stringstream stri2;
+    stri2 << "medial_axis_fusioned_thincut_" << layer_id << "_" << id++ << ".svg";
+    SVG svg2(stri2.str());
+    svg2.draw(*this);
+    svg2.draw(pp);
+    svg2.Close();
+
     /* Loop through all returned polylines in order to extend their endpoints to the 
        expolygon boundaries */
-    bool removed = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
 
@@ -405,6 +592,7 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
         Optimisation of the old algorithm : now we select the most "strait line" choice 
         when we merge with an other line at a point with more than two meet.
         */
+    changes = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
@@ -441,32 +629,80 @@ ExPolygon::medial_axis(const ExPolygon &bounds, double max_width, double min_wid
         if (best_candidate != nullptr) {
 
             polyline.points.insert(polyline.points.end(), best_candidate->points.begin() + 1, best_candidate->points.end());
-            polyline.width.insert(polyline.width.end(), best_candidate->width.begin(), best_candidate->width.end());
+            polyline.get_width().insert(polyline.get_width().end(), best_candidate->get_width().begin() + 1, best_candidate->get_width().end());
             polyline.endpoints.second = best_candidate->endpoints.second;
-            assert(polyline.width.size() == polyline.points.size()*2 - 2);
-                
+            assert(polyline.width.size() == polyline.points.size());
+            changes = true;
             pp.erase(pp.begin() + best_idx);
         }
     }
+    if (changes) concatThickPolylines(pp);
 
-    for (size_t i = 0; i < pp.size(); ++i) {
-        ThickPolyline& polyline = pp[i];
-
-        /*  remove too short polylines
-        (we can't do this check before endpoints extension and clipping because we don't
-        know how long will the endpoints be extended since it depends on polygon thickness
-        which is variable - extension will be <= max_width/2 on each side)  */
-        if ((polyline.endpoints.first || polyline.endpoints.second)
-            && polyline.length() < max_w * 2) {
-            pp.erase(pp.begin() + i);
-            --i;
-            removed = true;
-            continue;
+    for (ThickPolyline& polyline : pp) {
+        std::cout << "poly l:" << unscale(polyline.length()) << " : ";
+        for (Point pt : polyline.points) {
+            std::cout << unscale((int)(pt.x * 100) / 100.0) << ":" << unscale((int)(pt.y * 100) / 100.0) << "->";
         }
-
+        std::cout << " =W> ";
+        for (coord_t pt : polyline.get_width()) {
+            std::cout << unscale(pt) << "-";
+        }
+        std::cout << "\n";
     }
 
-    
+    changes = true;
+    while (changes) {
+        changes = false;
+        
+        double shortest_size = max_w * 2;
+        int32_t shortest_idx = -1;
+        for (size_t i = 0; i < pp.size(); ++i) {
+            ThickPolyline& polyline = pp[i];
+            /*  remove the shortest polylines : polyline that are shorter than wider
+            (we can't do this check before endpoints extension and clipping because we don't
+            know how long will the endpoints be extended since it depends on polygon thickness
+            which is variable - extension will be <= max_width/2 on each side)  */
+            if ((polyline.endpoints.first || polyline.endpoints.second)
+                && polyline.length() < max_w * 2) {
+                std::cout << "remove polyline " << unscale(polyline.length()) << " < " << unscale(max_w * 2)
+                    << " = " << ((polyline.endpoints.first || polyline.endpoints.second)
+                    && polyline.length() < max_w * 2) << "\n";
+                //TODO: checkl before if it can't be extended
+                //pp.erase(pp.begin() + i);
+                //--i;
+                //continue;
+                //changes = true;
+               /* if (shortest_size > polyline.length()) {
+                    shortest_size = polyline.length();
+                    shortest_idx = i;
+                }*/
+
+            }
+        }
+        if (shortest_idx >= 0 && shortest_idx < pp.size()) {
+            pp.erase(pp.begin() + shortest_idx);
+            changes = true;
+        }
+        if (changes) concatThickPolylines(pp);
+    }
+
+    //TODO last change: reduce the flow at the intersection points ?
+
+
+    std::cout << "\n";
+    std::cout << "\n";
+
+    for (ThickPolyline& polyline : pp) {
+        std::cout << "poly end :" << unscale(polyline.length()) << " : ";
+        for (Point pt : polyline.points) {
+            std::cout << unscale((int)(pt.x * 100) / 100.0) << ":" << unscale((int)(pt.y * 100) / 100.0) << "->";
+        }
+        std::cout << " =W> ";
+        for (coord_t pt : polyline.get_width()) {
+            std::cout << unscale(pt) << "-";
+        }
+        std::cout << "\n";
+    }
     polylines->insert(polylines->end(), pp.begin(), pp.end());
 }
 
@@ -474,7 +710,7 @@ void
 ExPolygon::medial_axis(double max_width, double min_width, Polylines* polylines) const
 {
     ThickPolylines tp;
-    this->medial_axis(*this, max_width, min_width, &tp);
+    this->medial_axis(*this, max_width, min_width, &tp,-1);
     polylines->insert(polylines->end(), tp.begin(), tp.end());
 }
 

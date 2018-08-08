@@ -128,14 +128,22 @@ inline void polylines_append(Polylines &dst, Polylines &&src)
 
 bool remove_degenerate(Polylines &polylines);
 
+
 class ThickPolyline : public Polyline {
     public:
-    std::vector<coordf_t> width;
+    //width size must be == point size
+    std::vector<coordf_t> width2;
+    // if tru => it's an endpoint. first is at front(), second is at back()
     std::pair<bool,bool> endpoints;
     ThickPolyline() : endpoints(std::make_pair(false, false)) {};
     ThickLines thicklines() const;
     void reverse();
+
+    inline std::vector<coordf_t> & get_width() { return width2; }
 };
+
+// concatenate poylines if possible and refresh the endpoints
+void concatThickPolylines(ThickPolylines &polylines);
 
 class Polyline3 : public MultiPoint3
 {

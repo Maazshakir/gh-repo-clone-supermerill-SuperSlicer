@@ -6,6 +6,7 @@
 #include "Polygon.hpp"
 #include <iostream>
 #include <utility>
+#include <algorithm>
 
 namespace Slic3r {
 
@@ -257,13 +258,25 @@ bool remove_degenerate(Polylines &polylines)
 ThickLines
 ThickPolyline::thicklines() const
 {
+
+    std::cout << "myThickline(1) ";
+    for (size_t wi : width2) {
+        std::cout << " " << wi;
+    }
+    std::cout << "\n";
+    std::cout << "myThickline(2) ";
+    for (size_t i = 0; i < width2.size(); ++i) {
+        std::cout << " " << i << ":" << width2[i];
+    }
+    std::cout << "\n";
     ThickLines lines;
     if (this->points.size() >= 2) {
         lines.reserve(this->points.size() - 1);
         for (size_t i = 0; i < this->points.size()-1; ++i) {
+            std::cout << "create new line " << i << " : " << this->width2[i] << "->" << this->width2[i + 1] << "\n";
             ThickLine line(this->points[i], this->points[i+1]);
-            line.a_width = this->width[2*i];
-            line.b_width = this->width[2*i+1];
+            line.a_width = this->width2[i];
+            line.b_width = this->width2[i + 1];
             lines.push_back(line);
         }
     }
@@ -274,7 +287,7 @@ void
 ThickPolyline::reverse()
 {
     Polyline::reverse();
-    std::reverse(this->width.begin(), this->width.end());
+    std::reverse(this->get_width().begin(), this->get_width().end());
     std::swap(this->endpoints.first, this->endpoints.second);
 }
 
@@ -290,6 +303,131 @@ Lines3 Polyline3::lines() const
         }
     }
     return lines;
+}
+
+void concatThickPolylines(ThickPolylines& pp) {
+
+    //concat polyline if only 2 polyline at a point
+    for (size_t i = 0; i < pp.size(); ++i) {
+        ThickPolyline *polyline = &pp[i];
+        std::cout << "check poly " << i << " \n";
+
+        int32_t id_candidate_first_point = -1;
+        int32_t id_candidate_last_point = -1;
+        int32_t nbCandidate_first_point = 0;
+        int32_t nbCandidate_last_point = 0;
+        // find another polyline starting here
+        for (size_t j = 0; j < pp.size(); ++j) {
+            if (j == i) continue;
+            ThickPolyline& other = pp[j];
+            if (polyline->last_point().coincides_with(other.last_point())) {
+                other.reverse();
+                id_candidate_last_point = j;
+                nbCandidate_last_point++;
+            } else if (polyline->first_point().coincides_with(other.last_point())) {
+                id_candidate_first_point = j;
+                nbCandidate_first_point++;
+            } else if (polyline->first_point().coincides_with(other.first_point())) {
+                id_candidate_first_point = j;
+                nbCandidate_first_point++;
+                other.reverse();
+            } else if (polyline->last_point().coincides_with(other.first_point())) {
+                id_candidate_last_point = j;
+                nbCandidate_last_point++;
+            } else {
+                continue;
+            }
+        }
+        if (id_candidate_last_point == id_candidate_first_point && nbCandidate_first_point == 1 && nbCandidate_last_point == 1) {
+            std::cout << "concat loop! " << id_candidate_last_point << " " << pp.size() << " \n";
+            //it's a  loop! it's a trap!
+            polyline->width2[0] = std::max(polyline->width2.front(), pp[id_candidate_first_point].width2.back());
+            polyline->points.insert(polyline->points.begin(), pp[id_candidate_first_point].points.begin(), pp[id_candidate_first_point].points.end() - 1);
+            polyline->width2.insert(polyline->width2.begin(), pp[id_candidate_first_point].width2.begin(), pp[id_candidate_first_point].width2.end() - 1);
+            pp.erase(pp.begin() + id_candidate_first_point);
+            polyline->endpoints.first = false;
+            polyline->endpoints.second = false;
+            continue;
+        }
+
+        if (nbCandidate_first_point == 1) {
+            //concat at front
+            std::cout << "concat (f) @ " << unscale(polyline->points.front().x) << ":" << unscale(polyline->points.front().y) << " =W> " << polyline->width2.front() << " " << pp[id_candidate_first_point].width2.back() << " \n";
+
+            std::cout << "before, front " << unscale(pp[id_candidate_first_point].points.front().x) << ":" << unscale(pp[id_candidate_first_point].points.front().y) << " : ";
+            for (auto wi : pp[id_candidate_first_point].width2) {
+                std::cout << " " << wi;
+            }
+            std::cout << "   ," << unscale(pp[id_candidate_first_point].points.back().x) << ":" << unscale(pp[id_candidate_first_point].points.back().y) << "\n";
+            std::cout << "before, back " << unscale(polyline->points.front().x) << ":" << unscale(polyline->points.front().y) << " : ";
+            for (auto wi : polyline->width2) {
+                std::cout << " " << wi;
+            }
+            std::cout << "  , " << unscale(polyline->points.back().x) << ":" << unscale(polyline->points.back().y) << "\n";
+           polyline->width2[0] = std::max(polyline->width2.front(), pp[id_candidate_first_point].width2.back());
+            polyline->points.insert(polyline->points.begin(), pp[id_candidate_first_point].points.begin(), pp[id_candidate_first_point].points.end() - 1);
+            polyline->width2.insert(polyline->width2.begin(), pp[id_candidate_first_point].width2.begin(), pp[id_candidate_first_point].width2.end() - 1);
+            polyline->endpoints.first = pp[id_candidate_first_point].endpoints.first;
+            pp.erase(pp.begin() + id_candidate_first_point);
+            if (id_candidate_first_point < i) {
+                std::cout << "move me  : " << i << " to " << i - 1;
+                i--;
+                polyline = &pp[i];
+            }
+            if (id_candidate_last_point > id_candidate_first_point) {
+                std::cout << "move last : " << id_candidate_last_point << " to " << id_candidate_last_point-1;
+                id_candidate_last_point--;
+            }
+            std::cout << "after : ";
+            for (auto wi : polyline->width2) {
+                std::cout << " " << wi;
+            }
+            std::cout << "\n";
+        } else if (nbCandidate_first_point == 0 && !polyline->endpoints.first && !polyline->first_point().coincides_with(polyline->last_point())) {
+            //update endpoint
+            polyline->endpoints.first = true;
+        }
+        if (nbCandidate_last_point == 1) {
+            //concat at back
+            std::cout << "concat (l) @ " << unscale(polyline->points.back().x) << ":" << unscale(polyline->points.back().y) << " =W> " << polyline->width2.back() << " " << pp[id_candidate_last_point].width2.front() << " \n";
+
+            std::cout << "before, front " << unscale(polyline->points.front().x) << ":" << unscale(polyline->points.front().y) << " : ";
+            for (auto wi : polyline->width2) {
+                std::cout << " " << wi;
+            }
+            std::cout << "  , " << unscale(polyline->points.back().x) << ":" << unscale(polyline->points.back().y) << "\n";
+            std::cout << "before, back " << unscale(pp[id_candidate_last_point].points.front().x) << ":" << unscale(pp[id_candidate_last_point].points.front().y) << " : ";
+            for (auto wi : pp[id_candidate_last_point].width2) {
+                std::cout << " " << wi;
+            }
+            std::cout << "   ," << unscale(pp[id_candidate_last_point].points.back().x) << ":" << unscale(pp[id_candidate_last_point].points.back().y) << "\n";
+            polyline->width2[polyline->width2.size() - 1] = std::max(polyline->width2.back(), pp[id_candidate_last_point].width2.front());
+            polyline->points.insert(polyline->points.end(), pp[id_candidate_last_point].points.begin() + 1, pp[id_candidate_last_point].points.end());
+            polyline->width2.insert(polyline->width2.end(), pp[id_candidate_last_point].width2.begin() + 1, pp[id_candidate_last_point].width2.end());
+            polyline->endpoints.second = pp[id_candidate_last_point].endpoints.second;
+            pp.erase(pp.begin() + id_candidate_last_point);
+            if (id_candidate_last_point < i) {
+                std::cout << "move me  : " << i << " to " << i - 1;
+                i--;
+                polyline = &pp[i];
+            }
+            std::cout << "after : ";
+            for (auto wi : polyline->width2) {
+                std::cout << " " << wi;
+            }
+            std::cout << "\n";
+        } else if (nbCandidate_last_point == 0 && !polyline->endpoints.second && !polyline->first_point().coincides_with(polyline->last_point())) {
+            //update endpoint
+            polyline->endpoints.second = true;
+        }
+
+        if (polyline->last_point().coincides_with(polyline->first_point())) {
+            //the concat has created a loop : update endpoints
+            std::cout << "loop!!(2) \n";
+            polyline->endpoints.first = false;
+            polyline->endpoints.second = false;
+        }
+    }
 }
 
 }

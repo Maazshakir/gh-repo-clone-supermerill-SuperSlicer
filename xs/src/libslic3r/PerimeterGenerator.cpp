@@ -127,7 +127,7 @@ void PerimeterGenerator::process()
                                 //and we want at least 1 perimeter of overlap
                                 ExPolygons bridge = unsupported_filtered;
                                 unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing)), last);
-                                // remove from the bridge & support the small inmperfections of the union
+                                // remove from the bridge & support the small imperfections of the union
                                 ExPolygons bridge_and_support = offset2_ex(union_ex(bridge, support, true), perimeter_spacing/2, -perimeter_spacing/2);
                                 // make him flush with perimeter area
                                 unsupported_filtered = intersection_ex(offset_ex(unsupported_filtered, (float)(perimeter_spacing / 2)), bridge_and_support);
@@ -236,8 +236,12 @@ void PerimeterGenerator::process()
                             ExPolygons bounds = union_ex(ExPolygons() = { ex }, anchor, true);
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(ex, bound).empty()) {
+                                    std::cout << "printing thin line at layer " << layer_id << "\n";
                                     // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                    ex.medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls);
+                                    //ExPolygons simplified_bounds = bound.simplify(SCALED_EPSILON);
+                                    //ex.medial_axis(simplified_bounds.size() == 1 ? simplified_bounds[0] : bound, 
+                                        //ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls, layer_id);
+                                    ex.medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, &thin_walls, layer_id);
                                     continue;
                                 }
                             }
@@ -396,7 +400,7 @@ void PerimeterGenerator::process()
                 true);
             ThickPolylines polylines;
             for (const ExPolygon &ex : gaps_ex)
-                ex.medial_axis(ex, max, min, &polylines);
+                ex.medial_axis(ex, max, min, &polylines, layer_id);
             if (!polylines.empty()) {
                 ExtrusionEntityCollection gap_fill = this->_variable_width(polylines, 
                     erGapFill, this->solid_infill_flow);
@@ -514,7 +518,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
         
         coll.append(ExtrusionLoop(paths, loop_role));
     }
-    
+
     // append thin walls to the nearest-neighbor search (only for first iteration)
     if (!thin_walls.empty()) {
         ExtrusionEntityCollection tw = this->_variable_width
@@ -577,6 +581,7 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
         
         for (int i = 0; i < (int)lines.size(); ++i) {
             const ThickLine& line = lines[i];
+            std::cout << "line : " << line.a_width << " -> " << line.b_width << "\n";
             
             const coordf_t line_len = line.length();
             if (line_len < SCALED_EPSILON) continue;
@@ -590,15 +595,18 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
                 {
                     pp.push_back(line.a);
                     width.push_back(line.a_width);
+                    std::cout << line.a_width<<", ";
                     for (size_t j = 1; j < segments; ++j) {
                         pp.push_back(line.point_at(j*seg_len));
                         
                         coordf_t w = line.a_width + (j*seg_len) * (line.b_width-line.a_width) / line_len;
                         width.push_back(w);
                         width.push_back(w);
+                        std::cout << w << "x2, ";
                     }
                     pp.push_back(line.b);
                     width.push_back(line.b_width);
+                    std::cout << line.b_width<<"\n";
                     
                     assert(pp.size() == segments + 1);
                     assert(width.size() == segments*2);
@@ -618,6 +626,7 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
             }
             
             const double w = fmax(line.a_width, line.b_width);
+            std::cout << "thin flow " << line.a_width << " , " << line.b_width << "\n";
             if (path.polyline.points.empty()) {
                 path.polyline.append(line.a);
                 path.polyline.append(line.b);
@@ -655,6 +664,9 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
                 ExtrusionEntityCollection unsortable_coll(paths);
                 unsortable_coll.no_sort = true;
                 coll.append(unsortable_coll);
+                for (auto path : paths) {
+                    std::cout << "path flow " << path.width << "\n";
+                }
             }
         }
     }
