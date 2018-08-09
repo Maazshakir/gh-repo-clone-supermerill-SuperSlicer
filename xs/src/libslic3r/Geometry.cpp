@@ -13,11 +13,6 @@
 #include <utility>
 #include <stack>
 #include <vector>
-#include "BoundingBox.hpp"
-#include "Polygon.hpp"
-#include "SVG.hpp"
-#include "polypartition.h"
-#include "poly2tri/poly2tri.h"
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -840,9 +835,6 @@ private:
     const Lines &lines;
 };
 
-int id = 0;
-int id1_5 = 0;
-int id2 = 0;
 void
 MedialAxis::build(ThickPolylines* polylines)
 {
@@ -862,36 +854,12 @@ MedialAxis::build(ThickPolylines* polylines)
         return;
     }
     */
-    stringstream stri;
-    stri << "medial_axis_voro_" << id++ << ".svg";
-    SVG svge(stri.str());
-
-    std::cout << "VORONOI : ";
-    Line l;
-    for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
-        if (edge->is_infinite() || edge->is_secondary()) continue;
-        std::cout << ", " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y());
-        std::cout << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y());
-        std::cout << " sec:" << edge->is_secondary() << "\n";
-        ++edge;
-        Line li;
-        li.a.x = edge->vertex0()->x();
-        li.a.y = edge->vertex0()->y();
-        li.b.x = edge->vertex1()->x();
-        li.b.y = edge->vertex1()->y();
-        svge.draw(li);
-    }
-    /*svg.draw(*this);
-    svg.draw(pp);
-    */
-    svge.Close();
 
     typedef const VD::vertex_type vert_t;
     typedef const VD::edge_type   edge_t;
 
     // collect valid edges (i.e. prune those not belonging to MAT)
     // note: this keeps twins, so it inserts twice the number of the valid edges
-    std::set<const VD::edge_type*> cout_edges;
     this->valid_edges.clear();
     {
         std::set<const VD::edge_type*> seen_edges;
@@ -908,26 +876,9 @@ MedialAxis::build(ThickPolylines* polylines)
             if (!this->validate_edge(&*edge)) continue;
             this->valid_edges.insert(&*edge);
             this->valid_edges.insert(edge->twin());
-            cout_edges.insert(&*edge);
         }
     }
     this->edges = this->valid_edges;
-    stringstream stri2;
-    stri2 << "medial_axis_vorofilter_" << id2++ << ".svg";
-    SVG svge2(stri2.str());
-    std::cout << "VORONOI filtered : ";
-    for (auto edge : cout_edges) {
-        std::cout << ", " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y());
-        std::cout << "=>" << unscale(edge->vertex1()->x()) << ":" << unscale(edge->vertex1()->y());
-        std::cout << " sec:" << edge->is_secondary() << "\n";
-        Line li;
-        li.a.x = edge->vertex0()->x();
-        li.a.y = edge->vertex0()->y();
-        li.b.x = edge->vertex1()->x();
-        li.b.y = edge->vertex1()->y();
-        svge2.draw(li);
-    }
-    svge2.Close();
     
     // iterate through the valid edges to build polylines
     while (!this->edges.empty()) {
@@ -1018,12 +969,6 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
             Point new_point(neighbor->vertex1()->x(), neighbor->vertex1()->y());
             polyline->points.push_back(new_point);
             polyline->get_width().push_back(this->thickness[neighbor].second);
-            if (abs(this->thickness[neighbor].first - this->thickness[edge].second) > SCALED_EPSILON) {
-                std::cout << "Error, this point redifined the point thiknesss:"
-                    << this->thickness[edge].first << "->" << this->thickness[edge].second
-                    <<", "<< this->thickness[neighbor].first << "->" << this->thickness[neighbor].second
-                    << "\n";
-            }
             
             (void)this->edges.erase(neighbor);
             (void)this->edges.erase(neighbor->twin());
