@@ -3,11 +3,6 @@
 #include "ExPolygon.hpp"
 #include "Line.hpp"
 #include "PolylineCollection.hpp"
-#include "BoundingBox.hpp"
-#include "Polygon.hpp"
-#include "SVG.hpp"
-#include "polypartition.h"
-#include "poly2tri/poly2tri.h"
 #include "clipper.hpp"
 #include <algorithm>
 #include <cassert>
@@ -18,6 +13,11 @@
 #include <utility>
 #include <stack>
 #include <vector>
+#include "BoundingBox.hpp"
+#include "Polygon.hpp"
+#include "SVG.hpp"
+#include "polypartition.h"
+#include "poly2tri/poly2tri.h"
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
@@ -865,7 +865,7 @@ MedialAxis::build(ThickPolylines* polylines)
     stringstream stri;
     stri << "medial_axis_voro_" << id++ << ".svg";
     SVG svge(stri.str());
-    
+
     std::cout << "VORONOI : ";
     Line l;
     for (VD::const_edge_iterator edge = this->vd.edges().begin(); edge != this->vd.edges().end(); ++edge) {
@@ -911,10 +911,10 @@ MedialAxis::build(ThickPolylines* polylines)
             cout_edges.insert(&*edge);
         }
     }
+    this->edges = this->valid_edges;
     stringstream stri2;
     stri2 << "medial_axis_vorofilter_" << id2++ << ".svg";
     SVG svge2(stri2.str());
-    this->edges = this->valid_edges;
     std::cout << "VORONOI filtered : ";
     for (auto edge : cout_edges) {
         std::cout << ", " << unscale(edge->vertex0()->x()) << ":" << unscale(edge->vertex0()->y());
@@ -1018,6 +1018,12 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
             Point new_point(neighbor->vertex1()->x(), neighbor->vertex1()->y());
             polyline->points.push_back(new_point);
             polyline->get_width().push_back(this->thickness[neighbor].second);
+            if (abs(this->thickness[neighbor].first - this->thickness[edge].second) > SCALED_EPSILON) {
+                std::cout << "Error, this point redifined the point thiknesss:"
+                    << this->thickness[edge].first << "->" << this->thickness[edge].second
+                    <<", "<< this->thickness[neighbor].first << "->" << this->thickness[neighbor].second
+                    << "\n";
+            }
             
             (void)this->edges.erase(neighbor);
             (void)this->edges.erase(neighbor->twin());
@@ -1098,6 +1104,7 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
         ? line.b.distance_to(segment_l)*2
         : line.b.distance_to(this->retrieve_endpoint(cell_l))*2;
     
+    //don't remove the line that goes to the intersection of the contour
     //if (cell_l->contains_segment() && cell_r->contains_segment()) {
     //    // calculate the relative angle between the two boundary segments
     //    double angle = fabs(segment_r.orientation() - segment_l.orientation());
@@ -1122,10 +1129,13 @@ MedialAxis::validate_edge(const VD::edge_type* edge)
     //    if (w0 < SCALED_EPSILON || w1 < SCALED_EPSILON)
     //        return false;
     //}
-    
-    if (w0 < this->min_width && w1 < this->min_width)
-        return false;
-    
+
+    // don't do that before we try to fusion them
+    //if (w0 < this->min_width && w1 < this->min_width)
+    //    return false;
+    //
+
+    //shouldn't occur if perimeter_generator is well made
     if (w0 > this->max_width && w1 > this->max_width)
         return false;
     

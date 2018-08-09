@@ -236,10 +236,10 @@ void PerimeterGenerator::process()
                         // (actually, something larger than that still may exist due to mitering or other causes)
                         coord_t min_width = (coord_t)scale_(this->ext_perimeter_flow.nozzle_diameter / 3);
                         
-                        Polygons no_thin_zone = offset(next_onion, (float)(ext_perimeter_width / 2));
+                        ExPolygons no_thin_zone = offset_ex(next_onion, (float)(ext_perimeter_width / 2));
                         ExPolygons expp = offset2_ex(
                             // medial axis requires non-overlapping geometry
-                            diff_ex(to_polygons(last),
+                            diff_ex(last,
                                     no_thin_zone,
                                     true),
                                     (float)(-min_width / 2), (float)(min_width / 2));
@@ -253,15 +253,24 @@ void PerimeterGenerator::process()
                         }*/
                         int id_thin = 0;
                         for (ExPolygon &ex : expp) {
-                            ExPolygons anchor = intersection_ex(to_polygons(offset_ex(ex, (float)(ext_perimeter_width / 2))), no_thin_zone, true);
+                            ExPolygons ex_off = offset_ex(ex, (float)(ext_perimeter_width / 2), jtSquare);
+                            ExPolygons anchor = intersection_ex(offset_ex(ex, (float)(ext_perimeter_width / 2), jtSquare), no_thin_zone, true);
                             ExPolygons bounds = union_ex(ExPolygons() = { ex }, anchor, true);
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(ex, bound).empty()) {
-                                    stringstream stri;
-                                    stri << "bound" << layer_id << "_" << id_thin << ".svg";
+                                    {stringstream stri;
+                                    stri << id_thin << "-0-bound" << layer_id << "_" << id_thin << ".svg";
                                     SVG svg(stri.str());
                                     svg.draw(bound);
                                     svg.Close();
+                                    }
+                                    if (ex_off.size() > 0) {
+                                        stringstream stri;
+                                        stri << id_thin << "-0.0-ext" << layer_id << "_" << id_thin << ".svg";
+                                        SVG svg(stri.str());
+                                        svg.draw(ex_off[0]);
+                                        svg.Close();
+                                    }
                                     // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                     //ExPolygons simplified_bounds = bound.simplify(SCALED_EPSILON);
                                     //ex.medial_axis(simplified_bounds.size() == 1 ? simplified_bounds[0] : bound, 
