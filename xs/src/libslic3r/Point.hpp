@@ -71,6 +71,11 @@ public:
     double ccw_angle(const Point &p1, const Point &p2) const;
     Point projection_onto(const MultiPoint &poly) const;
     Point projection_onto(const Line &line) const;
+    /// return a new point, on the line from this point to point2.
+    /// coeff should be between 0 and 1. 
+    /// coeff == 0 => the return value is at our position
+    /// coeff == 1 => the return value is at point2
+    Point interpolate_to(const double coeff, const Point& point2) const { return Point(x * (1 - coeff) + point2.x * (coeff), y * (1 - coeff) + point2.y * (coeff)); }
     Point negative() const;
     Vector vector_to(const Point &point) const;
 };
