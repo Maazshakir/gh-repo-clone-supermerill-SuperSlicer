@@ -1219,6 +1219,7 @@ void GCode::process_layer(
     coordf_t             print_z       = layer.print_z;
     bool                 first_layer   = layer.id() == 0;
     unsigned int         first_extruder_id = layer_tools.extruders.front();
+    std::cout << "Process layer" << layer.id() << ", z=" << print_z<< "\n";
 
     // Initialize config with the 1st object to be printed at this layer.
     m_config.apply(layer.object()->config, true);
@@ -1546,6 +1547,7 @@ void GCode::process_layer(
                 
                 unsigned int copy_id = 0;
                 for (const Point &copy : copies) {
+                    std::cout << "Process layer_infill " << layer_id<<":"<<copy_id << " @layer" << layer.id() << ", z=" << print_z << "\n";
                     if (this->config().gcode_comments){
                         gcode += ((std::ostringstream&)(std::ostringstream() << "; printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
                     }
@@ -1569,6 +1571,7 @@ void GCode::process_layer(
                         gcode += this->extrude_perimeters(print, by_region_specific, lower_layer_edge_grids[layer_id]);
                         gcode += this->extrude_infill(print, by_region_specific, false);
                     }
+                    std::cout << "End Process layer_infill " << layer_id << ":" << copy_id << " @layer" << layer.id() << ", z=" << print_z << "\n";
                     if (this->config().gcode_comments) {
                         gcode += ((std::ostringstream&)(std::ostringstream() << "; stop printing object " << print_object->model_object()->name << " id:" << layer_id << " copy " << copy_id << "\n")).str();
                     }
@@ -1595,6 +1598,7 @@ void GCode::process_layer(
     if (m_pressure_equalizer)
         gcode = m_pressure_equalizer->process(gcode.c_str(), false);
     // printf("G-code after filter:\n%s\n", out.c_str());
+    std::cout << "END Process layer" << layer.id() << ", z=" << print_z << "\n";
 
     _write(file, gcode);
 }
@@ -2219,14 +2223,18 @@ std::string GCode::extrude_perimeters(const Print &print, const std::vector<Obje
 // Chain the paths hierarchically by a greedy algorithm to minimize a travel distance.
 std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, bool is_infill_first)
 {
+    std::cout << "BEGIN extrude INFILL\n";
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region) {
         if (print.regions[&region - &by_region.front()]->config.infill_first == is_infill_first) {
             m_config.apply(print.regions[&region - &by_region.front()]->config);
+            std::cout << "chained_path_from" << "\n";
             ExtrusionEntityCollection chained = region.infills.chained_path_from(m_last_pos, false);
+            std::cout << "extrude_entity" << "\n";
             gcode += extrude_entity(chained, "infill");
         }
     }
+    std::cout << "END extrude INFILL\n";
     return gcode;
 }
 
@@ -2476,7 +2484,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
             gcode += ";_EXTRUDE_END\n";
 
     
-    this->set_last_pos(path.last_point());
+        this->set_last_pos(path.last_point());
     return gcode;
 }
 

@@ -13,6 +13,7 @@ ExtrusionEntityCollection::ExtrusionEntityCollection(const ExtrusionPaths &paths
 
 ExtrusionEntityCollection& ExtrusionEntityCollection::operator= (const ExtrusionEntityCollection &other)
 {
+    label = other.label;
     this->entities      = other.entities;
     for (size_t i = 0; i < this->entities.size(); ++i)
         this->entities[i] = this->entities[i]->clone();
@@ -24,6 +25,7 @@ ExtrusionEntityCollection& ExtrusionEntityCollection::operator= (const Extrusion
 void
 ExtrusionEntityCollection::swap(ExtrusionEntityCollection &c)
 {
+    std::swap(label, c.label);
     std::swap(this->entities, c.entities);
     std::swap(this->orig_indices, c.orig_indices);
     std::swap(this->no_sort, c.no_sort);
@@ -104,13 +106,16 @@ ExtrusionEntityCollection ExtrusionEntityCollection::chained_path_from(Point sta
 
 void ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEntityCollection* retval, bool no_reverse, ExtrusionRole role, std::vector<size_t>* orig_indices) const
 {
+    std::cout << "BEGIN chained_path_from" << retval->label<< "\n";
     if (this->no_sort) {
         *retval = *this;
         return;
     }
+    std::cout << "1 chained_path_from" << "\n";
     retval->entities.reserve(this->entities.size());
     retval->orig_indices.reserve(this->entities.size());
-    
+
+    std::cout << "2 chained_path_from" << "\n";
     // if we're asked to return the original indices, build a map
     std::map<ExtrusionEntity*,size_t> indices_map;
     
@@ -130,6 +135,7 @@ void ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEnt
         my_paths.push_back(entity);
         if (orig_indices != NULL) indices_map[entity] = it - this->entities.begin();
     }
+    std::cout << "3 chained_path_from" << "\n";
     
     Points endpoints;
     for (ExtrusionEntitiesPtr::iterator it = my_paths.begin(); it != my_paths.end(); ++it) {
@@ -140,22 +146,38 @@ void ExtrusionEntityCollection::chained_path_from(Point start_near, ExtrusionEnt
             endpoints.push_back((*it)->last_point());
         }
     }
+    std::cout << "4 chained_path_from" << "\n";
     
     while (!my_paths.empty()) {
         // find nearest point
         int start_index = start_near.nearest_point_index(endpoints);
-        int path_index = start_index/2;
+        std::cout << "start_index=" << start_index << " / " << endpoints .size()<< "\n";
+        int path_index = start_index / 2;
+        std::cout << "path_index=" << path_index << " / " << my_paths.size()<< "\n";
         ExtrusionEntity* entity = my_paths.at(path_index);
+        std::cout << "entity=" << (int)entity << "\n";
+        std::cout << "entity.coll?=" << entity->is_collection() << "\n";
+        std::cout << "entity.lable=" << entity->label << "\n";
         // never reverse loops, since it's pointless for chained path and callers might depend on orientation
         if (start_index % 2 && !no_reverse && entity->can_reverse()) {
+            std::cout << "reverse\n";
             entity->reverse();
         }
-        retval->entities.push_back(my_paths.at(path_index));
+        retval->entities.push_back(entity);
+        std::cout << "1retval->entities.size()=" << retval->entities.size() << "\n";
         if (orig_indices != NULL) orig_indices->push_back(indices_map[entity]);
+        std::cout << "2retval->entities.size()=" << retval->entities.size() << "\n";
         my_paths.erase(my_paths.begin() + path_index);
-        endpoints.erase(endpoints.begin() + 2*path_index, endpoints.begin() + 2*path_index + 2);
+        std::cout << "3retval->entities.size()=" << retval->entities.size() << "\n";
+        endpoints.erase(endpoints.begin() + 2 * path_index, endpoints.begin() + 2 * path_index + 2);
+        std::cout << "4retval->entities.size()=" << retval->entities.size() << "\n";
+        std::cout << "4retval->entities.back()=" << (int)(retval->entities.back()) << "\n";
+        std::cout << "4retval->entities.back()->coll?=" << retval->entities.back()->is_collection() << "\n";
+        std::cout << "4retval->entities.back()->label=" << retval->entities.back()->label << "\n";
         start_near = retval->entities.back()->last_point();
+        std::cout << "new start next loop\n";
     }
+    std::cout << "END chained_path_from" << "\n";
 }
 
 void ExtrusionEntityCollection::polygons_covered_by_width(Polygons &out, const float scaled_epsilon) const

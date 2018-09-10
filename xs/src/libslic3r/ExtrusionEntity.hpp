@@ -68,6 +68,7 @@ enum ExtrusionLoopRole {
 class ExtrusionEntity
 {
 public:
+    std::string label;
     virtual ExtrusionRole role() const = 0;
     virtual bool is_collection() const { return false; }
     virtual bool is_loop() const { return false; }

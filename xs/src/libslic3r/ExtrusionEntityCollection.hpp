@@ -14,12 +14,14 @@ public:
     std::vector<size_t> orig_indices;  // handy for XS
     bool no_sort;
     ExtrusionEntityCollection(): no_sort(false) {};
-    ExtrusionEntityCollection(const ExtrusionEntityCollection &other) : orig_indices(other.orig_indices), no_sort(other.no_sort) { this->append(other.entities); }
-    ExtrusionEntityCollection(ExtrusionEntityCollection &&other) : entities(std::move(other.entities)), orig_indices(std::move(other.orig_indices)), no_sort(other.no_sort) {}
+    ExtrusionEntityCollection(const ExtrusionEntityCollection &other) : orig_indices(other.orig_indices), no_sort(other.no_sort) { label = other.label; this->append(other.entities); }
+    ExtrusionEntityCollection(ExtrusionEntityCollection &&other) : entities(std::move(other.entities)), orig_indices(std::move(other.orig_indices)), no_sort(other.no_sort) { label = other.label; }
     explicit ExtrusionEntityCollection(const ExtrusionPaths &paths);
     ExtrusionEntityCollection& operator=(const ExtrusionEntityCollection &other);
     ExtrusionEntityCollection& operator=(ExtrusionEntityCollection &&other) 
-        { this->entities = std::move(other.entities); this->orig_indices = std::move(other.orig_indices); this->no_sort = other.no_sort; return *this; }
+    {
+        label = other.label; this->entities = std::move(other.entities); this->orig_indices = std::move(other.orig_indices); this->no_sort = other.no_sort; return *this;
+    }
     ~ExtrusionEntityCollection() { clear(); }
     explicit operator ExtrusionPaths() const;
     
@@ -63,7 +65,10 @@ public:
     void chained_path_from(Point start_near, ExtrusionEntityCollection* retval, bool no_reverse = false, ExtrusionRole role = erMixed, std::vector<size_t>* orig_indices = nullptr) const;
     void reverse();
     Point first_point() const { return this->entities.front()->first_point(); }
-    Point last_point() const { return this->entities.back()->last_point(); }
+    Point last_point() const {
+        std::cout << "last_point: nbEnities=" << this->entities.size() << "\n";
+        std::cout << "last_point: entities.back().label=" << this->entities.back()->label << "\n";
+        return this->entities.back()->last_point(); }
     // Produce a list of 2D polygons covered by the extruded paths, offsetted by the extrusion width.
     // Increase the offset by scaled_epsilon to achieve an overlap, so a union will produce no gaps.
     virtual void polygons_covered_by_width(Polygons &out, const float scaled_epsilon) const;

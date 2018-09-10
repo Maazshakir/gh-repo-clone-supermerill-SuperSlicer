@@ -401,6 +401,7 @@ void PerimeterGenerator::process()
                 }
             }
             // at this point, all loops should be in contours[0]
+            std::cout << "perimetergenerator:process\n";
             ExtrusionEntityCollection entities = this->_traverse_loops(contours.front(), thin_walls);
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
@@ -489,6 +490,7 @@ void PerimeterGenerator::process()
 ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     const PerimeterGeneratorLoops &loops, ThickPolylines &thin_walls) const
 {
+    std::cout << "_traverse_loops\n";
     // loops is an arrayref of ::Loop objects
     // turn each one into an ExtrusionLoop object
     ExtrusionEntityCollection coll;
@@ -531,7 +533,8 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
                 this->_mm3_per_mm_overhang,
                 this->overhang_flow.width,
                 this->overhang_flow.height);
-            
+
+            std::cout << "chained_path()\n";
             // reapply the nearest point search for starting point
             // We allow polyline reversal because Clipper may have randomly
             // reversed polylines during clipping.
@@ -560,10 +563,13 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     // sort entities into a new collection using a nearest-neighbor search,
     // preserving the original indices which are useful for detecting thin walls
     ExtrusionEntityCollection sorted_coll;
+    sorted_coll.label = "sorted coll";
+    std::cout << "chained_path(&sorted_coll, false, erMixed, &sorted_coll.orig_indices)\n";
     coll.chained_path(&sorted_coll, false, erMixed, &sorted_coll.orig_indices);
     
     // traverse children and build the final collection
     ExtrusionEntityCollection entities;
+    entities.label = "peri entities";
     for (std::vector<size_t>::const_iterator idx = sorted_coll.orig_indices.begin();
         idx != sorted_coll.orig_indices.end();
         ++idx) {
@@ -603,6 +609,7 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
     const double tolerance = scale_(0.05);
     
     ExtrusionEntityCollection coll;
+    coll.label = "_variable_width";
     for (const ThickPolyline &p : polylines) {
         ExtrusionPaths paths;
         ExtrusionPath path(role);
@@ -686,6 +693,7 @@ ExtrusionEntityCollection PerimeterGenerator::_variable_width(const ThickPolylin
             } else {
                 //not a loop : avoid to "sort" it.
                 ExtrusionEntityCollection unsortable_coll(paths);
+                unsortable_coll.label = "unsortable coll of thin wall";
                 unsortable_coll.no_sort = true;
                 coll.append(unsortable_coll);
             }
