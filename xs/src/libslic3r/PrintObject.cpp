@@ -1978,6 +1978,7 @@ void PrintObject::_make_perimeters()
         BOOST_LOG_TRIVIAL(debug) << "Generating extra perimeters for region " << region_id << " in parallel - end";
     }
 
+    std::cout << "Generating perimeters in parallel - start";
     BOOST_LOG_TRIVIAL(debug) << "Generating perimeters in parallel - start";
     tbb::parallel_for(
         tbb::blocked_range<size_t>(0, this->layers.size()),
@@ -1987,6 +1988,7 @@ void PrintObject::_make_perimeters()
         }
     );
     BOOST_LOG_TRIVIAL(debug) << "Generating perimeters in parallel - end";
+    std::cout << "Generating perimeters in parallel - end";
 
     /*
         simplify slices (both layer and region slices),

@@ -57,7 +57,7 @@ sub slice {
 # 3) Generates perimeters, gap fills and fill regions (fill regions of type stInternal).
 sub make_perimeters {
     my ($self) = @_;
-    
+    print("perl make_perimeters\n");
     # prerequisites
     $self->slice;
 
@@ -65,29 +65,40 @@ sub make_perimeters {
         $self->print->status_cb->(20, "Generating perimeters");
         $self->_make_perimeters;
     }
+    print("perl end make_perimeters\n");
 }
 
 sub prepare_infill {
     my ($self) = @_;
+    print("perl start prepare_infill\n");
     
     # prerequisites
     $self->make_perimeters;
     
-    return if $self->step_done(STEP_PREPARE_INFILL);
+    print("perl middle prepare_infill\n");
+	my $resul = $self->step_done(STEP_PREPARE_INFILL);
+    print("perl middle step_done?".$resul."\n");
+    return if $resul;
+    print("perl middleok prepare_infill\n");
     $self->set_step_started(STEP_PREPARE_INFILL);
     $self->print->status_cb->(30, "Preparing infill");
     
+    print("perl real prepare_infill\n");
     $self->_prepare_infill;
 
     $self->set_step_done(STEP_PREPARE_INFILL);
+    print("perl end prepare_infill\n");
 }
 
 sub infill {
     my ($self) = @_;
     
+    print("perl infill start\n");
     # prerequisites
     $self->prepare_infill;
+    print("perl infill middle\n");
     $self->_infill;
+    print("perl infill end\n");
 }
 
 sub generate_support_material {

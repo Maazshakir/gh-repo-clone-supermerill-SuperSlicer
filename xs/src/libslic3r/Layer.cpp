@@ -75,6 +75,7 @@ void Layer::merge_slices()
 // The resulting fill surface is split back among the originating regions.
 void Layer::make_perimeters()
 {
+    std::cout << "make_perimeters\n";
     BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id();
     
     // keep track of regions whose perimeters we have already generated
@@ -84,6 +85,7 @@ void Layer::make_perimeters()
         size_t region_id = layerm - this->regions.begin();
         if (done.find(region_id) != done.end()) continue;
         BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id() << ", region " << region_id;
+        std::cout << "Generating perimeters for layer " << this->id() << ", region " << region_id<<"\n";
         done.insert(region_id);
         const PrintRegionConfig &config = (*layerm)->region()->config;
         
@@ -111,7 +113,9 @@ void Layer::make_perimeters()
         if (layerms.size() == 1) {  // optimization
             (*layerm)->fill_surfaces.surfaces.clear();
             (*layerm)->make_perimeters((*layerm)->slices, &(*layerm)->fill_surfaces);
+            std::cout << "fill_surfaces call\n";
             (*layerm)->fill_expolygons = to_expolygons((*layerm)->fill_surfaces.surfaces);
+            std::cout << "fill_surfaces call end\n";
         } else {
             SurfaceCollection new_slices;
             {
@@ -143,6 +147,7 @@ void Layer::make_perimeters()
         }
     }
     BOOST_LOG_TRIVIAL(trace) << "Generating perimeters for layer " << this->id() << " - Done";
+    std::cout << "end make_perimeters\n";
 }
 
 void Layer::make_fills()

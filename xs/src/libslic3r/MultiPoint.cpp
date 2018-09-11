@@ -137,7 +137,7 @@ MultiPoint::intersection(const Line& line, Point* intersection) const
     return false;
 }
 
-bool MultiPoint::first_intersection(const Line& line, Point* intersection) const
+bool MultiPoint::first_intersection(const Line& line, Point* intersection, Line* line_out) const
 {
     bool   found = false;
     double dmin  = 0.;
@@ -148,11 +148,13 @@ bool MultiPoint::first_intersection(const Line& line, Point* intersection) const
                 found = true;
                 dmin = ip.distance_to(line.a);
                 *intersection = ip;
+                if (line_out != nullptr) *line_out = l;
             } else {
                 double d = ip.distance_to(line.a);
                 if (d < dmin) {
                     dmin = d;
                     *intersection = ip;
+                    if (line_out != nullptr) *line_out = l;
                 }
             }
         }

@@ -138,6 +138,7 @@ class ThickPolyline : public Polyline {
     public:
     /// width size must be == point size
     std::vector<coordf_t> width;
+    std::vector<bool> curved;
     /// if true => it's an endpoint, if false it join an other ThickPolyline. first is at front(), second is at back()
     std::pair<bool,bool> endpoints;
     ThickPolyline() : endpoints(std::make_pair(false, false)) {};

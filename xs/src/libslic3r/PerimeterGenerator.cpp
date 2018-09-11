@@ -251,6 +251,7 @@ void PerimeterGenerator::process()
                             no_thin_zone = diff_ex(last, offset_ex(expp, (float)(min_width / 2)), true);
                         }
                         // compute a bit of overlap to anchor thin walls inside the print.
+                        std::cout << "thin walls begin\n";
                         for (ExPolygon &ex : expp) {
                             //growing back the polygon
                             //a vary little bit of overlap can be created here with other thin polygon, but it's more useful than worisome.
@@ -264,13 +265,14 @@ void PerimeterGenerator::process()
                                     //be sure it's not too small to extrude reliably
                                     if (ex_bigger[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        ex_bigger[0].medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width, 
+                                        ex_bigger[0].medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width,
                                             &thin_walls, this->layer_height);
                                     }
                                     break;
                                 }
                             }
                         }
+                        std::cout << "thin walls end\n";
                     }
                 } else {
                     //FIXME Is this offset correct if the line width of the inner perimeters differs
@@ -413,6 +415,7 @@ void PerimeterGenerator::process()
                 this->loops->append(entities);
         } // for each loop of an island
 
+        std::cout << "fill gaps begin\n";
         // fill gaps
         if (!gaps.empty()) {
             // collapse 
@@ -445,6 +448,7 @@ void PerimeterGenerator::process()
                 last = diff_ex(to_polygons(last), gap_fill.polygons_covered_by_width(10.f));
             }
         }
+        std::cout << "fill gaps end\n";
 
         // create one more offset to be used as boundary for fill
         // we offset by half the perimeter spacing (to get to the actual infill boundary)
@@ -484,6 +488,7 @@ void PerimeterGenerator::process()
             this->fill_no_overlap.insert(this->fill_no_overlap.end(), polyWithoutOverlap.begin(), polyWithoutOverlap.end());
         }
     } // for each island
+    std::cout << "perimeters end\n";
 }
 
 ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(

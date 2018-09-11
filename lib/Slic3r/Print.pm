@@ -34,6 +34,7 @@ sub size {
 # Slicing process, running at a background thread.
 sub process {
     my ($self) = @_;
+    print("perl process start\n");
     
     Slic3r::trace(3, "Staring the slicing process.");
     $_->make_perimeters for @{$self->objects};
@@ -61,7 +62,8 @@ sub process {
         eval "use Slic3r::Test::SectionCut";
         Slic3r::Test::SectionCut->new(print => $self)->export_svg("section_cut.svg");
     }
-    Slic3r::trace(3, "Slicing process finished.")
+    Slic3r::trace(3, "Slicing process finished.");
+    print("perl process end\n");
 }
 
 # G-code export process, running at a background thread.
@@ -213,6 +215,7 @@ EOF
 sub make_skirt {
     my $self = shift;
     
+    print("perl make_skirt start\n");
     # prerequisites
     $_->make_perimeters for @{$self->objects};
     $_->infill for @{$self->objects};
@@ -227,6 +230,7 @@ sub make_skirt {
         $self->_make_skirt();
     }
     $self->set_step_done(STEP_SKIRT);
+    print("perl make_skirt end\n");
 }
 
 sub make_brim {

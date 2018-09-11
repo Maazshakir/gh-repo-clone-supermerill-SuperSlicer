@@ -905,6 +905,8 @@ MedialAxis::build(ThickPolylines* polylines)
         polyline.points.push_back(Point( edge->vertex1()->x(), edge->vertex1()->y() ));
         polyline.width.push_back(this->thickness[edge].first);
         polyline.width.push_back(this->thickness[edge].second);
+        polyline.curved.push_back(edge->is_curved());
+        polyline.curved.push_back(edge->is_curved());
         
         // remove this edge and its twin from the available edges
         (void)this->edges.erase(edge);
@@ -912,24 +914,25 @@ MedialAxis::build(ThickPolylines* polylines)
         
         // get next points
         this->process_edge_neighbors(edge, &polyline);
-        
+
         // get previous points
         {
             ThickPolyline rpolyline;
             this->process_edge_neighbors(edge->twin(), &rpolyline);
             polyline.points.insert(polyline.points.begin(), rpolyline.points.rbegin(), rpolyline.points.rend());
             polyline.width.insert(polyline.width.begin(), rpolyline.width.rbegin(), rpolyline.width.rend());
+            polyline.curved.insert(polyline.curved.begin(), rpolyline.curved.rbegin(), rpolyline.curved.rend());
             polyline.endpoints.first = rpolyline.endpoints.second;
         }
         
         assert(polyline.width.size() == polyline.points.size());
-        
+
         // prevent loop endpoints from being extended
         if (polyline.first_point().coincides_with(polyline.last_point())) {
             polyline.endpoints.first = false;
             polyline.endpoints.second = false;
         }
-        
+
         // append polyline to result
         polylines->push_back(polyline);
     }
@@ -984,6 +987,7 @@ MedialAxis::process_edge_neighbors(const VD::edge_type* edge, ThickPolyline* pol
             Point new_point(neighbor->vertex1()->x(), neighbor->vertex1()->y());
             polyline->points.push_back(new_point);
             polyline->width.push_back(this->thickness[neighbor].second);
+            polyline->curved.push_back(neighbor->is_curved());
             
             (void)this->edges.erase(neighbor);
             (void)this->edges.erase(neighbor->twin());

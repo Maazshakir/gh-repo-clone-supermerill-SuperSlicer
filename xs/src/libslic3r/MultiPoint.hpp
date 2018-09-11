@@ -74,7 +74,7 @@ public:
     }
 
     bool intersection(const Line& line, Point* intersection) const;
-    bool first_intersection(const Line& line, Point* intersection) const;
+    bool first_intersection(const Line& line, Point* intersection, Line* line_out = nullptr) const;
     std::string dump_perl() const;
     
     static Points _douglas_peucker(const Points &points, const double tolerance);

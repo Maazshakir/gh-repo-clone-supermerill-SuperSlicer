@@ -54,6 +54,7 @@ void LayerRegion::slices_to_fill_surfaces_clipped()
 void
 LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection* fill_surfaces)
 {
+    std::cout << "make peri\n";
     this->perimeters.clear();
     this->thin_fills.clear();
     
@@ -86,6 +87,7 @@ LayerRegion::make_perimeters(const SurfaceCollection &slices, SurfaceCollection*
     g.process();
 
     this->fill_no_overlap_expolygons = g.fill_no_overlap;
+    std::cout << "end make peri\n";
 }
 
 //#define EXTERNAL_SURFACES_OFFSET_PARAMETERS ClipperLib::jtMiter, 3.
