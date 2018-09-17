@@ -218,6 +218,13 @@ Line::ccw(const Point& point) const
     return point.ccw(*this);
 }
 
+double
+Line::dot(Line l2) {
+    Vectorf v1 = normalize(Vectorf(this->b.x - this->a.x, this->b.y - this->a.y));
+    Vectorf v2 = normalize(Vectorf(l2.b.x - l2.a.x, l2.b.y - l2.a.y));
+    return v1.x*v2.x + v1.y*v2.y;
+}
+
 double Line3::length() const
 {
     return a.distance_to(b);

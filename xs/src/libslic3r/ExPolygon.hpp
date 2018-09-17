@@ -33,6 +33,7 @@ public:
     void rotate(double angle);
     void rotate(double angle, const Point &center);
     double area() const;
+    Point centroid() const;
     bool empty() const { return contour.points.empty(); }
     bool is_valid() const;
 
@@ -53,6 +54,8 @@ public:
     Polygons simplify_p(double tolerance) const;
     ExPolygons simplify(double tolerance) const;
     void simplify(double tolerance, ExPolygons* expolygons) const;
+    /// remove point that are at SCALED_EPSILON * 2 distance.
+    void remove_point_too_near(const coord_t smallest = SCALED_EPSILON * 2);
     void medial_axis(const ExPolygon &bounds, double max_width, double min_width, ThickPolylines* polylines, double height) const;
     void medial_axis(double max_width, double min_width, Polylines* polylines) const;
     void get_trapezoids(Polygons* polygons) const;

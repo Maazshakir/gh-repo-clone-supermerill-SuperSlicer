@@ -279,6 +279,28 @@ ThickPolyline::reverse()
     std::swap(this->endpoints.first, this->endpoints.second);
 }
 
+/// remove point that are at SCALED_EPSILON * 2 distance.
+void
+ThickPolyline::remove_point_too_near() {
+    const coord_t smallest = SCALED_EPSILON * 2;
+    size_t id = 1;
+    while (id < this->points.size() - 1) {
+        double newdist = std::min(this->points[id].distance_to(this->points[id - 1])
+            , this->points[id].distance_to(this->points[id + 1]));
+        if (newdist < smallest) {
+            this->points.erase(this->points.begin() + id);
+            this->width.erase(this->width.begin() + id);
+            newdist = this->points[id].distance_to(this->points[id - 1]);
+        }
+        //go to next one
+        //if you removed a point, it check if the next one isn't too near from the previous one.
+        // if not, it byepass it.
+        if (newdist > smallest) {
+            ++id;
+        }
+    }
+}
+
 Lines3 Polyline3::lines() const
 {
     Lines3 lines;

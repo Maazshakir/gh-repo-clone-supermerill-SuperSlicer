@@ -143,6 +143,7 @@ class ThickPolyline : public Polyline {
     ThickPolyline() : endpoints(std::make_pair(false, false)) {};
     ThickLines thicklines() const;
     void reverse();
+    void remove_point_too_near();
     bool trim_start_if_too_shallow(coord_t min_width, coord_t min_length);
 };
 
