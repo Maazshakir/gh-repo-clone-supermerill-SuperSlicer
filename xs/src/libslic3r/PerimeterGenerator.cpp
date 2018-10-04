@@ -415,32 +415,41 @@ void PerimeterGenerator::process()
                     NEXT_CONTOUR: ;
                 }
             }
-
+            ExtrusionEntityCollection entities;
             //onlyone_perimter = >fusion all perimeterLoops
             {
                 for (PerimeterGeneratorLoop &loop : contours.front()) {
                     std::cout << "_traverse_and_join_loops call\n";
-                    Polyline polyline = this->_traverse_and_join_loops(loop, loop.polygon.points.front());
-                    loop.polygon.points = polyline.points;
+                    ExtrusionEntityCollection flattened;
+                    this->_traverse_and_join_loops(loop, loop.polygon.points.front()).flatten(&flattened);
+                    flattened.no_sort = true;
+                    ExtrusionLoop loop(ExtrusionRole::erMixed);
+                    for (const ExtrusionEntity *entity : flattened.entities) loop.paths.push_back(*((ExtrusionPath*)entity));
+                    loop.paths.front().polyline.points.insert(loop.paths.front().polyline.points.begin(), loop.paths.back().polyline.points.back());
+                    entities.append(loop);
 
-                    SVG svg("polygon.svg");
-                    svg.draw(loop.polygon);
-                    svg.Close();
-                    SVG svg2("polyline.svg");
-                    svg2.draw(polyline);
-                    svg2.Close();
+                    //loop.polygon.points = polyline.points;
+
+                    std::cout << "check1\n";
+                    flattened.check();
+                    //SVG svg("polygon.svg");
+                    //svg.draw(loop.polygon);
+                    //svg.Close();
+                    //SVG svg2("polyline.svg");
+                    //for (ExtrusionEntity *path : entities.flatten().entities) {
+                    //    svg2.draw(path->as_polyline());
+                    //}
+                    //svg2.Close();
                     
                 }
             }
+            std::cout << "check2\n";
+            entities.check();
 
             // at this point, all loops should be in contours[0]
-            ExtrusionEntityCollection entities = this->_traverse_loops(contours.front(), thin_walls);
-            {
+            //ExtrusionEntityCollection entities = this->_traverse_loops(contours.front(), thin_walls);
 
-                SVG svg("entities.svg");
-                svg.draw(entities.as_polyline());
-                svg.Close();
-            }
+
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
             // TODO: add test for perimeter order
@@ -634,7 +643,7 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     return entities;
 }
 
-Polyline
+ExtrusionEntityCollection
 PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse) const
 {
     std::cout << "_traverse_and_join_loops\n";
@@ -642,17 +651,82 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
     std::cout << "dist_cut=" << dist_cut<<"\n";
     //TODO change this->perimeter_flow.scaled_width() if it's the first one!
     //myPolyline
-    Polyline myPolyline = loop.polygon.split_at_vertex(entryPoint);
-    if (has_to_reverse) myPolyline.reverse();
-    std::cout << "myPolyline.pointsize = " << myPolyline.points.size()<<"\n";
-    myPolyline.clip_end(dist_cut);
-    std::cout << "clip_end ok " << myPolyline.points.size()<<"\n";
-
+    Polyline initialPolyline = loop.polygon.split_at_vertex(entryPoint);
+    if (has_to_reverse && loop.is_contour || !loop.is_contour && !has_to_reverse) initialPolyline.reverse();
+    std::cout << "myPolyline.pointsize = " << initialPolyline.points.size() << "\n";
+    initialPolyline.clip_end(dist_cut);
+    std::cout << "clip_end ok " << initialPolyline.points.size() << "\n";
 
     std::vector<PerimeterPolylineNode> myPolylines;
-    myPolylines.emplace_back();
-    myPolylines.back().me = myPolyline;
-    myPolylines.back().next = nullptr;
+
+
+    //overhang / notoverhang
+    {
+        bool is_external = loop.is_external();
+
+        ExtrusionRole role;
+        ExtrusionLoopRole loop_role;
+        role = is_external ? erExternalPerimeter : erPerimeter;
+        if (loop.is_internal_contour()) {
+            // Note that we set loop role to ContourInternalPerimeter
+            // also when loop is both internal and external (i.e.
+            // there's only one contour loop).
+            loop_role = elrContourInternalPerimeter;
+        } else {
+            loop_role = elrDefault;
+        }
+
+        // detect overhanging/bridging perimeters
+        if (this->config->overhangs && this->layer_id > 0
+            && !(this->object_config->support_material && this->object_config->support_material_contact_distance.value == 0)) {
+            ExtrusionPaths paths;
+            // get non-overhang paths by intersecting this loop with the grown lower slices
+            extrusion_paths_append(
+                paths,
+                intersection_pl(initialPolyline, this->_lower_slices_p),
+                role,
+                is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm,
+                is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width,
+                this->layer_height);
+
+            // get overhang paths by checking what parts of this loop fall 
+            // outside the grown lower slices (thus where the distance between
+            // the loop centerline and original lower slices is >= half nozzle diameter
+            extrusion_paths_append(
+                paths,
+                diff_pl(initialPolyline, this->_lower_slices_p),
+                erOverhangPerimeter,
+                this->_mm3_per_mm_overhang,
+                this->overhang_flow.width,
+                this->overhang_flow.height);
+
+            // reapply the nearest point search for starting point
+            // We allow polyline reversal because Clipper may have randomly
+            // reversed polylines during clipping.
+            paths = (ExtrusionPaths)ExtrusionEntityCollection(paths).chained_path();
+
+            PerimeterPolylineNode *previous = nullptr;
+            for (ExtrusionPath path : paths) {
+                myPolylines.emplace_back(ExtrusionEntityCollection(), path);
+                if (previous != nullptr) {
+                    previous->next = &myPolylines.back();
+                }
+                previous = previous->next;
+            }
+
+        } else {
+            ExtrusionPath path(role);
+            path.polyline = initialPolyline;
+            path.mm3_per_mm = is_external ? this->_ext_mm3_per_mm : this->_mm3_per_mm;
+            path.width = is_external ? this->ext_perimeter_flow.width : this->perimeter_flow.width;
+            path.height = (float)(this->layer_height);
+            myPolylines.emplace_back(ExtrusionEntityCollection(), path);
+        }
+
+    }
+
+    //TODO : create poitns at middle of lines
+
     //Polylines myPolylines = { myPolyline };
     //iterate on each point ot find the best place to go into the child
     int child_idx = 0;
@@ -664,17 +738,18 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
         size_t my_polyline_idx = -1;
         std::cout << "nbMyPolys = " << myPolylines.size() << "\n";
         for (size_t idx_poly = 0; idx_poly < myPolylines.size(); idx_poly++) {
-            std::cout << "check poly " << idx_poly << ", nbpoints = " << myPolylines[idx_poly].me.points.size() << "\n";
+            std::cout << "check poly " << idx_poly << ", nbpoints = " << myPolylines[idx_poly].me.polyline.points.size() << "\n";
             if (myPolylines[idx_poly].me.length() < dist_cut) continue;
-            for (size_t idx_point = 0; idx_point < myPolylines[idx_poly].me.points.size() - 1; idx_point++) {
+            for (size_t idx_point = 0; idx_point < myPolylines[idx_poly].me.polyline.points.size() - 1; idx_point++) {
                 std::cout << "check point " << idx_point << "\n";
-                const Point &p = myPolylines[idx_poly].me.points[idx_point];
+                const Point &p = myPolylines[idx_poly].me.polyline.points[idx_point];
+                //TODO: get the best point in line, not in points
                 const size_t nearest_idx = child.polygon.closest_point_index(p);
                 const coord_t dist = (coord_t)child.polygon[nearest_idx].distance_to(p);
                 if (dist < smallest_dist) {
                     //test if there are enough space
                     {
-                        Polyline new_polyline = myPolylines[idx_poly].me;
+                        Polyline new_polyline = myPolylines[idx_poly].me.polyline;
                         new_polyline.points.erase(new_polyline.points.begin(), new_polyline.points.begin() + idx_point);
                         //not enough space => continue with next polyline
                         if (new_polyline.length() < dist_cut) break;
@@ -691,10 +766,10 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
         std::cout << "call child: " << my_polyline_idx << ", " << my_smallest_idx << " => " << smallest_idx<<"\n";
         if (smallest_idx == (size_t)-1) {
             std::cout << "ERROR: _traverse_and_join_loops: can't find a point near enough!\n";
-            return myPolyline;
+            return ExtrusionEntityCollection();
         } else {
-            //create new node
-            myPolylines.emplace_back();
+            //create new node with recursive ask for the inner perimeter & COPY of the points, ready to be cut
+            myPolylines.emplace_back(_traverse_and_join_loops(child, child.polygon.points[smallest_idx], !has_to_reverse), ExtrusionPath(myPolylines[my_polyline_idx].me));
             PerimeterPolylineNode &new_node = myPolylines.back();
             new_node.next = myPolylines[my_polyline_idx].next;
             myPolylines[my_polyline_idx].next = &new_node;
@@ -703,55 +778,57 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 <<"\n";
 
             //cut our polyline
-            //create a new one
-            std::cout << "new sizes = " << myPolylines[my_polyline_idx].me.points.size();
-            new_node.me = myPolylines[my_polyline_idx].me;
+            std::cout << "new sizes = " << myPolylines[my_polyline_idx].me.polyline.points.size() << " == " << new_node.me.polyline.points.size() << " ( > " << (my_smallest_idx+1)<<")";
             //separate them
-            new_node.me.points.erase(new_node.me.points.begin(), new_node.me.points.begin() + my_smallest_idx);
-            myPolylines[my_polyline_idx].me.points.erase(myPolylines[my_polyline_idx].me.points.begin() + my_smallest_idx + 1, myPolylines[my_polyline_idx].me.points.end());
+            new_node.me.polyline.points.erase(new_node.me.polyline.points.begin(), new_node.me.polyline.points.begin() + my_smallest_idx);
+            Points &my_polyline_points = myPolylines[my_polyline_idx].me.polyline.points;
+            my_polyline_points.erase(my_polyline_points.begin() + my_smallest_idx + 1, my_polyline_points.end());
+            std::cout << " == " << myPolylines[my_polyline_idx].me.polyline.points.size() << " + " << new_node.me.polyline.points.size() << "\n";
             //trim the end/begining
-            new_node.me.clip_start(dist_cut);
-            std::cout << " == " << myPolylines[my_polyline_idx].me.points.size() << " + " << new_node.me.points.size() << "\n";
+            new_node.me.polyline.clip_start(dist_cut);
 
-            //recursive ask for the inner perimeter
-            std::cout << "RECURSIVE  " << smallest_idx << " : " << child.polygon.contains(child.polygon.points[smallest_idx]) << "\n";
-            new_node.to_extrude_before = _traverse_and_join_loops(child, child.polygon.points[smallest_idx], !has_to_reverse);
-            std::cout << "child.size=  " << new_node.to_extrude_before.points.size() << "\n";
 
+            std::cout << "trimmed=>" << new_node.me.polyline.points.size()<<"\n";
         }
     }
 
     std::cout << "create my complete polyline with childs\n";
     //create the polyline
-    Polyline finalPolyline;
-    std::cout << "finalPolyline.points created, size = 0 =?= " << finalPolyline.points.size()<<" !\n";
-    for (PerimeterPolylineNode &node : myPolylines) {
-        std::cout << "node " << node.me.points.size() << " & " << node.to_extrude_before.points.size() << ", " << (&node) << " , " << node.next << "\n";
-        std::cout << "   to_extrude Points:";
-        for (Point &p : node.to_extrude_before.points) {
-            std::cout << "  " << unscale(p.x) << ":" << unscale(p.y);
-        }
-        std::cout << "\n";
-        std::cout << "   me Points:";
-        for (Point &p : node.me.points) {
-            std::cout << "  " << unscale(p.x) << ":" << unscale(p.y);
-        }
-        std::cout << "\n";
-    }
+    ExtrusionEntityCollection finalPolyline;
+    finalPolyline.no_sort = true;
+    std::cout << "finalPolyline.points created, size = 0 =?= " << finalPolyline.entities.size() << " !\n";
+    
     PerimeterPolylineNode *current_node = &myPolylines.front();
+    //first one is always an extrusionpath.
+    finalPolyline.append(current_node->me);
+    Point *last_point = &current_node->me.polyline.points.back();
     while (current_node->next != nullptr) {
-        std::cout << "insert inner node " << current_node << ", next = " << current_node->next << " \n";
-        std::cout << "finalPolyline.points size = " << finalPolyline.points.size() << " and adding(childs) " << current_node->to_extrude_before.points.size() << "\n";
-        finalPolyline.points.insert(finalPolyline.points.end(), current_node->to_extrude_before.points.begin(), current_node->to_extrude_before.points.end());
-        std::cout << "finalPolyline.points size = " << finalPolyline.points.size() << " and adding " << current_node->me.points.size() << "\n";
-        finalPolyline.points.insert(finalPolyline.points.end(), current_node->me.points.begin(), current_node->me.points.end());
         current_node = current_node->next;
+
+        std::cout << "insert inner node " << current_node << ", next = " << current_node->next << " \n";
+        if (!current_node->to_extrude_before.entities.empty()) {
+            //first one is always an extrusionpath.
+            ExtrusionPath *firstPath = dynamic_cast<ExtrusionPath*>(current_node->to_extrude_before.entities.front());
+            if (last_point != nullptr) firstPath->polyline.points.insert(firstPath->polyline.points.begin(), *last_point);
+            finalPolyline.append(current_node->to_extrude_before);
+            //last one is always an extrusionpath. (see lines a bit below)
+            ExtrusionPath *lastPath = dynamic_cast<ExtrusionPath*>(current_node->to_extrude_before.entities.back());
+            last_point = &lastPath->polyline.points.back();
+        }
+        std::cout << "finalPolyline.points size = " << finalPolyline.entities.size() << " and adding " << current_node->me.polyline.points.size() << "\n";
+        if (!current_node->me.polyline.points.empty()) {
+            if (last_point != nullptr) current_node->me.polyline.points.insert(current_node->me.polyline.points.begin(), *last_point);
+            finalPolyline.append(current_node->me);
+            last_point = &current_node->me.polyline.points.back();
+        } else {
+            std::cout << "ERROR, empty cpath\n";
+        }
+
     }
     std::cout << "insert last node\n";
-    finalPolyline.points.insert(finalPolyline.points.end(), current_node->to_extrude_before.points.begin(), current_node->to_extrude_before.points.end());
-    finalPolyline.points.insert(finalPolyline.points.end(), current_node->me.points.begin(), current_node->me.points.end());
 
-    std::cout << "RETURN " << finalPolyline.points.size()<<" \n";
+    std::cout << "RETURN " << finalPolyline.entities.size() << " \n";
+    finalPolyline.check();
     return finalPolyline;
 }
 

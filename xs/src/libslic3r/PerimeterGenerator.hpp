@@ -8,13 +8,19 @@
 #include "Polygon.hpp"
 #include "PrintConfig.hpp"
 #include "SurfaceCollection.hpp"
+#include "ExtrusionEntityCollection.hpp"
 
 namespace Slic3r {
 
-struct PerimeterPolylineNode {
+class PerimeterPolylineNode {
+public:
     PerimeterPolylineNode* next;
-    Polyline me;
-    Polyline to_extrude_before;
+    ExtrusionPath me;
+    ExtrusionEntityCollection to_extrude_before;
+    PerimeterPolylineNode(const ExtrusionEntityCollection &collection, const ExtrusionPath &path)
+        : me(path), to_extrude_before(collection), next(nullptr) {
+        std::cout << "create " << path.polyline.points.size() << " == " << this->me.polyline.points.size() << "\n";
+    }
 };
 
 // Hierarchy of perimeters.
@@ -98,7 +104,7 @@ private:
 
     ExtrusionEntityCollection _traverse_loops(const PerimeterGeneratorLoops &loops,
         ThickPolylines &thin_walls) const;
-    Polyline _traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse = false) const;
+    ExtrusionEntityCollection _traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse = false) const;
     ExtrusionEntityCollection _variable_width
         (const ThickPolylines &polylines, ExtrusionRole role, Flow flow) const;
 };
