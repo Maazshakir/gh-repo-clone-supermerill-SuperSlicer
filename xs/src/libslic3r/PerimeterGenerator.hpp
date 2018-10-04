@@ -11,6 +11,12 @@
 
 namespace Slic3r {
 
+struct PerimeterPolylineNode {
+    PerimeterPolylineNode* next;
+    Polyline me;
+    Polyline to_extrude_before;
+};
+
 // Hierarchy of perimeters.
 class PerimeterGeneratorLoop {
 public:
@@ -89,9 +95,10 @@ private:
     double _mm3_per_mm;
     double _mm3_per_mm_overhang;
     Polygons _lower_slices_p;
-    
+
     ExtrusionEntityCollection _traverse_loops(const PerimeterGeneratorLoops &loops,
         ThickPolylines &thin_walls) const;
+    Polyline _traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse = false) const;
     ExtrusionEntityCollection _variable_width
         (const ThickPolylines &polylines, ExtrusionRole role, Flow flow) const;
 };
