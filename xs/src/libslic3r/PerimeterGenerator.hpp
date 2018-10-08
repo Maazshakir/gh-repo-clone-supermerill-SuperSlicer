@@ -24,7 +24,6 @@ public:
 struct PerimeterIntersectionPoint {
     size_t idx_children;
     Point child_best;
-    size_t idx_outter;
     Point outter_best;
     size_t idx_polyline_outter;
     coord_t distance;

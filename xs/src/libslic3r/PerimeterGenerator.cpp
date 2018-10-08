@@ -663,14 +663,6 @@ ExtrusionEntityCollection PerimeterGenerator::_traverse_loops(
     return entities;
 }
 
-void printChilds(const PerimeterGeneratorLoop &loop, int level) {
-
-    for (int i = 0; i < level; i++)std::cout << " ";
-    std::cout << "my size " << loop.polygon.points.size() << " with nbc=" << loop.children.size() << "\n";
-    for (const PerimeterGeneratorLoop &child : loop.children) {
-        printChilds(child, level + 2);
-    }
-}
 PerimeterIntersectionPoint
 get_nearest_point(const PerimeterGeneratorLoops &children, std::vector<PerimeterPolylineNode> &myPolylines, const coord_t dist_cut) {
     //find best points of intersections
@@ -686,7 +678,6 @@ get_nearest_point(const PerimeterGeneratorLoops &children, std::vector<Perimeter
             for (size_t idx_point = 0; idx_point < myPolylines[idx_poly].me.polyline.points.size() - 1; idx_point++) {
                 const Point &p = myPolylines[idx_poly].me.polyline.points[idx_point];
                 Point nearest_p = child.polygon.point_projection(p);
-                std::cout << " my point " << unscale(p.x) << ":" << unscale(p.y) << " child point=" << unscale(nearest_p.x) << ":" << unscale(nearest_p.y) << " \n";
                 coord_t dist = (coord_t)nearest_p.distance_to(p);
                 //if no projection, use nearest point
                 if (dist == 0) {
@@ -702,18 +693,14 @@ get_nearest_point(const PerimeterGeneratorLoops &children, std::vector<Perimeter
                         //not enough space => continue with next polyline
                         if (new_polyline.length() + SCALED_EPSILON < dist_cut) break;
                     }
-                    std::cout << "good point (from me) \n";
                     //ok, copy the idx
                     intersect.distance = dist;
                     intersect.idx_children = idx_child;
                     intersect.idx_polyline_outter = idx_poly;
-                    intersect.idx_outter = idx_point;
                     intersect.outter_best = p;
                     intersect.child_best = nearest_p;
                 }
-                std::cout << "end child point\n";
             }
-            std::cout << "go to my points\n";
             for (size_t idx_point = 0; idx_point < child.polygon.points.size() - 1; idx_point++) {
                 const Point &p = child.polygon.points[idx_point];
                 Point nearest_p = myPolylines[idx_poly].me.polyline.point_projection(p);
@@ -737,14 +724,12 @@ get_nearest_point(const PerimeterGeneratorLoops &children, std::vector<Perimeter
                         //not enough space => continue with next polyline
                         if (new_polyline.length() + SCALED_EPSILON < dist_cut) break;
                     }
-                    std::cout << "good point (from child) \n";
                     //ok, copy the idx
                     intersect.distance = dist;
                     intersect.idx_children = idx_child;
                     intersect.idx_polyline_outter = idx_poly;
                     intersect.child_best = p;
                     intersect.outter_best = nearest_p;
-                    intersect.idx_outter = idx_point;
                 }
             }
         }
@@ -753,26 +738,16 @@ get_nearest_point(const PerimeterGeneratorLoops &children, std::vector<Perimeter
 }
 
 
-int id = 0;
 ExtrusionLoop
 PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse) const
 {
-    const int my_id = id++;
-    std::cout << my_id << "_traverse_and_join_loops\n";
-    {
-        stringstream stname;
-        stname << my_id << "_init_poly.svg";
-        SVG svg(stname.str());
-        svg.draw(loop.polygon);
-        svg.Close();
-    }
     const coord_t dist_cut = this->perimeter_flow.scaled_width();
     //std::cout << "dist_cut=" << dist_cut<<"\n";
     //TODO change this->perimeter_flow.scaled_width() if it's the first one!
     Polyline initialPolyline;
     if (loop.polygon.closest_point(entryPoint)->distance_to(entryPoint) > SCALED_EPSILON) {
         //create new Point
-                //get first point
+         //get first point
         size_t idx_before = -1;
         for (size_t idx_p_a = 0; idx_p_a < loop.polygon.points.size(); ++idx_p_a) {
             Line l(loop.polygon.points[idx_p_a], loop.polygon.points[ (idx_p_a+1 == loop.polygon.points.size()) ? 0 : (idx_p_a + 1)]);
@@ -782,10 +757,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             }
         }
         if (idx_before == (size_t)-1) std::cout << "ERROR: _traverse_and_join_loops : idx_before can't be finded to create new point\n";
-        /*
-        initialPolyline = loop.polygon.split_at_index(idx_before+1);
-        initialPolyline.points.insert(initialPolyline.points.begin(), entryPoint);
-        initialPolyline.points[initialPolyline.points.size() - 1] = entryPoint;*/
         initialPolyline = loop.polygon.split_at_index(idx_before);
         initialPolyline.points.push_back(entryPoint);
         initialPolyline.points[0] = entryPoint;
@@ -794,7 +765,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
     }
     
     if (has_to_reverse && loop.is_contour || !loop.is_contour && !has_to_reverse) initialPolyline.reverse();
-    std::cout << my_id << "myPolyline.pointsize = " << initialPolyline.points.size() << "\n";
     initialPolyline.clip_end(dist_cut);
 
     std::vector<PerimeterPolylineNode> myPolylines;
@@ -862,13 +832,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
         }
 
     }
-    {
-        stringstream stname;
-        stname << my_id << "_before_poly.svg";
-        SVG svg(stname.str());
-        svg.draw(svg_out.polygon());
-        svg.Close();
-    }
 
 
 
@@ -877,71 +840,25 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
     vector<PerimeterGeneratorLoop> childs = loop.children;
     int child_idx = 0;
     while (!childs.empty()) {
-        std::cout << my_id << "check child " << ++child_idx << "\n";
         PerimeterIntersectionPoint nearest = get_nearest_point(childs, myPolylines, dist_cut);
-        std::cout << my_id << "check child  done\n";
-        //coord_t smallest_dist = (coord_t)(dist_cut * 4.1);
-        //size_t smallest_idx = -1;
-        //size_t my_smallest_idx = -1;
-        //size_t my_polyline_idx = -1;
-        //std::cout << my_id << "nbMyPolys = " << myPolylines.size() << "\n";
-        //for (size_t idx_poly = 0; idx_poly < myPolylines.size(); idx_poly++) {
-        //    std::cout << my_id << "check poly " << idx_poly << ", nbpoints = " << myPolylines[idx_poly].me.polyline.points.size() << "\n";
-        //    if (myPolylines[idx_poly].me.length() + SCALED_EPSILON < dist_cut) continue;
-        //    for (size_t idx_point = 0; idx_point < myPolylines[idx_poly].me.polyline.points.size() - 1; idx_point++) {
-        //        //std::cout << "check point " << idx_point << "\n";
-        //        const Point &p = myPolylines[idx_poly].me.polyline.points[idx_point];
-        //        //TODO: get the best point in line, not in points
-        //        const size_t nearest_idx = child.polygon.closest_point_index(p);
-        //        const coord_t dist = (coord_t)child.polygon[nearest_idx].distance_to(p);
-        //        if (dist < smallest_dist) {
-        //            //test if there are enough space
-        //            {
-        //                Polyline new_polyline = myPolylines[idx_poly].me.polyline;
-        //                new_polyline.points.erase(new_polyline.points.begin(), new_polyline.points.begin() + idx_point);
-        //                //not enough space => continue with next polyline
-        //                if (new_polyline.length()+SCALED_EPSILON < dist_cut) break;
-        //            }
-        //            //std::cout << "good point\n";
-        //            //ok, copy the idx
-        //            smallest_dist = dist;
-        //            smallest_idx = nearest_idx;
-        //            my_smallest_idx = idx_point;
-        //            my_polyline_idx = idx_poly;
-        //        }
-        //    }
-        //}
-        //std::cout << my_id << "call child: " << my_polyline_idx << ", " << my_smallest_idx << " => " << smallest_idx << "\n";
         if (nearest.idx_children == (size_t)-1) {
             std::cout << "ERROR: _traverse_and_join_loops: can't find a point near enough! => don't extrude this perimeter\n";
             //return ExtrusionEntityCollection();
             break;
         } else {
             PerimeterGeneratorLoop &child = childs[nearest.idx_children];
-            std::cout << "nearest.idx_polyline_outter = " << nearest.idx_polyline_outter << "\n";
             //create new node with recursive ask for the inner perimeter & COPY of the points, ready to be cut
             myPolylines.insert(myPolylines.begin() + nearest.idx_polyline_outter + 1,
                 PerimeterPolylineNode(_traverse_and_join_loops(child, nearest.child_best, !has_to_reverse),
                 ExtrusionPath(myPolylines[nearest.idx_polyline_outter].me)));
             PerimeterPolylineNode &new_node = myPolylines[nearest.idx_polyline_outter + 1];
             PerimeterPolylineNode &selected_node = myPolylines[nearest.idx_polyline_outter];
-            std::cout << my_id << " selected_node.me.polyline.size=" << myPolylines[nearest.idx_polyline_outter].me.polyline.points.size() << " == " << selected_node.me.polyline.points.size() << "\n";
-
-            std::cout << my_id << " points before cut (0): !";
-            for (Point &p : new_node.me.polyline.points) {
-                std::cout << " " << unscale(p.x) << ":" << unscale(p.y);
-            }
-            std::cout << "\n";
+           
             //cut our polyline
             //separate them
-            std::cout << my_id << " selected_node.me.polyline.size=" << selected_node.me.polyline.points.size() << "\n";
-            std::cout << my_id << " nearest.outter_beste=" << unscale(nearest.outter_best.x) << ":" << unscale(nearest.outter_best.y) << "\n";
             size_t nearest_idx_outter = selected_node.me.polyline.closest_point_index(nearest.outter_best);
-            std::cout << my_id << " nearest_idx_outter=" << nearest_idx_outter << "\n";
             if (selected_node.me.polyline.points[nearest_idx_outter].coincides_with_epsilon(nearest.outter_best)) {
-                std::cout << my_id << " use index\n";
                 if (nearest_idx_outter == selected_node.me.polyline.points.size() - 1) {
-                    std::cout << my_id << " last point!!\n";
                     //it's the last, please remove dist_cut
                     selected_node.me.polyline.clip_end(dist_cut - SCALED_EPSILON);
 
@@ -956,7 +873,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                     new_node.me.polyline.clip_start(dist_cut - SCALED_EPSILON);
                 }
             } else {
-                std::cout << my_id << " use new point " << unscale(nearest.outter_best.x) << ":" << unscale(nearest.outter_best.y)<<" \n";
                 //get first point
                 size_t idx_before = -1;
                 for (size_t idx_p_a = 0; idx_p_a < selected_node.me.polyline.points.size() - 1; ++idx_p_a) {
@@ -967,9 +883,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                     }
                 }
                 if (idx_before == (size_t)-1) std::cout << "ERROR: idx_before can't be finded\n";
-                std::cout << my_id << " idx_before=" << idx_before << " ? " << nearest_idx_outter<<"\n";
 
-                std::cout << my_id << " use new point afdter idx " << idx_before << "/" << new_node.me.polyline.points.size() << "\n";
                 Points &my_polyline_points = selected_node.me.polyline.points;
                 my_polyline_points.erase(my_polyline_points.begin() + idx_before + 1, my_polyline_points.end());
                 my_polyline_points.push_back(nearest.outter_best);
@@ -979,105 +893,41 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
                 //trim the end/begining
                 new_node.me.polyline.clip_start(dist_cut - SCALED_EPSILON);
             }
-
-            std::cout << my_id << " points after cut (1): !";
-            for (Point &p : selected_node.me.polyline.points) {
-                std::cout << " " << unscale(p.x) << ":" << unscale(p.y);
-            }
-            std::cout << "\n";
-            std::cout << my_id << " points after cut (2): !";
-            for (Point &p : new_node.me.polyline.points) {
-                std::cout << " " << unscale(p.x) << ":" << unscale(p.y);
-            }
-            std::cout << "\n";
-
-            std::cout << my_id << "trimmed=>" << new_node.me.polyline.points.size() << "\n";
         }
 
         //update for next loop
         childs.erase(childs.begin() + nearest.idx_children);
     }
-    std::cout << my_id << "check child end ""\n";
-    std::cout << my_id << "nbMyPolysEnd = " << myPolylines.size() << "\n";
-    for (size_t idx_poly = 0; idx_poly < myPolylines.size(); idx_poly++) {
-        std::cout << my_id << "checkend poly " << idx_poly << ", nbpoints = " << myPolylines[idx_poly].me.polyline.points.size() 
-            << " " << &(myPolylines[idx_poly]) << "\n";
-    }
 
-    for (PerimeterPolylineNode &ppp : myPolylines) {
-        std::cout << my_id << " path:";
-        for (Point &p : ppp.me.polyline.points) {
-            std::cout << " " << unscale(p.x) << ":" << unscale(p.y);
-        }
-        std::cout << "\n";
-    }
-
-
-    std::cout << my_id << "create my complete polyline with childs. " <<" \n";
     //create the polyline
     ExtrusionLoop finalPolyline(elrContourInternalPerimeter);
     ExtrusionLoop testPolyline(elrContourInternalPerimeter);
-    std::cout << my_id << " finalPolyline.points created, size = 0 =?= " << finalPolyline.paths.size() << " !\n";
     
     PerimeterPolylineNode &first_node = myPolylines.front();
     //first one is always an extrusionpath without any loop.
     if (!first_node.to_extrude_before.paths.empty()) std::cout << "error, not empty first Node\n";
     finalPolyline.paths.push_back(first_node.me);
     testPolyline.paths.push_back(first_node.me);
-    std::cout << my_id << " append, first cpath size=" << first_node.me.polyline.points.size() << " \n";
-    std::cout << my_id << " startPooints: !";
-    for (Point &p : first_node.me.polyline.points) {
-            std::cout << " " << unscale(p.x) << ":" << unscale(p.y);
-    }
-    std::cout << "\n";
     Point last_point = first_node.me.polyline.points.back();
     for (size_t idx_node = 1; idx_node < myPolylines.size(); idx_node++) {
         PerimeterPolylineNode &current_node = myPolylines[idx_node];
 
-        std::cout << my_id << "insert inner node " << current_node.to_extrude_before.paths.empty() << " \n";
         if (!current_node.to_extrude_before.paths.empty()) {
             //first one is always an extrusionpath.
             ExtrusionPath &firstPath = current_node.to_extrude_before.paths.front();
             firstPath.polyline.points.insert(firstPath.polyline.points.begin(), last_point);
             finalPolyline.paths.insert(finalPolyline.paths.end(), 
                 current_node.to_extrude_before.paths.begin(), current_node.to_extrude_before.paths.end());
-            std::cout << my_id << "insert child of size = " << current_node.to_extrude_before.paths.size() << " last point = " << unscale(last_point.x) << ":" << unscale(last_point.y) << "\n";
-            //last one is always an extrusionpath. (see lines a bit below)
+           //last one is always an extrusionpath. (see lines a bit below)
             last_point = current_node.to_extrude_before.paths.back().polyline.points.back();
         }
-        std::cout << my_id << "finalPolyline.points size = " << finalPolyline.paths.size() 
-            << " and adding " << current_node.me.polyline.points.size() << " last point = " << unscale(last_point.x) << ":" << unscale(last_point.y) << "\n";
         if (!current_node.me.polyline.points.empty()) {
             current_node.me.polyline.points.insert(current_node.me.polyline.points.begin(), last_point);
             finalPolyline.paths.push_back(current_node.me);
             testPolyline.paths.push_back(current_node.me);
-            std::cout << my_id << " nextPoints: !";
-            for (Point &p : current_node.me.polyline.points) {
-                std::cout << " " << unscale(p.x) << ":" << unscale(p.y);
-            }
-            std::cout << "\n";
             last_point = current_node.me.polyline.points.back();
-        } else {
-            std::cout << my_id << "ERROR, empty cpath\n";
         }
 
-    }
-
-    {
-        stringstream stname;
-        stname << my_id << "_meonly_poly.svg";
-        SVG svg(stname.str());
-        svg.draw(testPolyline.polygon());
-        svg.Close();
-    }
-
-    std::cout << my_id << "RETURN " << finalPolyline.paths.size() << " \n";
-    {
-        stringstream stname;
-        stname << my_id << "_poly.svg";
-        SVG svg(stname.str());
-        svg.draw(finalPolyline.polygon());
-        svg.Close();
     }
     finalPolyline.check();
     return finalPolyline;
