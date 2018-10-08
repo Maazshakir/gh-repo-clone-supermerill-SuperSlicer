@@ -43,16 +43,12 @@ Lines Polygon::lines() const
 Polyline
 Polygon::split_at_vertex(const Point &point) const
 {
-    std::cout << "split_at_vertex\n";
     // find index of point
     for (Points::const_iterator it = this->points.begin(); it != this->points.end(); ++it) {
-        std::cout << "next, ";
         if (it->coincides_with(point)) {
-            std::cout << "point found\n";
             return this->split_at_index(it - this->points.begin());
         }
     }
-    std::cout << "point not found\n";
     CONFESS("Point not found");
     return Polyline();
 }

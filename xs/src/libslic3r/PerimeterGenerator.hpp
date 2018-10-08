@@ -18,8 +18,16 @@ public:
     ExtrusionLoop to_extrude_before;
     PerimeterPolylineNode(const ExtrusionLoop &loop, const ExtrusionPath &path)
         : me(path), to_extrude_before(loop) {
-        std::cout << "create " << path.polyline.points.size() << " == " << this->me.polyline.points.size() << "\n";
     }
+};
+
+struct PerimeterIntersectionPoint {
+    size_t idx_children;
+    Point child_best;
+    size_t idx_outter;
+    Point outter_best;
+    size_t idx_polyline_outter;
+    coord_t distance;
 };
 
 // Hierarchy of perimeters.
