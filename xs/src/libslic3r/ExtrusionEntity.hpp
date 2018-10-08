@@ -93,7 +93,6 @@ public:
     virtual Polyline as_polyline() const = 0;
     virtual double length() const = 0;
     virtual double total_volume() const = 0;
-    virtual void check() const = 0;
 };
 
 typedef std::vector<ExtrusionEntity*> ExtrusionEntitiesPtr;
@@ -151,7 +150,6 @@ public:
     double min_mm3_per_mm() const { return this->mm3_per_mm; }
     Polyline as_polyline() const { return this->polyline; }
     virtual double total_volume() const { return mm3_per_mm * unscale(length()); }
-    virtual void check() const { std::cout << "extrusion path : " << polyline.points.size() << "\n"; };
 
 private:
     void _inflate_collection(const Polylines &polylines, ExtrusionEntityCollection* collection) const;
@@ -199,12 +197,6 @@ public:
     double min_mm3_per_mm() const;
     Polyline as_polyline() const;
     virtual double total_volume() const { double volume = 0.; for (const auto& path : paths) volume += path.total_volume(); return volume; }
-    virtual void check() const { std::cout << "extrusion multipath : " "\n";
-    for (const ExtrusionPath &path : paths) {
-        path.check();
-    }
-    std::cout << "end extrusion multipath : " "\n";
-    };
 };
 
 
@@ -254,13 +246,6 @@ public:
     double min_mm3_per_mm() const;
     Polyline as_polyline() const { return this->polygon().split_at_first_point(); }
     virtual double total_volume() const { double volume = 0.; for (const auto& path : paths) volume += path.total_volume(); return volume; }
-    virtual void check() const {
-        std::cout << "extrusion loop : " "\n";
-        for (const ExtrusionPath &path : paths) {
-            path.check();
-        }
-        std::cout << "end extrusion loop : " "\n";
-    };
 
 private:
     ExtrusionLoopRole m_loop_role;

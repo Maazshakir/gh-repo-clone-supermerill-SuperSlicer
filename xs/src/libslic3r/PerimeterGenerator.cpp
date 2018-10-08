@@ -420,41 +420,20 @@ void PerimeterGenerator::process()
             //onlyone_perimter = >fusion all perimeterLoops
             {
                 for (PerimeterGeneratorLoop &loop : contours.front()) {
-                    std::cout << "_traverse_and_join_loops call\n";
-                    ExtrusionLoop extr_loop = this->_traverse_and_join_loops(loop, loop.polygon.points.front());
-                    std::cout << "insert last point:\n";
+                    ExtrusionLoop extr_loop = this->_traverse_and_join_loops(loop, loop.polygon.points.front(), loop.polygon.is_counter_clockwise());
                     extr_loop.paths.back().polyline.points.push_back(extr_loop.paths.front().polyline.points.front());
-                    std::cout << "inserted last point:";
                     entities.append(extr_loop);
+                }
 
-                    //loop.polygon.points = polyline.points;
+                // append thin walls (TODO: sort it to ~nearest)
+                if (!thin_walls.empty()) {
+                    ExtrusionEntityCollection tw = this->_variable_width
+                        (thin_walls, erExternalPerimeter, this->ext_perimeter_flow);
 
-                        std::cout << "looppath:";
-                        for (ExtrusionPath &path : extr_loop.paths) {
-                            std::cout << " !";
-                            for (Point &p : path.polyline.points) {
-                                std::cout << " " << unscale(p.x) << ":" << unscale(p.y);
-                            }
-                        }
-                        std::cout << "\n";
-                    
-
-                    std::cout << " -- check1\n";
-                    extr_loop.check();
-                    SVG svg("polygon.svg");
-                    svg.draw(extr_loop.polygon());
-                    svg.Close();
-                    SVG svg2("polyline.svg");
-                    /*for (ExtrusionEntity *path : entities.flatten().entities) {
-                        svg2.draw(path->as_polyline());
-                    }*/
-                    svg.draw(extr_loop.as_polyline());
-                    svg2.Close();
-                    
+                    entities.append(tw.entities);
+                    thin_walls.clear();
                 }
             }
-            std::cout << " == check2\n";
-            entities.check();
 
             // at this point, all loops should be in contours[0]
             /*ExtrusionEntityCollection entities_test = this->_traverse_loops(contours.front(), thin_walls);
@@ -737,15 +716,16 @@ get_nearest_point(const PerimeterGeneratorLoops &children, std::vector<Perimeter
     return intersect;
 }
 
-
 ExtrusionLoop
-PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse) const
+PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool is_ccw) const
 {
     const coord_t dist_cut = this->perimeter_flow.scaled_width();
-    //std::cout << "dist_cut=" << dist_cut<<"\n";
+    bool loop_poly_is_ccw = loop.polygon.is_counter_clockwise();
+    const bool needToReverse = (is_ccw && !loop_poly_is_ccw || !is_ccw && loop_poly_is_ccw);
     //TODO change this->perimeter_flow.scaled_width() if it's the first one!
     Polyline initialPolyline;
-    if (loop.polygon.closest_point(entryPoint)->distance_to(entryPoint) > SCALED_EPSILON) {
+    size_t idx_closest_from_entry_point = loop.polygon.closest_point_index(entryPoint);
+    if (loop.polygon.points[idx_closest_from_entry_point].distance_to(entryPoint) > SCALED_EPSILON) {
         //create new Point
          //get first point
         size_t idx_before = -1;
@@ -761,10 +741,9 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
         initialPolyline.points.push_back(entryPoint);
         initialPolyline.points[0] = entryPoint;
     } else {
-        initialPolyline = loop.polygon.split_at_vertex(entryPoint);
+        initialPolyline = loop.polygon.split_at_index(idx_closest_from_entry_point);
     }
-    
-    if (has_to_reverse && loop.is_contour || !loop.is_contour && !has_to_reverse) initialPolyline.reverse();
+    if (needToReverse) initialPolyline.reverse();
     initialPolyline.clip_end(dist_cut);
 
     std::vector<PerimeterPolylineNode> myPolylines;
@@ -816,7 +795,11 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             paths = (ExtrusionPaths)ExtrusionEntityCollection(paths).chained_path();
 
             //TODO: add a point a bit before last point to allow to use the last point as "return point"
+            if (needToReverse) {
+                std::reverse(paths.begin(), paths.end());
+            }
             for (ExtrusionPath path : paths) {
+                if (needToReverse) path.reverse();
                 myPolylines.emplace_back(ExtrusionLoop(elrDefault), path);
                 svg_out.paths.push_back(path);
             }
@@ -833,9 +816,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
 
     }
 
-
-
-    //Polylines myPolylines = { myPolyline };
     //iterate on each point ot find the best place to go into the child
     vector<PerimeterGeneratorLoop> childs = loop.children;
     int child_idx = 0;
@@ -849,7 +829,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
             PerimeterGeneratorLoop &child = childs[nearest.idx_children];
             //create new node with recursive ask for the inner perimeter & COPY of the points, ready to be cut
             myPolylines.insert(myPolylines.begin() + nearest.idx_polyline_outter + 1,
-                PerimeterPolylineNode(_traverse_and_join_loops(child, nearest.child_best, !has_to_reverse),
+                PerimeterPolylineNode(_traverse_and_join_loops(child, nearest.child_best, !is_ccw),
                 ExtrusionPath(myPolylines[nearest.idx_polyline_outter].me)));
             PerimeterPolylineNode &new_node = myPolylines[nearest.idx_polyline_outter + 1];
             PerimeterPolylineNode &selected_node = myPolylines[nearest.idx_polyline_outter];
@@ -911,9 +891,8 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
     Point last_point = first_node.me.polyline.points.back();
     for (size_t idx_node = 1; idx_node < myPolylines.size(); idx_node++) {
         PerimeterPolylineNode &current_node = myPolylines[idx_node];
-
+        //add inner loop
         if (!current_node.to_extrude_before.paths.empty()) {
-            //first one is always an extrusionpath.
             ExtrusionPath &firstPath = current_node.to_extrude_before.paths.front();
             firstPath.polyline.points.insert(firstPath.polyline.points.begin(), last_point);
             finalPolyline.paths.insert(finalPolyline.paths.end(), 
@@ -921,6 +900,7 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
            //last one is always an extrusionpath. (see lines a bit below)
             last_point = current_node.to_extrude_before.paths.back().polyline.points.back();
         }
+        //add next segment
         if (!current_node.me.polyline.points.empty()) {
             current_node.me.polyline.points.insert(current_node.me.polyline.points.begin(), last_point);
             finalPolyline.paths.push_back(current_node.me);
@@ -929,7 +909,6 @@ PerimeterGenerator::_traverse_and_join_loops(const PerimeterGeneratorLoop &loop,
         }
 
     }
-    finalPolyline.check();
     return finalPolyline;
 }
 
