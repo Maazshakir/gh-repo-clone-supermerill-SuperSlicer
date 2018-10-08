@@ -92,6 +92,13 @@ public:
         CONFESS("Calling length() on a ExtrusionEntityCollection");
         return 0.;        
     }
+    virtual void check() const {
+        std::cout << "extrusion collection : " "\n";
+        for (ExtrusionEntity *ent : entities) {
+            ent->check();
+        }
+        std::cout << "end extrusion collection : " "\n";
+    };
 };
 
 }
