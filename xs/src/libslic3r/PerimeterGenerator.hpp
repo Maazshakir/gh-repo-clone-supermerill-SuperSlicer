@@ -14,11 +14,10 @@ namespace Slic3r {
 
 class PerimeterPolylineNode {
 public:
-    PerimeterPolylineNode* next;
     ExtrusionPath me;
-    ExtrusionEntityCollection to_extrude_before;
-    PerimeterPolylineNode(const ExtrusionEntityCollection &collection, const ExtrusionPath &path)
-        : me(path), to_extrude_before(collection), next(nullptr) {
+    ExtrusionLoop to_extrude_before;
+    PerimeterPolylineNode(const ExtrusionLoop &loop, const ExtrusionPath &path)
+        : me(path), to_extrude_before(loop) {
         std::cout << "create " << path.polyline.points.size() << " == " << this->me.polyline.points.size() << "\n";
     }
 };
@@ -104,7 +103,7 @@ private:
 
     ExtrusionEntityCollection _traverse_loops(const PerimeterGeneratorLoops &loops,
         ThickPolylines &thin_walls) const;
-    ExtrusionEntityCollection _traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse = false) const;
+    ExtrusionLoop _traverse_and_join_loops(const PerimeterGeneratorLoop &loop, Point entryPoint, bool has_to_reverse = false) const;
     ExtrusionEntityCollection _variable_width
         (const ThickPolylines &polylines, ExtrusionRole role, Flow flow) const;
 };
