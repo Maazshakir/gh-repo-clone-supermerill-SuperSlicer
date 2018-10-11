@@ -12,15 +12,6 @@
 
 namespace Slic3r {
 
-class PerimeterPolylineNode {
-public:
-    ExtrusionPath me;
-    ExtrusionLoop to_extrude_before;
-    PerimeterPolylineNode(const ExtrusionLoop &loop, const ExtrusionPath &path)
-        : me(path), to_extrude_before(loop) {
-    }
-};
-
 struct PerimeterIntersectionPoint {
     size_t idx_children;
     Point child_best;
