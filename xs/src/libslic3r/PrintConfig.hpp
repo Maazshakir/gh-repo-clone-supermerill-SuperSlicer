@@ -42,7 +42,7 @@ enum SupportMaterialPattern {
 };
 
 enum SeamPosition {
-    spRandom, spNearest, spAligned, spRear
+    spRandom, spNearest, spAligned, spRear, spHidden
 };
 
 enum FilamentType {
@@ -120,6 +120,7 @@ template<> inline t_config_enum_values& ConfigOptionEnum<SeamPosition>::get_enum
         keys_map["nearest"]             = spNearest;
         keys_map["aligned"]             = spAligned;
         keys_map["rear"]                = spRear;
+        keys_map["hidden"]              = spHidden;
     }
     return keys_map;
 }
@@ -351,6 +352,7 @@ public:
     ConfigOptionBool                exact_last_layer_height;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
+    ConfigOptionBool                seam_travel;
 //    ConfigOptionFloat               seam_preferred_direction;
 //    ConfigOptionFloat               seam_preferred_direction_jitter;
     ConfigOptionBool                support_material;
@@ -397,6 +399,7 @@ protected:
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
+        OPT_PTR(seam_travel);
 //        OPT_PTR(seam_preferred_direction);
 //        OPT_PTR(seam_preferred_direction_jitter);
         OPT_PTR(support_material);
@@ -446,6 +449,7 @@ public:
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
     ConfigOptionBool                perimeter_loop;
+    ConfigOptionEnum<SeamPosition>  perimeter_loop_seam;
     ConfigOptionBool                extra_perimeters;
     ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
@@ -502,6 +506,7 @@ protected:
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
         OPT_PTR(perimeter_loop);
+        OPT_PTR(perimeter_loop_seam);
         OPT_PTR(extra_perimeters);
         OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);
