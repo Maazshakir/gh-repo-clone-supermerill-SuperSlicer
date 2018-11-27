@@ -42,7 +42,7 @@ enum SupportMaterialPattern {
 };
 
 enum SeamPosition {
-    spRandom, spNearest, spAligned, spRear
+    spRandom, spNearest, spAligned, spRear, spHidden
 };
 
 enum FilamentType {
@@ -120,6 +120,7 @@ template<> inline t_config_enum_values& ConfigOptionEnum<SeamPosition>::get_enum
         keys_map["nearest"]             = spNearest;
         keys_map["aligned"]             = spAligned;
         keys_map["rear"]                = spRear;
+        keys_map["hidden"]              = spHidden;
     }
     return keys_map;
 }
@@ -340,6 +341,7 @@ class PrintObjectConfig : public StaticPrintConfig
     STATIC_PRINT_CONFIG_CACHE(PrintObjectConfig)
 public:
     ConfigOptionBool                clip_multipart_objects;
+    ConfigOptionBool                remove_small_gaps;
     ConfigOptionBool                dont_support_bridges;
     ConfigOptionFloat               elefant_foot_compensation;
     ConfigOptionFloatOrPercent      extrusion_width;
@@ -351,6 +353,7 @@ public:
     ConfigOptionBool                exact_last_layer_height;
     ConfigOptionInt                 raft_layers;
     ConfigOptionEnum<SeamPosition>  seam_position;
+    ConfigOptionBool                seam_travel;
 //    ConfigOptionFloat               seam_preferred_direction;
 //    ConfigOptionFloat               seam_preferred_direction_jitter;
     ConfigOptionBool                support_material;
@@ -387,6 +390,7 @@ protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
         OPT_PTR(clip_multipart_objects);
+        OPT_PTR(remove_small_gaps);
         OPT_PTR(dont_support_bridges);
         OPT_PTR(elefant_foot_compensation);
         OPT_PTR(extrusion_width);
@@ -397,6 +401,7 @@ protected:
         OPT_PTR(exact_last_layer_height);
         OPT_PTR(raft_layers);
         OPT_PTR(seam_position);
+        OPT_PTR(seam_travel);
 //        OPT_PTR(seam_preferred_direction);
 //        OPT_PTR(seam_preferred_direction_jitter);
         OPT_PTR(support_material);
@@ -446,6 +451,7 @@ public:
     ConfigOptionFloatOrPercent      external_perimeter_speed;
     ConfigOptionBool                external_perimeters_first;
     ConfigOptionBool                perimeter_loop;
+    ConfigOptionEnum<SeamPosition>  perimeter_loop_seam;
     ConfigOptionBool                extra_perimeters;
     ConfigOptionBool                only_one_perimeter_top;
     ConfigOptionFloat               fill_angle;
@@ -502,6 +508,7 @@ protected:
         OPT_PTR(external_perimeter_speed);
         OPT_PTR(external_perimeters_first);
         OPT_PTR(perimeter_loop);
+        OPT_PTR(perimeter_loop_seam);
         OPT_PTR(extra_perimeters);
         OPT_PTR(only_one_perimeter_top);
         OPT_PTR(fill_angle);
