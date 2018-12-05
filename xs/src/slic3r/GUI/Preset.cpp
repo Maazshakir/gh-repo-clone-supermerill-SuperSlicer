@@ -310,6 +310,7 @@ const std::vector<std::string>& Preset::print_options()
         "support_material_solid_first_layer", "perimeter_loop", "perimeter_loop_seam", "seam_travel"
         , "remove_small_gaps"
         , "exact_last_layer_height"
+        , "infill_not_connected"
     };
     return s_opts;
 }

@@ -807,7 +807,7 @@ PrintConfigDef::PrintConfigDef()
     def->default_value = new ConfigOptionPercent(18);
 
     def = this->add("fill_pattern", coEnum);
-    def->label = L("Inside");
+    def->label = L("Pattern");
     def->category = L("Sparse fill pattern");
     def->tooltip = L("Fill pattern for general low-density infill.");
     def->cli = "fill-pattern=s";
@@ -984,6 +984,13 @@ PrintConfigDef::PrintConfigDef()
     def->cli = "infill-dense!";
     def->default_value = new ConfigOptionBool(false);
 
+    def = this->add("infill_not_connected", coBool);
+    def->label = ("Do not connect infill lines to each other.");
+    def->category = L("Infill");
+    def->tooltip = L("If checked, the infill algorithm will try to not connect the lines near the infill. Can be useful for art or with high infill/perimeter overlap.");
+    def->cli = "infill-not-connected!";
+    def->default_value = new ConfigOptionBool(false);
+    
     def = this->add("infill_dense_algo", coEnum);
     def->label = L("Algorithm");
     def->tooltip = L("Choose the way the dense layer is lay out."
