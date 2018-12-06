@@ -299,7 +299,7 @@ void PerimeterGenerator::process()
                                         simplifiedBounds.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
                                         simplifiedPolygon.medial_axis(simplifiedBounds, ext_perimeter_width + ext_perimeter_spacing2, min_width,
-                                            &thin_walls, this->layer_height, this->layer_id);
+                                            &thin_walls, this->layer_height);
                                     }
                                     break;
                                 }
