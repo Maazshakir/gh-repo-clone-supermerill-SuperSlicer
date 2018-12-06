@@ -627,21 +627,37 @@ MedialAxis::extends_line(ThickPolyline& polyline, const ExPolygons& anchors, con
         if (this->expolygon.contour.has_boundary_point(polyline.points.back())) {
             new_back = polyline.points.back();
         } else {
+            //TODO: verify also for holes.
             (void)this->expolygon.contour.first_intersection(line, &new_back);
             // safety check if no intersection
             if (new_back.x == 0 && new_back.y == 0) {
+                if (!this->expolygon.contains(line.b)) {
+                    //it's outside!!!
+                    std::cout << "Error, a line is formed that start in a polygon, end outside of it can don't cross it!\n";
+                }
                 new_back = line.b;
             }
             polyline.points.push_back(new_back);
             polyline.width.push_back(polyline.width.back());
         }
         Point new_bound;
+        //TODO: verify also for holes.
         (void)bounds.contour.first_intersection(line, &new_bound);
         // safety check if no intersection
         if (new_bound.x == 0 && new_bound.y == 0) {
             if (line.b.coincides_with_epsilon(polyline.points.back())) {
                 return;
             }
+            //check if we don't over-shoot inside us
+            bool is_in_anchor = false;
+            for (const ExPolygon& a : anchors) {
+                if (a.contains(line.b)) {
+                    is_in_anchor = true;
+                    break;
+                }
+            }
+            if (!is_in_anchor) std::cout << "not in anchor:\n";
+            if (!is_in_anchor) return;
             new_bound = line.b;
         }
        /* if (new_bound.coincides_with_epsilon(new_back)) {
@@ -1049,7 +1065,8 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
             polyline.width.erase(polyline.width.end() - 1);
             changes = true;
         }
-        if (polyline.points.size() < 2) {
+        //remove points and bits that comes from a "main line"
+        if (polyline.points.size() < 2 || (changes && polyline.length() < max_width && polyline.points.size() ==2)) {
             //remove self if too small
             pp.erase(pp.begin() + i);
             --i;
@@ -1073,7 +1090,6 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
     Optimisation of the old algorithm : now we select the most "strait line" choice
     when we merge with an other line at a point with more than two meet.
     */
-    bool changes = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
         if (polyline.endpoints.first && polyline.endpoints.second) continue; // optimization
@@ -1083,8 +1099,11 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
         size_t best_idx = 0;
 
         // find another polyline starting here
-        for (size_t j = i + 1; j < pp.size(); ++j) {
+        for (size_t j = 0; j < pp.size(); ++j) {
+            if (j == i) continue;
             ThickPolyline& other = pp[j];
+            if (other.endpoints.first && other.endpoints.second) continue;
+
             if (polyline.last_point().coincides_with(other.last_point())) {
                 other.reverse();
             } else if (polyline.first_point().coincides_with(other.last_point())) {
@@ -1108,16 +1127,14 @@ MedialAxis::concatenate_polylines_with_crossing(ThickPolylines& pp)
             }
         }
         if (best_candidate != nullptr) {
-
             polyline.points.insert(polyline.points.end(), best_candidate->points.begin() + 1, best_candidate->points.end());
             polyline.width.insert(polyline.width.end(), best_candidate->width.begin() + 1, best_candidate->width.end());
             polyline.endpoints.second = best_candidate->endpoints.second;
             assert(polyline.width.size() == polyline.points.size());
-            changes = true;
+            if (best_idx < i) i--;
             pp.erase(pp.begin() + best_idx);
         }
     }
-    if (changes) concatThickPolylines(pp);
 }
 
 void
@@ -1293,15 +1310,34 @@ void
 MedialAxis::build(ThickPolylines* polylines_out)
 {
     this->id++;
-
+    //std::cout << layerid << "\n";
+    //{
+    //    stringstream stri;
+    //    stri << "medial_axis_0_enter_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(this->surface);
+    //    svg.Close();
+    //}
     this->expolygon = simplify_polygon_frontier();
+    //check area
+    if (this->expolygon.area() < this->max_width * this->min_width) return;
 
-
+    //std::cout << "simplify_polygon_frontier\n";
+    //{
+    //    stringstream stri;
+    //    stri << "medial_axis_0.5_simplified_" << id << ".svg";
+    //    SVG svg(stri.str());
+    //    svg.draw(bounds);
+    //    svg.draw(this->expolygon);
+    //    svg.Close();
+    //}
     // compute the Voronoi diagram and extract medial axis polylines
     ThickPolylines pp;
     this->polyline_from_voronoi(this->expolygon.lines(), &pp);
     
+    concatThickPolylines(pp);
 
+    //std::cout << "concatThickPolylines\n";
     //{
     //    stringstream stri;
     //    stri << "medial_axis_1_voronoi_" << id << ".svg";
