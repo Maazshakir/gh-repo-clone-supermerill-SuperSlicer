@@ -292,13 +292,11 @@ void PerimeterGenerator::process()
                             for (ExPolygon &bound : bounds) {
                                 if (!intersection_ex(thin[0], bound).empty()) {
                                     //be sure it's not too small to extrude reliably
-                                    ExPolygon simplifiedPolygon = thin[0];
-                                    simplifiedPolygon.remove_point_too_near(SCALED_RESOLUTION);
-                                    if (simplifiedPolygon.area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
-                                        ExPolygon simplifiedBounds = bound;
-                                        simplifiedBounds.remove_point_too_near(SCALED_RESOLUTION);
+                                    thin[0].remove_point_too_near(SCALED_RESOLUTION);
+                                    if (thin[0].area() > min_width*(ext_perimeter_width + ext_perimeter_spacing2)) {
+                                        bound.remove_point_too_near(SCALED_RESOLUTION);
                                         // the maximum thickness of our thin wall area is equal to the minimum thickness of a single loop
-                                        simplifiedPolygon.medial_axis(simplifiedBounds, ext_perimeter_width + ext_perimeter_spacing2, min_width,
+                                        thin[0].medial_axis(bound, ext_perimeter_width + ext_perimeter_spacing2, min_width,
                                             &thin_walls, this->layer_height);
                                     }
                                     break;

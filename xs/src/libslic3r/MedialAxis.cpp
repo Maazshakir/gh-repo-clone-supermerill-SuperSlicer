@@ -359,21 +359,21 @@ add_point_same_percent(ThickPolyline* pattern, ThickPolyline* to_modify)
 /// return 1 for an angle of 90° and 0 for an angle of 0° or 180°
 double
 get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t min_dist_between_point) {
-    double nearestDist = point.distance_to(contour.contour.points.front());
-    Point nearest = contour.contour.points.front();
+    double nearest_dist = point.distance_to(contour.contour.points.front());
+    Point point_nearest = contour.contour.points.front();
     size_t id_nearest = 0;
-    double nearDist = nearestDist;
-    Point near = nearest;
+    double near_dist = nearest_dist;
+    Point point_near = point_nearest;
     size_t id_near = 0;
     for (size_t id_point = 1; id_point < contour.contour.points.size(); ++id_point) {
-        if (nearestDist > point.distance_to(contour.contour.points[id_point])) {
-            //update near
+        if (nearest_dist > point.distance_to(contour.contour.points[id_point])) {
+            //update point_near
             id_near = id_nearest;
-            near = nearest;
-            nearDist = nearestDist;
+            point_near = point_nearest;
+            near_dist = nearest_dist;
             //update nearest
-            nearestDist = point.distance_to(contour.contour.points[id_point]);
-            nearest = contour.contour.points[id_point];
+            nearest_dist = point.distance_to(contour.contour.points[id_point]);
+            point_nearest = contour.contour.points[id_point];
             id_nearest = id_point;
         }
     }
@@ -381,7 +381,7 @@ get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t mi
     size_t id_before = id_nearest == 0 ? contour.contour.points.size() - 1 : id_nearest - 1;
     Point point_before = id_nearest == 0 ? contour.contour.points.back() : contour.contour.points[id_nearest - 1];
     //Search one point far enough to be relevant
-    while (nearest.distance_to(point_before) < min_dist_between_point) {
+    while (point_nearest.distance_to(point_before) < min_dist_between_point) {
         point_before = id_before == 0 ? contour.contour.points.back() : contour.contour.points[id_before - 1];
         id_before = id_before == 0 ? contour.contour.points.size() - 1 : id_before - 1;
         //don't loop
@@ -394,7 +394,7 @@ get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t mi
     size_t id_after = id_nearest == contour.contour.points.size() - 1 ? 0 : id_nearest + 1;
     Point point_after = id_nearest == contour.contour.points.size() - 1 ? contour.contour.points.front() : contour.contour.points[id_nearest + 1];
     //Search one point far enough to be relevant
-    while (nearest.distance_to(point_after) < min_dist_between_point) {
+    while (point_nearest.distance_to(point_after) < min_dist_between_point) {
         point_after = id_after == contour.contour.points.size() - 1 ? contour.contour.points.front() : contour.contour.points[id_after + 1];
         id_after = id_after == contour.contour.points.size() - 1 ? 0 : id_after + 1;
         //don't loop
@@ -405,15 +405,15 @@ get_coeff_from_angle_countour(Point &point, const ExPolygon &contour, coord_t mi
         }
     }
     //compute angle
-    angle = nearest.ccw_angle(point_before, point_after);
+    angle = point_nearest.ccw_angle(point_before, point_after);
     if (angle >= PI) angle = 2 * PI - angle;  // smaller angle
     //compute the diff from 90°
     angle = abs(angle - PI / 2);
-    if (near.coincides_with(nearest) && max(nearestDist, nearDist) + SCALED_EPSILON < nearest.distance_to(near)) {
+    if (point_near.coincides_with(point_nearest) && max(nearest_dist, near_dist) + SCALED_EPSILON < point_nearest.distance_to(point_near)) {
         //not only nearest
         Point point_before = id_near == 0 ? contour.contour.points.back() : contour.contour.points[id_near - 1];
         Point point_after = id_near == contour.contour.points.size() - 1 ? contour.contour.points.front() : contour.contour.points[id_near + 1];
-        double angle2 = min(nearest.ccw_angle(point_before, point_after), nearest.ccw_angle(point_after, point_before));
+        double angle2 = min(point_nearest.ccw_angle(point_before, point_after), point_nearest.ccw_angle(point_after, point_before));
         angle2 = abs(angle - PI / 2);
         angle = (angle + angle2) / 2;
     }
@@ -1319,10 +1319,6 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //    svg.Close();
     //}
     this->expolygon = simplify_polygon_frontier();
-    //check area
-    if (this->expolygon.area() < this->max_width * this->min_width) return;
-
-    //std::cout << "simplify_polygon_frontier\n";
     //{
     //    stringstream stri;
     //    stri << "medial_axis_0.5_simplified_" << id << ".svg";
@@ -1331,6 +1327,11 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //    svg.draw(this->expolygon);
     //    svg.Close();
     //}
+    //safety check
+    if (this->expolygon.area() < this->min_width * this->min_width) this->expolygon = this->surface;
+    if (this->expolygon.area() < this->min_width * this->min_width) return;
+
+    //std::cout << "simplify_polygon_frontier\n";
     // compute the Voronoi diagram and extract medial axis polylines
     ThickPolylines pp;
     this->polyline_from_voronoi(this->expolygon.lines(), &pp);
@@ -1366,7 +1367,6 @@ MedialAxis::build(ThickPolylines* polylines_out)
     //    svg.Close();
     //}
 
-    concatThickPolylines(pp);
 
     // Aligned fusion: Fusion the bits at the end of lines by "increasing thickness"
     // For that, we have to find other lines,
@@ -1386,6 +1386,16 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     //fusion right-angle corners.
     fusion_corners(pp);
+
+    if (do_not_overextrude) {
+        const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+        for (size_t i = 0; i < pp.size(); ++i) {
+            ThickPolyline& polyline = pp[i];
+            extends_line(polyline, anchors, min_width);
+            polyline.reverse();
+            extends_line(polyline, anchors, min_width);
+        }
+    }
 
     //reduce extrusion when it's too thin to be printable
     remove_too_thin_extrusion(pp);
@@ -1412,12 +1422,14 @@ MedialAxis::build(ThickPolylines* polylines_out)
 
     // Loop through all returned polylines in order to extend their endpoints to the 
     //   expolygon boundaries
-    const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
-    for (size_t i = 0; i < pp.size(); ++i) {
-        ThickPolyline& polyline = pp[i];
-        extends_line(polyline, anchors, min_width);
-        polyline.reverse();
-        extends_line(polyline, anchors, min_width);
+    if (!do_not_overextrude) {
+        const ExPolygons anchors = offset2_ex(diff_ex(this->bounds, this->expolygon), -SCALED_RESOLUTION, SCALED_RESOLUTION);
+        for (size_t i = 0; i < pp.size(); ++i) {
+            ThickPolyline& polyline = pp[i];
+            extends_line(polyline, anchors, min_width);
+            polyline.reverse();
+            extends_line(polyline, anchors, min_width);
+        }
     }
     //{
     //    stringstream stri;
