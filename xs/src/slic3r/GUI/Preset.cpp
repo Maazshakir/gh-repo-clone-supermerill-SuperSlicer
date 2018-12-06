@@ -311,6 +311,7 @@ const std::vector<std::string>& Preset::print_options()
         , "remove_small_gaps"
         , "exact_last_layer_height"
         , "infill_not_connected"
+        ,"first_layer_infill_speed"
     };
     return s_opts;
 }
