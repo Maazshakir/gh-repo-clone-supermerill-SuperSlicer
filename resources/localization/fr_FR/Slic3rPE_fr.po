@@ -2442,8 +2442,8 @@ msgid "perimeters"
 msgstr "périmètres"
 
 #: xs/src/slic3r/GUI/ConfigWizard.cpp:297
-msgid "Pick another vendor supported by Slic3r PE:"
-msgstr "Choisissez un autre fabriquant supporté par Slic3r PE :"
+msgid "Pick another vendor supported by Slic3r++:"
+msgstr "Choisissez un autre fabriquant supporté par Slic3r++ :"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:2024
 msgid "Place one more copy of the selected object"
@@ -3229,14 +3229,14 @@ msgstr "Incompatibilité avec Slic3r"
 #: xs/src/slic3r/GUI/UpdateDialogs.cpp:165
 #, c-format
 msgid ""
-"Slic3r PE now uses an updated configuration structure.\n"
+"Slic3r++ now uses an updated configuration structure.\n"
 "\n"
 "So called 'System presets' have been introduced, which hold the built-in default settings for various printers. These System presets cannot be modified, instead, users now may create their own presets inheriting settings from one of the System presets.\n"
 "An inheriting preset may either inherit a particular value from its parent or override it with a customized value.\n"
 "\n"
 "Please proceed with the %s that follows to set up the new presets and to choose whether to enable automatic preset updates."
 msgstr ""
-"Slic3r PE utilise à présent une structure de configuration mise à jour.\n"
+"Slic3r++ utilise à présent une nouvelle structure de configurations avec mise à jour automatique.\n"
 "\n"
 "Il existe à présent des \"préréglages Système\", qui intègrent les réglages par défaut pour les différentes imprimantes. Ces préréglages Système ne peuvent pas être modifiés, mais les utilisateurs peuvent désormais créer leurs propres préréglages héritant des paramètres de l'un des préréglages Système.\n"
 "Un tel préréglage peut ainsi hériter d'une valeur particulière de son parent ou la remplacer par une valeur personnalisée.\n"
@@ -4772,7 +4772,7 @@ msgstr "Ajoute un fort coût aux déplacement pour les minimiser davantage."
 msgid "The convex holes will be grown / shrunk in the XY plane by the configured value"
                    " (negative = inwards, positive = outwards, should be positive as the holes are always a bit smaller)."
                    " This might be useful for fine-tuning hole sizes."
-msgstr "Les trous convexes vont être agrandis/rétécis en XY par cette valeur pour compenser la rétractation du palstique. (negatif = vers l'intérieur de la pièce, positif = vers l'extérieur) !!! Devrait être négative (<0) afin d'agrandir le trou!!!"
+msgstr "Les trous convexes vont être agrandis/rétécis en XY par cette valeur pour compenser la rétractation du plastique. (negatif = vers l'intérieur de la pièce, positif = vers l'extérieur) !!! Devrait être négative (<0) afin d'agrandir le trou!!!"
 
 #: supermerill's add: PrintConfig.cpp
 msgid "Invalid value for --over-bridge-flow-ratio"
@@ -4829,3 +4829,12 @@ msgstr "Aligné"
 
 msgid "Concentric"
 msgstr "Concentrique"
+
+msgid "Default value"
+msgstr "Valeur par défaut"
+
+msgid "false"
+msgstr "faux"
+
+msgid "true"
+msgstr "vrai"
