@@ -1,95 +1,49 @@
-
-### NOTE: This document is currently outdated wrt. the new post-Perl Slic3rPE. A new build process and the description thereof is a work in progress and is comming soon. Please stay tuned.
-
---
-
-
 # Building Slic3r PE on Microsoft Windows
 
 The currently supported way of building Slic3r PE on Windows is with CMake and MS Visual Studio 2013
-using our Perl binary distribution (compiled from official Perl sources).
 You can use the free [Visual Studio 2013 Community Edition](https://www.visualstudio.com/vs/older-downloads/).
 CMake installer can be downloaded from [the official website](https://cmake.org/download/).
 
-Other setups (such as mingw + Strawberry Perl) _may_ work, but we cannot guarantee this will work
-and cannot provide guidance.
+### Building Slic3r PE with Visual Studio
 
+Git clone slic3r into c:/local folder.
 
-### Geting the dependencies
+note: you can change the slic3r folder name, but don't forget to change it also in all commands below.
 
-First, download and upnack our Perl + wxWidgets binary distribution:
+#### Building Dependencies
 
-  - 32 bit, release mode: [wperl32-5.24.0-2018-03-02.7z](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=wperl32-5.24.0-2018-03-02.7z)
-  - 64 bit, release mode: [wperl64-5.24.0-2018-03-02.7z](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=wperl64-5.24.0-2018-03-02.7z)
-  - 64 bit, release mode + debug symbols: [wperl64d-5.24.0-2018-03-02.7z](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=wperl64d-5.24.0-2018-03-02.7z)
+* go into C:/local/Slic3r/deps
+* create the deps-build folder and go into it
+* execute>cmake .. -G "Visual Studio 12 Win64"
+* open Slic3r-deps.sln with visual studio 2013
+* select the "relWithDebInfo" target (or an other one if you want it)
+* right-clic on ALL_BUILD and clic on build
+* After compiling, you must check that all projects are successfully built
 
-It is recommended to unpack this package into `C:\`.
+#### Building Slic3r
 
-Apart from wxWidgets and Perl, you will also need additional dependencies:
+* Add the SLIC3R_STATIC : 1 Environment Variable (Open the System (Control Panel) -> Click the Advanced system settings link -> Click Environment Variables -> ADD)
+* Be sure you don't have mingw in your path.
+* Go into C:/local/Slic3r
+* Create the build folder and go into it
+* Execute>cmake .. -G "Visual Studio 12 Win64" -DCMAKE_PREFIX_PATH=C:\local\Slic3r\deps\deps-build\destdir\usr\local
+* open C:\local\Slic3rcpp\build64\src\png\libpng\cmake_install.cmake and search the lines that contains  the expr reg "png(pf)?.[35]". Rplace these paths by the good ones (->C:/local/Slic3r/src/png/libpng/libpng(pf)?.[35])
+* Open Slic3r.sln with visual studio 2013
+* Select the "relWithDebInfo" target (same as deps)
+* Right-clic on ALL_BUILD and clic on build
+* It should compile Slic3r. You can test the .exe (it's inside C:\local\Slic3r\build\src\RelWithDebInfo)
 
-  - Boost
-  - Intel TBB
-  - libcurl
+#### Installing Slic3r
 
-We have prepared a binary package of the listed libraries:
+The install project will copy the include, lib & share folder inside the install folder (C:/Program Files/Slic3r), be sure to have the credentials to do so.
 
-  - 32 bit: [slic3r-destdir-32.7z](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=2%2Fslic3r-destdir-32.7z)
-  - 64 bit: [slic3r-destdir-64.7z](https://bintray.com/vojtechkral/Slic3r-PE/download_file?file_path=2%2Fslic3r-destdir-64.7z)
+You have to copy the exe and dll yourself.
 
-It is recommended you unpack this package into `C:\local\` as the environment
-setup script expects it there.
+Some information about the version and name are in the version.inc file at the root folder.
 
-Alternatively you can also compile the additional dependencies yourself.
-There is a [powershell script](./deps-build/windows/slic3r-makedeps.ps1) which automates this process.
+#### other
 
-### Building Slic3r PE
-
-Once the dependencies are set up in their respective locations,
-go to the `wperl*` directory extracted earlier and launch the `cmdline.lnk` file
-which opens a command line prompt with appropriate environment variables set up.
-
-In this command line, `cd` into the directory with Slic3r sources
-and use these commands to build the Slic3r from the command line:
-
-    perl Build.PL
-    perl Build.PL --gui
-    mkdir build
-    cd build
-    cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
-    nmake
-    cd ..
-    perl slic3r.pl
-
-The above commands use `nmake` Makefiles.
-You may also build Slic3r PE with other build tools:
-
-
-### Building with Visual Studio
-
-To build and debug Slic3r PE with Visual Studio (64 bits), replace the `cmake` command with:
-
-    cmake .. -G "Visual Studio 12 Win64" -DCMAKE_CONFIGURATION_TYPES=RelWithDebInfo
-
-For the 32-bit variant, use:
-
-    cmake .. -G "Visual Studio 12" -DCMAKE_CONFIGURATION_TYPES=RelWithDebInfo
-
-After `cmake` has finished, go to the build directory and open the `Slic3r.sln` solution file.
-This should open Visual Studio and load the Slic3r solution containing all the projects.
-Make sure you use Visual Studio 2013 to open the solution.
-
-You can then use the usual Visual Studio controls to build Slic3r (Hit `F5` to build and run with debugger).
-If you want to run or debug Slic3r from within Visual Studio, make sure the `XS` project is activated.
-It should be set as the Startup project by CMake by default, but you might want to check anyway.
-There are multiple projects in the Slic3r solution, but only the `XS` project is configured with the right
-commands to run and debug Slic3r.
-
-The above cmake commands generate Visual Studio project files with the `RelWithDebInfo` configuration only.
-If you also want to use the `Release` configuration, you can generate Visual Studio projects with:
-
-    -DCMAKE_CONFIGURATION_TYPES=Release;RelWithDebInfo
-
-(The `Debug` configuration is not supported as of now.)
+For the 32-bit variant, use "Visual Studio 12" instead of "Visual Studio 12 Win64"
 
 ### Building with ninja
 
