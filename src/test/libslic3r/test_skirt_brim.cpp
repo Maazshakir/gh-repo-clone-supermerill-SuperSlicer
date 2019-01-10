@@ -153,6 +153,34 @@ SCENARIO("Original Slic3r Skirt/Brim tests", "[!mayfail]") {
                 REQUIRE(tool == config->getInt("support_material_extruder") - 1);
             }
         }
+        WHEN("brim") {
+            config->set("skirts", 0);
+            config->set("first_layer_width", 0.5);
+            config->set("brim_width", 1);
+            config->set("brim_ears", false);
+			
+            THEN("normal brim") {
+			
+				Slic3r::Model model;
+				auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+				print->process();
+				REQUIRE(print->brim.size() == 2);
+            }
+        }
+        WHEN("brim ears") {
+            config->set("skirts", 0);
+            config->set("first_layer_width", 0.5);
+            config->set("brim_width", 1);
+            config->set("brim_ears", true);
+			
+            THEN("brim ears") {
+			
+				Slic3r::Model model;
+				auto print {Slic3r::Test::init_print({TestMesh::cube_20x20x20}, model, config)};
+				print->process();
+				REQUIRE(print->brim.size() == 4);
+            }
+        }
 
         WHEN("Object is plated with overhang support and a brim") {
             config->set("layer_height", 0.4);
