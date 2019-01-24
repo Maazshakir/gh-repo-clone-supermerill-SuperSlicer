@@ -138,8 +138,10 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
 }
 
 void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &params, const Flow &flow, const ExtrusionRole &role, ExtrusionEntitiesPtr &out) {
+    std::cout << "generic fill_surface_extrusion \n";
     //add overlap & call fill_surface
     Polylines polylines = this->fill_surface(surface, params);
+    std::cout << "polylines size=" << polylines.size()<<" \n";
     if (polylines.empty())
         return;
     // ensure it doesn't over or under-extrude
@@ -194,6 +196,7 @@ void Fill::fill_surface_extrusion(const Surface *surface, const FillParams &para
             ((surface->is_top()) ? erTopSolidInfill : erSolidInfill) :
             erInternalInfill));
     }
+    std::cout << "push polylines, multFlow=" << multFlow<<" \n";
     /// push the path
     extrusion_entities_append_paths(
         eec->entities, std::move(polylines),

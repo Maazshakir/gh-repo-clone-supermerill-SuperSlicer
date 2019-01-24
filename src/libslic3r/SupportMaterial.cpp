@@ -2312,13 +2312,16 @@ static inline void fill_expolygons_generate_paths(
     ExtrusionRole            role, 
     const Flow              &flow)
 {
+    std::cout << "generate path with filler (const) \n";
     FillParams fill_params;
     fill_params.density = density;
     fill_params.complete = true;
     fill_params.dont_adjust = true;
     for (const ExPolygon &expoly : expolygons) {
         Surface surface(stInternal, expoly);
+        std::cout << "generate - begin " << dst.size() <<"\n";
         filler->fill_surface_extrusion(&surface, fill_params, flow, role, dst);
+        std::cout << "generate - end " << dst.size() << "\n";
     }
 }
 
@@ -2330,13 +2333,16 @@ static inline void fill_expolygons_generate_paths(
     ExtrusionRole            role,
     const Flow              &flow)
 {
+    std::cout << "generate path with filler \n";
     FillParams fill_params;
     fill_params.density = density;
     fill_params.complete = true;
     fill_params.dont_adjust = true;
     for (ExPolygon &expoly : expolygons) {
         Surface surface(stInternal, std::move(expoly));
+        std::cout << "generate - begin " << dst.size() << "\n";
         filler->fill_surface_extrusion(&surface, fill_params, flow, role, dst);
+        std::cout << "generate - end " << dst.size() << "\n";
     }
 }
 
@@ -2669,11 +2675,13 @@ void modulate_extrusion_by_overlapping_layers(
     // Multiple layers overlapping with this_layer, sorted bottom up.
     const PrintObjectSupportMaterial::MyLayersPtr      &overlapping_layers)
 {
+    std::cout << "modulate_extrusion_by_overlapping_layers begin" << extrusions_in_out.entities.size() << "\n";
     size_t n_overlapping_layers = overlapping_layers.size();
     if (n_overlapping_layers == 0 || extrusions_in_out.empty())
         // The extrusions do not overlap with any other extrusion.
         return;
 
+    std::cout << "modulate_extrusion_by_overlapping_layers flatten_extrusions_in_out\n";
     ExtrusionEntityCollection flatten_extrusions_in_out = extrusions_in_out.flatten();
 
     // Get the initial extrusion parameters.
@@ -2709,7 +2717,7 @@ void modulate_extrusion_by_overlapping_layers(
         const PrintObjectSupportMaterial::MyLayer &overlapping_layer = *overlapping_layers[i_overlapping_layer];
         bbox.merge(get_extents(overlapping_layer.polygons));
     }
-    for (ExtrusionEntitiesPtr::const_iterator it = extrusions_in_out.begin(); it != extrusions_in_out.end(); ++ it) {
+    for (ExtrusionEntitiesPtr::const_iterator it = flatten_extrusions_in_out.entities.begin(); it != flatten_extrusions_in_out.entities.end(); ++ it) {
         ExtrusionPath *path = dynamic_cast<ExtrusionPath*>(*it);
         assert(path != nullptr);
         bbox.merge(get_extents(path->polyline));
@@ -2729,10 +2737,10 @@ void modulate_extrusion_by_overlapping_layers(
         svg.draw(to_polylines(overlapping_layer.polygons), dbg_index_to_color(int(i_overlapping_layer)), scale_(0.1));
     }
     // Fill extrusion, the source.
-    for (ExtrusionEntitiesPtr::const_iterator it = extrusions_in_out.begin(); it != extrusions_in_out.end(); ++ it) {
+    for (ExtrusionEntitiesPtr::const_iterator it = flatten_extrusions_in_out.entities.begin(); it != flatten_extrusions_in_out.entities.end(); ++ it) {
         ExtrusionPath *path = dynamic_cast<ExtrusionPath*>(*it);
         std::string color_name;
-        switch ((it - extrusions_in_out.begin()) % 9) {
+        switch ((it - flatten_extrusions_in_out.entities.begin()) % 9) {
             case 0: color_name = "magenta"; break;
             case 1: color_name = "deepskyblue"; break;
             case 2: color_name = "coral"; break;
@@ -2753,12 +2761,21 @@ void modulate_extrusion_by_overlapping_layers(
     {
         Polylines &polylines = path_fragments.back().polylines;
         for (ExtrusionEntitiesPtr::const_iterator it = flatten_extrusions_in_out.entities.begin(); it != flatten_extrusions_in_out.entities.end(); ++it) {
+            std::cout << "transfert path : iscoll" << (*it)->is_collection();
+            std::cout << "isloop" << (*it)->is_loop() << ", points : ";
+            for (Polyline poly : (*it)->as_polylines()) {
+                for (Point &p : poly.points) {
+                    std::cout << ", " << (int)(unscale<double>(p.x())) << ":" << (int)(unscale<double>(p.y()));
+                }
+            }
+            std::cout << "\n ";
             ExtrusionPath *path = dynamic_cast<ExtrusionPath*>(*it);
             assert(path != nullptr);
             polylines.emplace_back(Polyline(std::move(path->polyline)));
             path_ends.emplace_back(std::pair<Point, Point>(polylines.back().points.front(), polylines.back().points.back()));
         }
     }
+    std::cout << "path_fragments polylines size =" << path_fragments.back().polylines.size() << "\n";
     // Destroy the original extrusion paths, their polylines were moved to path_fragments already.
     // This will be the destination for the new paths.
     extrusions_in_out.clear();
@@ -2902,6 +2919,7 @@ void modulate_extrusion_by_overlapping_layers(
     //FIXME this shall not happen, if the Clipper works as expected and all paths split to fragments could be re-connected.
     for (auto it_fragment = path_fragments.begin(); it_fragment != path_fragments.end(); ++ it_fragment)
         extrusion_entities_append_paths(extrusions_in_out.entities, std::move(it_fragment->polylines), extrusion_role, it_fragment->mm3_per_mm, it_fragment->width, it_fragment->height);
+    std::cout << "modulate_extrusion_by_overlapping_layers end " << extrusions_in_out.entities.size()<<"\n";
 }
 
 void PrintObjectSupportMaterial::generate_toolpaths(
@@ -3101,10 +3119,12 @@ void PrintObjectSupportMaterial::generate_toolpaths(
         size_t idx_layer_top_contact      = size_t(-1);
         size_t idx_layer_intermediate     = size_t(-1);
         size_t idx_layer_inteface         = size_t(-1);
-        std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(m_slicing_params.soluble_interface ? ipConcentricGapFill : ipRectilinear));
+        std::unique_ptr<Fill> filler_interface = std::unique_ptr<Fill>(Fill::new_from_type(m_slicing_params.soluble_interface ? ipConcentric : ipRectilinear));
+        std::unique_ptr<Fill> filler_interface2 = std::unique_ptr<Fill>(Fill::new_from_type(ipSmooth));
         std::unique_ptr<Fill> filler_support = std::unique_ptr<Fill>(Fill::new_from_type(infill_pattern));
         std::unique_ptr<Fill> filler_solid = std::unique_ptr<Fill>(Fill::new_from_type(ipRectiWithPerimeter));
         filler_interface->set_bounding_box(bbox_object);
+        filler_interface2->set_bounding_box(bbox_object);
         filler_support->set_bounding_box(bbox_object);
         for (size_t support_layer_id = range.begin(); support_layer_id < range.end(); ++ support_layer_id)
         {
@@ -3179,14 +3199,18 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                     m_support_material_interface_flow.nozzle_diameter,
                     layer_ex.layer->bridging);
                 Fill *filler = filler_interface.get();
+                Fill *filler2 = filler_interface2.get();
                 float density = interface_density;
-                //if first alyer and solid first layer : draw concentric with 100% density
+                //if first layer and solid first layer : draw concentric with 100% density
                 if (support_layer.id() == 0 && this->m_object_config->support_material_solid_first_layer.value) {
                     filler = filler_solid.get();
                     density = 1.f;
                     interface_flow = m_first_layer_flow;
                     filler->angle = 0;
                     filler->spacing = interface_flow.spacing();
+                    filler2 = filler_solid.get();
+                    filler2->angle = 0;
+                    filler2->spacing = interface_flow.spacing();
                 } else {
                     filler->angle = interface_as_base ?
                         // If zero interface layers are configured, use the same angle as for the base layers.
@@ -3195,16 +3219,47 @@ void PrintObjectSupportMaterial::generate_toolpaths(
                         interface_angle;
                     filler->spacing = m_support_material_interface_flow.spacing();
                     filler->link_max_length = coord_t(scale_(filler_interface->spacing * link_max_length_factor / density));
+                    filler2->angle = interface_as_base ?
+                        // If zero interface layers are configured, use the same angle as for the base layers.
+                        angles[support_layer_id % angles.size()] :
+                        // Use interface angle for the interface layers.
+                        interface_angle;
+                    filler2->spacing = m_support_material_interface_flow.spacing();
+                    filler2->link_max_length = coord_t(scale_(filler_interface->spacing * link_max_length_factor / density));
                 }
+                std::cout << layer_ex.layer->print_z << " ===== try with concentric " << i << " ====\n";
+                //if (i != 0)
                 fill_expolygons_generate_paths(
                     // Destination
-                    layer_ex.extrusions.entities, 
+                    layer_ex.extrusions.entities,
                     // Regions to fill
                     union_ex(layer_ex.polygons_to_extrude(), true),
                     // Filler and its parameters
                     filler, float(density),
                     // Extrusion parameters
                     erSupportMaterialInterface, interface_flow);
+                std::cout << "now with rectilinear\n";
+                //if (i==0)
+                //fill_expolygons_generate_paths(
+                //    // Destination
+                //    layer_ex.extrusions.entities,
+                //    // Regions to fill
+                //    union_ex(layer_ex.polygons_to_extrude(), true),
+                //    // Filler and its parameters
+                //    filler2, float(density),
+                //    // Extrusion parameters
+                //    erSupportMaterialInterface, interface_flow);
+                for (ExtrusionEntity* eep : layer_ex.extrusions.entities) {
+                    std::cout << "next eep : iscoll " << eep->is_collection();
+                    std::cout << ", isloop " << eep->is_loop() << ", points : ";
+                    for (Polyline poly : eep->as_polylines()) {
+                        for (Point &p : poly.points) {
+                            std::cout << ", " << (int)(unscale<double>(p.x())) << ":" << (int)(unscale<double>(p.y()));
+                        }
+                    }
+                    std::cout << "\n";
+                }
+                std::cout << "------ end -----\n";
             }
 
             // Base support or flange.
@@ -3329,8 +3384,10 @@ void PrintObjectSupportMaterial::generate_toolpaths(
             SupportLayer &support_layer = *object.support_layers()[support_layer_id];
             LayerCache   &layer_cache   = layer_caches[support_layer_id];
             for (LayerCacheItem &layer_cache_item : layer_cache.overlaps) {
+                std::cout << "support_layer " << support_layer.print_z << " (before) layer_cache_item.layer_extruded->extrusions " << layer_cache_item.layer_extruded->extrusions.size() << "\n";
                 modulate_extrusion_by_overlapping_layers(layer_cache_item.layer_extruded->extrusions, *layer_cache_item.layer_extruded->layer, layer_cache_item.overlapping);
                 support_layer.support_fills.append(std::move(layer_cache_item.layer_extruded->extrusions));
+                std::cout << "support_layer " << support_layer.print_z << ".support_fills " << support_layer.support_fills.entities.size() << "\n";
             }
         }
     });
