@@ -1227,6 +1227,7 @@ void TabPrint::update()
         && m_config->opt_int("support_material_enforce_layers") == 0
         && m_config->opt_bool("exact_last_layer_height") == false
         && m_config->opt_bool("ensure_vertical_shell_thickness") == false
+        && m_config->opt_bool("infill_dense") == false
         )) {
 		wxString msg_text = _(L("The Spiral Vase mode requires:\n"
 			"- one perimeter\n"
@@ -1235,6 +1236,7 @@ void TabPrint::update()
 			"- no support material\n"
 			"- no ensure_vertical_shell_thickness\n"
 			"- unchecked 'exact last layer height'\n"
+			"- unchecked 'dense infill'\n"
 			"\nShall I adjust those settings in order to enable Spiral Vase?"));
 		auto dialog = new wxMessageDialog(parent(), msg_text, _(L("Spiral Vase")), wxICON_WARNING | wxYES | wxNO);
         is_msg_dlg_already_exist = true;
@@ -1246,7 +1248,8 @@ void TabPrint::update()
 			new_conf.set_key_value("support_material", new ConfigOptionBool(false));
             new_conf.set_key_value("support_material_enforce_layers", new ConfigOptionInt(0));
             new_conf.set_key_value("exact_last_layer_height", new ConfigOptionBool(false));
-			new_conf.set_key_value("ensure_vertical_shell_thickness", new ConfigOptionBool(false));
+            new_conf.set_key_value("ensure_vertical_shell_thickness", new ConfigOptionBool(false));
+            new_conf.set_key_value("infill_dense", new ConfigOptionBool(false));
 			fill_density = 0;
 		}
 		else {
