@@ -3211,6 +3211,7 @@ void DynamicPrintConfig::normalize()
             this->opt<ConfigOptionBool>("exact_last_layer_height", true)->value = false;
             this->opt<ConfigOptionBool>("ensure_vertical_shell_thickness", true)->value = false;
             this->opt<ConfigOptionBool>("infill_dense", true)->value = false;
+            this->opt<ConfigOptionBool>("extra_perimeters", true)->value = false;
         }
     }
 }
@@ -3366,6 +3367,8 @@ std::string FullPrintConfig::validate()
             return "Spiral vase mode is not compatible with support material";
         if (this->infill_dense)
             return "Spiral vase mode can only print hollow objects and have no top surface, so you don't need any dense infill";
+        if (this->extra_perimeters)
+            return "Can't make more than one perimeter when spiral vase mode is enabled";
     }
     
     // extrusion widths
