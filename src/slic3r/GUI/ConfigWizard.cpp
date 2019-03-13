@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <numeric>
 #include <utility>
-#include <unordered_map>
+#include <boost/unordered_map.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -299,7 +299,7 @@ PageWelcome::PageWelcome(ConfigWizard *parent)
 }
 
 
-PagePrinters::PagePrinters(ConfigWizard *parent, wxString title, wxString shortname, const VendorProfile &vendor, unsigned indent, Technology technology)
+PagePrinters::PagePrinters(ConfigWizard *parent, wxString title, wxString shortname, const VendorProfile &vendor, unsigned indent, PrinterTechnology technology)
     : ConfigWizardPage(parent, std::move(title), std::move(shortname), indent)
 {
     enum {
@@ -313,8 +313,7 @@ PagePrinters::PagePrinters(ConfigWizard *parent, wxString title, wxString shortn
     const auto families = vendor.families();
     for (const auto &family : families) {
         const auto filter = [&](const VendorProfile::PrinterModel &model) {
-            return (model.technology == ptFFF && technology & T_FFF
-                    || model.technology == ptSLA && technology & T_SLA)
+            return (model.technology == technology)
                 && model.family == family;
         };
 
@@ -800,17 +799,6 @@ void ConfigWizardIndex::on_mouse_move(wxMouseEvent &evt)
 
 // priv
 
-static const std::unordered_map<std::string, std::pair<std::string, std::string>> legacy_preset_map {{
-    { "Original Prusa i3 MK2.ini",                           std::make_pair("MK2S", "0.4") },
-    { "Original Prusa i3 MK2 MM Single Mode.ini",            std::make_pair("MK2SMM", "0.4") },
-    { "Original Prusa i3 MK2 MM Single Mode 0.6 nozzle.ini", std::make_pair("MK2SMM", "0.6") },
-    { "Original Prusa i3 MK2 MultiMaterial.ini",             std::make_pair("MK2SMM", "0.4") },
-    { "Original Prusa i3 MK2 MultiMaterial 0.6 nozzle.ini",  std::make_pair("MK2SMM", "0.6") },
-    { "Original Prusa i3 MK2 0.25 nozzle.ini",               std::make_pair("MK2S", "0.25") },
-    { "Original Prusa i3 MK2 0.6 nozzle.ini",                std::make_pair("MK2S", "0.6") },
-    { "Original Prusa i3 MK3.ini",                           std::make_pair("MK3",  "0.4") },
-}};
-
 void ConfigWizard::priv::load_pages(bool custom_setup)
 {
     const auto former_active = index->active_item();
@@ -818,8 +806,9 @@ void ConfigWizard::priv::load_pages(bool custom_setup)
     index->clear();
 
     index->add_page(page_welcome);
-    index->add_page(page_fff);
-    index->add_page(page_msla);
+    for (PagePrinters *page : page_vendors) {
+        index->add_page(page);
+    }
     index->add_page(page_custom);
 
     if (custom_setup) {
@@ -876,22 +865,8 @@ void ConfigWizard::priv::load_vendors()
 
     // Load up the set of vendors / models / variants the user has had enabled up till now
     const AppConfig *app_config = GUI::get_app_config();
-    if (! app_config->legacy_datadir()) {
         appconfig_vendors.set_vendors(*app_config);
-    } else {
-        // In case of legacy datadir, try to guess the preference based on the printer preset files that are present
-        const auto printer_dir = fs::path(Slic3r::data_dir()) / "printer";
-        for (auto &dir_entry : boost::filesystem::directory_iterator(printer_dir))
-            if (Slic3r::is_ini_file(dir_entry)) {
-                auto needle = legacy_preset_map.find(dir_entry.path().filename().string());
-                if (needle == legacy_preset_map.end()) { continue; }
-
-                const auto &model = needle->second.first;
-                const auto &variant = needle->second.second;
-                appconfig_vendors.set_variant("PrusaResearch", model, variant, true);
             }
-    }
-}
 
 void ConfigWizard::priv::add_page(ConfigWizardPage *page)
 {
@@ -968,6 +943,13 @@ void ConfigWizard::priv::apply_config(AppConfig *app_config, PresetBundle *prese
     preset_bundle->export_selections(*app_config);
 }
 
+static const boost::unordered_map<PrinterTechnology, std::string> tech_to_string{ {
+    { PrinterTechnology::ptFFF, "FFF" },
+    { PrinterTechnology::ptSLA, "SLA" },
+    { PrinterTechnology::ptUnknown, "Unknown" },
+    { PrinterTechnology::ptAny, "Any" },
+    } };
+
 // Public
 
 ConfigWizard::ConfigWizard(wxWindow *parent, RunReason reason)
@@ -1011,22 +993,23 @@ ConfigWizard::ConfigWizard(wxWindow *parent, RunReason reason)
     p->btnsizer->Add(p->btn_finish, 0, wxLEFT, BTN_SPACING);
     p->btnsizer->Add(p->btn_cancel, 0, wxLEFT, BTN_SPACING);
 
-    const auto &vendors = p->vendors;
-    const auto vendor_prusa_it = vendors.find("PrusaResearch");
-    wxCHECK_RET(vendor_prusa_it != vendors.cend(), "Vendor PrusaResearch not found");
-    const VendorProfile &vendor_prusa = vendor_prusa_it->second;
-
     p->add_page(p->page_welcome = new PageWelcome(this));
 
-    p->page_fff = new PagePrinters(this, _(L("Prusa FFF Technology Printers")), "Prusa FFF", vendor_prusa, 0, PagePrinters::T_FFF);
-    p->add_page(p->page_fff);
-
-    p->page_msla = new PagePrinters(this, _(L("Prusa MSLA Technology Printers")), "Prusa MSLA", vendor_prusa, 0, PagePrinters::T_SLA);
-    p->add_page(p->page_msla);
+    for (auto vendor : p->vendors) {
+        bool first = true;
+        for (const PrinterTechnology &tech : vendor.second.technologies) {
+            wxString name = _(L(vendor.second.name));
+            name.Replace("{technology}", tech_to_string.at(tech));
+            wxString description = _(L(vendor.second.full_name));
+            description.Replace("{technology}", tech_to_string.at(tech));
+            p->page_vendors.push_back(new PagePrinters(this, description, name, vendor.second, 0, tech));
+            p->add_page(p->page_vendors.back());
+            first = false;
+        }
+    }
 
     p->add_page(p->page_custom   = new PageCustom(this));
     p->add_page(p->page_update   = new PageUpdate(this));
-    p->add_page(p->page_vendors  = new PageVendors(this));
     p->add_page(p->page_firmware = new PageFirmware(this));
     p->add_page(p->page_bed      = new PageBedShape(this));
     p->add_page(p->page_diams    = new PageDiameters(this));
@@ -1056,8 +1039,11 @@ ConfigWizard::ConfigWizard(wxWindow *parent, RunReason reason)
             disp_rect.y + disp_rect.height / 20,
             9*disp_rect.width / 10,
             9*disp_rect.height / 10);
-
-        const int width_hint = p->index->GetSize().GetWidth() + p->page_fff->get_width() + 300;    // XXX: magic constant, I found no better solution
+        int max_width = 0;
+        for (auto page : p->page_vendors) {
+            max_width = std::max(max_width, page->get_width());
+        }
+        const int width_hint = p->index->GetSize().GetWidth() + max_width + 300;    // XXX: magic constant, I found no better solution
         if (width_hint < window_rect.width) {
             window_rect.x += (window_rect.width - width_hint) / 2;
             window_rect.width = width_hint;
@@ -1072,8 +1058,8 @@ ConfigWizard::ConfigWizard(wxWindow *parent, RunReason reason)
     p->btn_finish->Hide();
 
     btn_sel_all->Bind(wxEVT_BUTTON, [this](const wxCommandEvent &) {
-        p->page_fff->select_all(true, false);
-        p->page_msla->select_all(true, false);
+        for (auto page : p->page_vendors)
+            page->select_all(true, false);
         p->index->go_to(p->page_update);
     });
 
