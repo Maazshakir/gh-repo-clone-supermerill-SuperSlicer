@@ -247,7 +247,7 @@ msgstr "&Fenêtre"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:291
 msgid "(&Re)Slice Now\tCtrl+S"
-msgstr "(&Re)Découper maintenant\tCtrl+S"
+msgstr "(&Re)Découper\tCtrl+S"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:994
 msgid "(minimum)"
@@ -1192,7 +1192,7 @@ msgstr "L'export a échoué"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:314
 msgid "Export G-code..."
-msgstr "Exporter le G-code..."
+msgstr "Créer le G-code..."
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:236
 msgid "Export G-code…"
@@ -1413,7 +1413,7 @@ msgstr "Angle du remplissage"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:501
 msgid "Fill density"
-msgstr "Densité du remplissage"
+msgstr "Densité interne"
 
 #: C:\src\Slic3r\xs\src\libslic3r\PrintConfig.cpp:539
 msgid "Fill pattern"
@@ -2997,7 +2997,7 @@ msgstr "Choisissez le type de support dont vous avez besoin"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:239
 msgid "Send to printer"
-msgstr "Envoyer à l'imprimante"
+msgstr "vers l'imprimante"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:1448
 msgid "Sending G-code file to the OctoPrint server..."
@@ -3265,7 +3265,7 @@ msgstr "Découper un fichier en un SVG multi-couches"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\Plater.pm:237
 msgid "Slice now"
-msgstr "Découper maintenant"
+msgstr "Découper"
 
 #: c:\src\Slic3r\lib\Slic3r\GUI\MainFrame.pm:287
 msgid "Slice to SV&G…\tCtrl+G"
@@ -4567,7 +4567,7 @@ msgstr "Position des jointures"
 
 #: supermerill's add: PrintConfig.cpp
 msgid "Only one perimeter on Top surfaces"
-msgstr "Seulement un périmètre autoir des surfaces du dessus"
+msgstr "Seulement un périmètre autour des surfaces du dessus"
 
 #: supermerill's add: PrintConfig.cpp
 msgid "Fill"

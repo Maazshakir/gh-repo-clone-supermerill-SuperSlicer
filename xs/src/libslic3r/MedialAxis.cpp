@@ -1279,9 +1279,8 @@ MedialAxis::ensure_not_overextrude(ThickPolylines& pp)
         //reduce width
         double reduce_by = boundsVolume / volume;
         for (ThickPolyline& polyline : pp) {
-            for (ThickLine &l : polyline.thicklines()) {
-                l.a_width *= reduce_by;
-                l.b_width *= reduce_by;
+            for (coordf_t &width : polyline.width) {
+                width *= reduce_by;
             }
         }
     }

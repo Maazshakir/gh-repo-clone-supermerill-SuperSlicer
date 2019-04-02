@@ -450,7 +450,7 @@ ExPolygons fit_to_size(ExPolygon polygon_to_cover, ExPolygon polygon_to_check, c
     const ExPolygon &growing_area, const coord_t offset, float coverage) {
 
     //grow the polygon_to_check enough to cover polygon_to_cover
-    float current_coverage = current_coverage;
+    float current_coverage = coverage;
     coord_t previous_offset = 0;
     coord_t current_offset = offset;
     ExPolygon polygon_reduced = try_fit_to_size(polygon_to_cover, polygon_to_check, allowedPoints);
