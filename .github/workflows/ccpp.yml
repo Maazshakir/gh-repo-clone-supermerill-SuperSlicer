@@ -1,0 +1,17 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: create build dir
+      run: mkdir build
+    - name: got build dir
+      run: cd build
+    - name: make
+      run: cmake .. -DSLIC3R_STATIC=1
