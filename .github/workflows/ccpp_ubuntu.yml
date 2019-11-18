@@ -31,7 +31,7 @@ jobs:
       run: ls destdir/usr/local/lib
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local"
+      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
     - name: make
       working-directory: ./build
       run: make
