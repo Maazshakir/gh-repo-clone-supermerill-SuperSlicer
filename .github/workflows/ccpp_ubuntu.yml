@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: install gtk+2
-      run: sudo apt-get install libgtk2.0-dev
+      run: sudo apt-get install libgtk2.0-dev libglew-dev
     - name: ls
       run: ls
     - name: mkdir in deps
