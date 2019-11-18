@@ -1,0 +1,49 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: ls
+      run: ls
+    - name: mkdir in deps
+      run: mkdir deps/build
+    - name: cmake deps
+      working-directory: ./deps/build
+      run: cmake ..
+    - name: make deps
+      working-directory: ./deps/build
+      run: make
+    - name: mkdir build
+      run: mkdir build
+    - name: pwd deps
+      working-directory: ./deps/build
+      run: pwd
+    - name: cmake
+      working-directory: ./build
+      run: cmake .. -DCMAKE_PREFIX_PATH="/home/Slic3r/Slic3r/deps/build/destdir/usr/local"
+    - name: make
+      working-directory: ./build
+      run: make
+    - name: create directory and copy into it
+      working-directory: ./build
+      run: mkdir package
+    - name: copy resources
+      working-directory: ./build
+      run: cp -Rf ../resources package/resources
+    - name: copy bin
+      working-directory: ./build
+      run: cp -Rf src/release/bin/slic3r package/bin/slic3r
+    - name: copy executable
+      working-directory: ./build
+      run: cp -Rf src/release/slic3r package/slic3r
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: nightly_win64
+        path: build/package/
