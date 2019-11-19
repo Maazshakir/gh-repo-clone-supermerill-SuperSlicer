@@ -46,6 +46,11 @@ jobs:
     - name: copy resources
       working-directory: ./build
       run: cp -Rf ../resources package/resources
+    - name: Upload all build folder
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: buildfolder
+        path: build/
     - name: copy bin
       working-directory: ./build
       run: cp -Rf src/release/bin/slic3r package/bin/slic3r
