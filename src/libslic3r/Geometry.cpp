@@ -5,6 +5,7 @@
 #include "Line.hpp"
 #include "PolylineCollection.hpp"
 #include "clipper.hpp"
+#include <numeric>
 #include <algorithm>
 #include <cassert>
 #include <cmath>
