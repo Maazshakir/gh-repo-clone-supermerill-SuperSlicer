@@ -1,16 +1,14 @@
-name: C/C++ CI ubuntu
+name: C/C++ CI macos
 
 on: [push]
 
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     
     steps:
     - uses: actions/checkout@v1
-    - name: install gtk2 glew
-      run: sudo apt-get install libgtk2.0-dev libglew-dev
     - name: ls
       run: ls
     - name: mkdir in deps
@@ -35,6 +33,11 @@ jobs:
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
+    - name: Upload filesystem
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: all_data_compiled
+        path: .
     - name: create directory and copy into it
       working-directory: ./build
       run: |
