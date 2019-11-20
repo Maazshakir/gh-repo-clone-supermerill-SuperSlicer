@@ -5,16 +5,17 @@
 #include "Line.hpp"
 #include "PolylineCollection.hpp"
 #include "clipper.hpp"
-#include <numeric>
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <list>
 #include <map>
+#include <numeric>
 #include <set>
 #include <utility>
 #include <stack>
 #include <vector>
+#include <boost/log/trivial.hpp>
 
 #ifdef SLIC3R_DEBUG
 #include "SVG.hpp"
