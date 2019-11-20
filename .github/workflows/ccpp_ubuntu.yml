@@ -15,6 +15,15 @@ jobs:
       run: ls
     - name: mkdir in deps
       run: mkdir deps/build
+    - name: create file from echo
+      run: echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/slic3r++" "$@"' >slic3r++.sh
+    - name: Upload file
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: nightly_win64
+        path: .
+    - name: crash
+      run: cp pasbon/pasla rate
     - name: cmake deps
       working-directory: ./deps/build
       run: cmake ..
@@ -32,31 +41,23 @@ jobs:
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
-    - name: Upload makefile
-      uses: actions/upload-artifact@v1.0.0
-      with:
-        name: makefile
-        path: build/
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
     - name: create directory and copy into it
       working-directory: ./build
-      run: mkdir package
+      run: |
+        mkdir package
+        mkdir package/bin
     - name: copy resources
       working-directory: ./build
       run: cp -Rf ../resources package/resources
-    - name: Upload all build folder
-      uses: actions/upload-artifact@v1.0.0
-      with:
-        name: buildfolder
-        path: build/
     - name: copy bin
       working-directory: ./build
-      run: cp -Rf src/release/bin/slic3r package/bin/slic3r
+      run: cp -f src/slic3r++ package/bin/slic3r++
     - name: copy executable
       working-directory: ./build
-      run: cp -Rf src/release/slic3r package/slic3r
+      run: cp -Rf src/slic3r package/slic3r
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
