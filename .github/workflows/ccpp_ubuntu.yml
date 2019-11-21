@@ -11,8 +11,6 @@ jobs:
     - uses: actions/checkout@v1
     - name: install gtk2 glew
       run: sudo apt-get install libgtk2.0-dev libglew-dev
-    - name: ls
-      run: ls
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
@@ -23,12 +21,6 @@ jobs:
       run: make
     - name: mkdir build
       run: mkdir build
-    - name: pwd deps
-      working-directory: ./deps/build
-      run: pwd
-    - name: ls deps
-      working-directory: ./deps/build
-      run: ls destdir/usr/local/lib
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/Slic3r/Slic3r/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
@@ -52,5 +44,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_win64
+        name: nightly_linux
         path: build/package/
