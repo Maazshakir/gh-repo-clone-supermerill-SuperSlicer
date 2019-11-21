@@ -9,10 +9,6 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - name: ls
-      run: ls
-    - name: pwd
-      run: pwd
     - name: mkdir in deps
       run: mkdir deps/build
     - name: cmake deps
@@ -23,39 +19,33 @@ jobs:
       run: make
     - name: mkdir build
       run: mkdir build
-    - name: pwd deps
-      working-directory: ./deps/build
-      run: pwd
-    - name: ls deps
-      working-directory: ./deps/build
-      run: ls destdir/usr/local/lib
     - name: cmake
       working-directory: ./build
       run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
-    - name: Upload filesystem
-      uses: actions/upload-artifact@v1.0.0
-      with:
-        name: all_data_compiled
-        path: .
     - name: create directory and copy into it
       working-directory: ./build
       run: |
-        mkdir package
-        mkdir package/bin
+        mkdir Slic3r++
+        mkdir Slic3r++/Slic3r++.app
+        mkdir Slic3r++/Slic3r++.app/Contents
+        mkdir Slic3r++/Slic3r++.app/Contents/_CodeSignature
+        mkdir Slic3r++/Slic3r++.app/Contents/Frameworks
+        mkdir Slic3r++/Slic3r++.app/Contents/MacOS
     - name: copy resources
       working-directory: ./build
-      run: cp -Rf ../resources package/resources
+      run: cp -Rf ../resources Slic3r++/Slic3r++.app/Contents/resources
     - name: copy bin
       working-directory: ./build
-      run: cp -f src/slic3r++ package/bin/slic3r++
-    - name: create sh from echo
-      working-directory: ./build/package
-      run: echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/slic3r++" "$@"' >slic3r++
+      run: cp -f src/slic3r++ Slic3r++/Slic3r++.app/Contents/MacOS/slic3r++
+#    - name: signing resources (creating CodeResources inside _CodeSignature)
+#      working-directory: .
+#      run: codesign -s <identity> resources
+# maybe i should just try to do that on a separate pc and copy the file here, more secure as a signing process.
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: nightly_win64
-        path: build/package/
+        name: nightly_macos
+        path: build/Slic3r++/
