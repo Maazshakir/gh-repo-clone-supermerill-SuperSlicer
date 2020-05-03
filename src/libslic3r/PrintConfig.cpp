@@ -3361,6 +3361,11 @@ std::string FullPrintConfig::validate()
         switch (opt->type()) {
         case coFloat:
         case coPercent:
+        {
+            auto* fopt = static_cast<const ConfigOptionPercent*>(opt);
+            out_of_range = fopt->get_abs_value(100) < optdef->min || fopt->get_abs_value(100) > optdef->max;
+            break;
+        }
         case coFloatOrPercent:
         {
             auto *fopt = static_cast<const ConfigOptionFloat*>(opt);
