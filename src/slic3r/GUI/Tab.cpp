@@ -2177,7 +2177,10 @@ PageShp TabPrinter::build_kinematics_page()
     current_line.widget = [this](wxWindow* parent) {
         ogStaticText* text;
         auto result = description_line_widget(parent, &text);
-        text->SetText(_(L("Description: The information below is used to calculate estimated printing time only, unless you enable the limits via the checkbox above.")));
+        text->SetText(_(L("Description: The information below is used to calculate estimated printing time and as safegard when generating gcode"
+            " (even if the acceleration is set to 3000 in the print profile, if the maximum is set here to 1500, it won't export a gcode that will tell to go over 1500)."
+            " You can also export these limits to the start gcode via the checkbox above (the output depends on the selected firmare).")));
+        return result;
         return result;
     };
     optgroup->append_line(current_line);
