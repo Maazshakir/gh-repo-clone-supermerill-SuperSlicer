@@ -22,22 +22,15 @@ jobs:
       run: sudo apt update
     - name: install gtk2 glew
       run: sudo apt install libgtk2.0-dev libglew-dev libudev-dev
-    - name: mkdir in deps
-      run: mkdir deps/build
-    - name: cmake deps
-      working-directory: ./deps/build
-      run: cmake ..
-    - name: make deps
-      working-directory: ./deps/build
-      run: make
-    - name: clean deps
-      working-directory: ./deps/build
-      run: rm -rf dep_*
+    - name: get deps
+      run: curl -L -o deps_linux.zip https://github.com/supermerill/SuperSlicer_deps/releases/latest/download/deps_linux.zip
+    - name: unzip deps
+      run: unzip deps_linux
     - name: mkdir build
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/SuperSlicer/SuperSlicer/deps/build/destdir/usr/local" -DSLIC3R_STATIC=1
+      run: cmake .. -DCMAKE_PREFIX_PATH="/home/runner/work/SuperSlicer/SuperSlicer/destdir/usr/local" -DSLIC3R_STATIC=1
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
@@ -63,11 +56,9 @@ jobs:
       with:
         name: nightly_linux.tar
         path: build/SuperSlicer.tar
-    - name: build appimage
-      working-directory: ./build/package
-      run: |
-        chmod +x ../../src/platform/unix/build_appimage.sh "/home/runner/work/SuperSlicer/SuperSlicer"
-        "../../src/platform/unix/build_appimage.sh SuperSlicer_${{ github.event.release.tag_name }}_ubu64_${{steps.date.outputs.date}}.AppImage"
-        
-        
-        
+    # - name: build appimage
+      # working-directory: ./build/package
+      # run: |
+        # chmod +x ../../src/platform/unix/build_appimage.sh "/home/runner/work/SuperSlicer/SuperSlicer"
+        # "../../src/platform/unix/build_appimage.sh SuperSlicer_${{ github.event.release.tag_name }}_ubu64_${{steps.date.outputs.date}}.AppImage"
+
