@@ -18,15 +18,19 @@ jobs:
       run: |
         sed "s/+UNKNOWN/_$(date '+%F')/" version.inc > version.date.inc
         mv version.date.inc version.inc
+    - name: mkdir build
+      run: mkdir deps/build
     - name: get deps
-      run: curl -L -o deps_linux.zip https://github.com/supermerill/SuperSlicer_deps/releases/latest/download/deps_mac.zip
+      working-directory: ./deps/build
+      run: curl -L -o deps_mac.zip https://github.com/supermerill/SuperSlicer_deps/releases/latest/download/deps_mac.zip
     - name: unzip deps
-      run: unzip deps_mac
+      working-directory: ./deps/build
+      run: unzip deps_mac.zip
     - name: mkdir build
       run: mkdir build
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
+      run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
@@ -79,7 +83,7 @@ jobs:
 # build again, but the debug one this time
     - name: cmake
       working-directory: ./build
-      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/../destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
+      run: cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13" -DSLIC3R_STATIC=1
     - name: make slic3r
       working-directory: ./build
       run: make slic3r
