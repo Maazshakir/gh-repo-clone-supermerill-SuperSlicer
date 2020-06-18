@@ -1,0 +1,29 @@
+name: build macos deps
+
+on:
+  push:
+    branches:
+      - build_deps
+
+jobs:
+  build_dep:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: 'build_deps'
+    - uses: actions/checkout@v1
+    - name: mkdir in deps
+      run: mkdir deps/build
+    - name: cmake deps
+      working-directory: ./deps/build
+      run: cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET="10.13"
+    - name: make deps
+      working-directory: ./deps/build
+      run: make
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: deps_mac
+        path: ./deps/build/destdir/

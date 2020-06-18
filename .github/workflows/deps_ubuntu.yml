@@ -1,0 +1,34 @@
+name: build ubuntu deps
+
+on:
+  push:
+    branches:
+      - build_deps
+
+jobs:
+  build_dep:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: 'build_deps'
+    - name: update clock
+      run: sudo hwclock -s
+    - name: update apt
+      run: sudo apt update
+    - name: install gtk2 glew
+      run: sudo apt install libgtk2.0-dev libglew-dev libudev-dev
+    - name: mkdir in deps
+      run: mkdir deps/build
+    - name: cmake deps
+      working-directory: ./deps/build
+      run: cmake ..
+    - name: make deps
+      working-directory: ./deps/build
+      run: make
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: deps_ubuntu
+        path: ./deps/build/destdir/
