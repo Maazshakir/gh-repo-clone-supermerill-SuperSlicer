@@ -2130,16 +2130,16 @@ void GLCanvas3D::delete_selected()
     m_selection.erase();
 }
 
-void GLCanvas3D::ensure_on_bed(unsigned int object_idx)
+void GLCanvas3D::ensure_on_bed(int object_idx /*=-1*/)
 {
     typedef std::map<std::pair<int, int>, double> InstancesToZMap;
     InstancesToZMap instances_min_z;
 
     for (GLVolume* volume : m_volumes.volumes)
     {
-        if ((volume->object_idx() == (int)object_idx) && !volume->is_modifier)
+        if (((object_idx < 0 && !volume->is_wipe_tower) || volume->object_idx() == (int)object_idx) && !volume->is_modifier)
         {
-            double min_z = volume->transformed_convex_hull_bounding_box().min(2);
+            double min_z = volume->transformed_convex_hull_bounding_box().min.z();
             std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
             InstancesToZMap::iterator it = instances_min_z.find(instance);
             if (it == instances_min_z.end())
@@ -2153,8 +2153,8 @@ void GLCanvas3D::ensure_on_bed(unsigned int object_idx)
     {
         std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
         InstancesToZMap::iterator it = instances_min_z.find(instance);
-        if (it != instances_min_z.end())
-            volume->set_instance_offset(Z, volume->get_instance_offset(Z) - it->second);
+        //if (it != instances_min_z.end())
+            //volume->set_instance_offset(Z, volume->get_instance_offset(Z) - it->second);
     }
 }
 
@@ -3883,13 +3883,15 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
     }
 
     // Fixes sinking/flying instances
-    for (const std::pair<int, int>& i : done)
-    {
-        ModelObject* m = m_model->objects[i.first];
-        Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
-        m_selection.translate(i.first, i.second, shift);
-        m->translate_instance(i.second, shift);
-    }
+    const DynamicPrintConfig* printConfig = wxGetApp().get_tab(Preset::TYPE_PRINT)->get_config();
+    if(!printConfig->option<ConfigOptionBool>("allow_empty_layers")->value)
+        for (const std::pair<int, int>& i : done)
+        {
+            ModelObject* m = m_model->objects[i.first];
+            Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
+            m_selection.translate(i.first, i.second, shift);
+            m->translate_instance(i.second, shift);
+        }
 
     if (object_moved)
         post_event(SimpleEvent(EVT_GLCANVAS_INSTANCE_MOVED));
@@ -3946,13 +3948,15 @@ void GLCanvas3D::do_rotate(const std::string& snapshot_type)
     }
 
     // Fixes sinking/flying instances
-    for (const std::pair<int, int>& i : done)
-    {
-        ModelObject* m = m_model->objects[i.first];
-        Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
-        m_selection.translate(i.first, i.second, shift);
-        m->translate_instance(i.second, shift);
-    }
+    const DynamicPrintConfig* printConfig = wxGetApp().get_tab(Preset::TYPE_PRINT)->get_config();
+    if (!printConfig->option<ConfigOptionBool>("allow_empty_layers")->value)
+        for (const std::pair<int, int>& i : done)
+        {
+            ModelObject* m = m_model->objects[i.first];
+            Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
+            m_selection.translate(i.first, i.second, shift);
+            m->translate_instance(i.second, shift);
+        }
 
     if (!done.empty())
         post_event(SimpleEvent(EVT_GLCANVAS_INSTANCE_ROTATED));
@@ -4003,13 +4007,15 @@ void GLCanvas3D::do_scale(const std::string& snapshot_type)
     }
 
     // Fixes sinking/flying instances
-    for (const std::pair<int, int>& i : done)
-    {
-        ModelObject* m = m_model->objects[i.first];
-        Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
-        m_selection.translate(i.first, i.second, shift);
-        m->translate_instance(i.second, shift);
-    }
+    const DynamicPrintConfig* printConfig = wxGetApp().get_tab(Preset::TYPE_PRINT)->get_config();
+    if (!printConfig->option<ConfigOptionBool>("allow_empty_layers")->value)
+        for (const std::pair<int, int>& i : done)
+        {
+            ModelObject* m = m_model->objects[i.first];
+            Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
+            m_selection.translate(i.first, i.second, shift);
+            m->translate_instance(i.second, shift);
+        }
 
     if (!done.empty())
         post_event(SimpleEvent(EVT_GLCANVAS_INSTANCE_ROTATED));
@@ -4063,13 +4069,15 @@ void GLCanvas3D::do_mirror(const std::string& snapshot_type)
     }
 
     // Fixes sinking/flying instances
-    for (const std::pair<int, int>& i : done)
-    {
-        ModelObject* m = m_model->objects[i.first];
-        Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
-        m_selection.translate(i.first, i.second, shift);
-        m->translate_instance(i.second, shift);
-    }
+    const DynamicPrintConfig* printConfig = wxGetApp().get_tab(Preset::TYPE_PRINT)->get_config();
+    if (!printConfig->option<ConfigOptionBool>("allow_empty_layers")->value)
+        for (const std::pair<int, int>& i : done)
+        {
+            ModelObject* m = m_model->objects[i.first];
+            Vec3d shift(0.0, 0.0, -m->get_instance_min_z(i.second));
+            m_selection.translate(i.first, i.second, shift);
+            m->translate_instance(i.second, shift);
+        }
 
     post_event(SimpleEvent(EVT_GLCANVAS_SCHEDULE_BACKGROUND_PROCESS));
 

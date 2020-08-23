@@ -1,12 +1,12 @@
 #include "libslic3r/libslic3r.h"
 #include "Selection.hpp"
 
-#include "GLCanvas3D.hpp"
 #include "GUI_App.hpp"
 #include "GUI.hpp"
 #include "GUI_ObjectManipulation.hpp"
 #include "GUI_ObjectList.hpp"
 #include "Gizmos/GLGizmoBase.hpp"
+#include "GLCanvas3D.hpp"
 #include "3DScene.hpp"
 #include "Camera.hpp"
 
@@ -95,7 +95,7 @@ Selection::~Selection()
 }
 #endif // ENABLE_RENDER_SELECTION_CENTER
 
-void Selection::set_volumes(GLVolumePtrs* volumes)
+void Selection::set_volumes(GLVolumePtrs *volumes)
 {
     m_volumes = volumes;
     update_valid();
@@ -642,9 +642,11 @@ void Selection::translate(const Vec3d& displacement, bool local)
         return;
 
     EMode translation_type = m_mode;
+    std::cout << "displace=" << displacement.z() << "\n";
 
     for (unsigned int i : m_list)
     {
+        std::cout << "4 z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
         if ((m_mode == Volume) || (*m_volumes)[i]->is_wipe_tower)
         {
             if (local)
@@ -667,6 +669,7 @@ void Selection::translate(const Vec3d& displacement, bool local)
             }
         }
     }
+    std::cout << "5 z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
 
 #if !DISABLE_INSTANCES_SYNCH
     if (translation_type == Instance)
@@ -674,8 +677,9 @@ void Selection::translate(const Vec3d& displacement, bool local)
     else if (translation_type == Volume)
         synchronize_unselected_volumes();
 #endif // !DISABLE_INSTANCES_SYNCH
-
+    std::cout << "6 z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
     this->set_bounding_boxes_dirty();
+    std::cout << "7 z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
 }
 
 // Rotate an object around one of the axes. Only one rotation component is expected to be changing.
@@ -989,12 +993,18 @@ void Selection::translate(unsigned int object_idx, const Vec3d& displacement)
 {
     if (!m_valid)
         return;
+    std::cout << "displace2=" << displacement.z() << "\n";
+
 
     for (unsigned int i : m_list)
     {
-        GLVolume* v = (*m_volumes)[i];
+        GLVolume* v = (*m_volumes)[i]; 
+        if (v->object_idx() == (int)object_idx)
+            std::cout << "v2_0 z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
         if (v->object_idx() == (int)object_idx)
             v->set_instance_offset(v->get_instance_offset() + displacement);
+        if (v->object_idx() == (int)object_idx)
+            std::cout << "v2_1 z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
     }
 
     std::set<unsigned int> done;  // prevent processing volumes twice
@@ -1035,6 +1045,7 @@ void Selection::translate(unsigned int object_idx, unsigned int instance_idx, co
     if (!m_valid)
         return;
 
+    std::cout << "displace3=" << displacement.z() << "\n";
     for (unsigned int i : m_list)
     {
         GLVolume* v = (*m_volumes)[i];
@@ -2208,30 +2219,7 @@ void Selection::synchronize_unselected_volumes()
 
 void Selection::ensure_on_bed()
 {
-    typedef std::map<std::pair<int, int>, double> InstancesToZMap;
-    InstancesToZMap instances_min_z;
-
-    for (GLVolume* volume : *m_volumes)
-    {
-        if (!volume->is_wipe_tower && !volume->is_modifier)
-        {
-            double min_z = volume->transformed_convex_hull_bounding_box().min(2);
-            std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
-            InstancesToZMap::iterator it = instances_min_z.find(instance);
-            if (it == instances_min_z.end())
-                it = instances_min_z.insert(InstancesToZMap::value_type(instance, DBL_MAX)).first;
-
-            it->second = std::min(it->second, min_z);
-        }
-    }
-
-    for (GLVolume* volume : *m_volumes)
-    {
-        std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
-        InstancesToZMap::iterator it = instances_min_z.find(instance);
-        if (it != instances_min_z.end())
-            volume->set_instance_offset(Z, volume->get_instance_offset(Z) - it->second);
-    }
+    wxGetApp().plater()->canvas3D()->ensure_on_bed();
 }
 
 bool Selection::is_from_fully_selected_instance(unsigned int volume_idx) const

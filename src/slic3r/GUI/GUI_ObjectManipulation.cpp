@@ -621,15 +621,15 @@ void ObjectManipulation::update_reset_buttons_visibility()
         Vec3d scale;
         double min_z = 0.;
 
-        if (selection.is_single_full_instance()) {
-            rotation = volume->get_instance_rotation();
-            scale = volume->get_instance_scaling_factor();
-        }
-        else {
+        //if (selection.is_single_full_instance()) {
+        //    rotation = volume->get_instance_rotation();
+        //    scale = volume->get_instance_scaling_factor();
+        //}
+        //else {
             rotation = volume->get_volume_rotation();
             scale = volume->get_volume_scaling_factor();
             min_z = get_volume_min_z(volume);
-        }
+        //}
         show_rotation = !rotation.isApprox(Vec3d::Zero());
         show_scale = !scale.isApprox(Vec3d::Ones());
         show_drop_to_bed = (std::abs(min_z) > EPSILON);
@@ -748,11 +748,14 @@ void ObjectManipulation::change_position_value(int axis, double value)
     Selection& selection = canvas->get_selection();
     selection.start_dragging();
     selection.translate(position - m_cache.position, selection.requires_local_axes());
+    std::cout << "after sel z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
     canvas->do_move(L("Set Position"));
+    std::cout << "after dmove z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
 
     m_cache.position = position;
 	m_cache.position_rounded(axis) = DBL_MAX;
     this->UpdateAndShow(true);
+    std::cout << "after updateshow z=" << wxGetApp().plater()->canvas3D()->get_selection().get_volume(0)->get_instance_transformation().get_offset().z() << "\n";
 }
 
 void ObjectManipulation::change_rotation_value(int axis, double value)
