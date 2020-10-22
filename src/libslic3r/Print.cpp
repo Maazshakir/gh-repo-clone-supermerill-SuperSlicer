@@ -1833,6 +1833,72 @@ std::string Print::export_gcode(const std::string &path_template, GCodePreviewDa
     return path.c_str();
 }
 
+void Print::_make_skirt_tight(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out)
+{
+    // First off we need to decide how tall the skirt must be.
+    // The skirt_height option from config is expressed in layers, but our
+    // object might have different layer heights, so we need to find the print_z
+    // of the highest layer involved.
+    // Note that unless has_infinite_skirt() == true
+    // the actual skirt might not reach this $skirt_height_z value since the print
+    // order of objects on each layer is not guaranteed and will not generally
+    // include the thickest object first. It is just guaranteed that a skirt is
+    // prepended to the first 'n' layers (with 'n' = skirt_height).
+    // $skirt_height_z in this case is the highest possible skirt height for safety.
+    coordf_t skirt_height_z = 0.;
+    for (const PrintObject *object : objects) {
+        size_t skirt_layers = this->has_infinite_skirt() ?
+            object->layer_count() :
+            std::min(size_t(m_config.skirt_height.value), object->layer_count());
+        skirt_height_z = std::max(skirt_height_z, object->m_layers[skirt_layers - 1]->print_z);
+    }
+    struct SkirtLayer {
+        Polygons contour;
+        Polygons skirt;
+        bool stable = false;
+    };
+    // Collect polygons from all layers contained in skirt height.
+    std::vector<SkirtLayer> layers;
+    for (const PrintObject *object : objects) {
+        std::vector<SkirtLayer> object_layers;
+        // Get object layers up to skirt_height_z.
+        for (const Layer *layer : object->m_layers) {
+            if (layer->print_z > skirt_height_z)
+                break;
+            while (object_layers.size() <= layer->id())
+                object_layers.emplace_back();
+            for (const ExPolygon &expoly : layer->lslices)
+                // Collect the outer contour points only, ignore holes for the calculation of the convex hull.
+                object_layers[layer->id()].contour.push_back(expoly.contour);
+        }
+        // Get support layers up to skirt_height_z.
+        for (const SupportLayer *layer : object->support_layers()) {
+            Points support_points;
+            if (layer->print_z > skirt_height_z)
+                break;
+            for (const ExtrusionEntity *extrusion_entity : layer->support_fills.entities) {
+                Polylines poly;
+                extrusion_entity->collect_polylines(poly);
+                for (const Polyline &polyline : poly)
+                    append(support_points, polyline.points);
+            }
+            if (support_points.size() > 2) {
+                object_layers[layer->id()].contour.emplace_back(Slic3r::Geometry::convex_hull(support_points));
+                object_layers[layer->id()].contour = union_(object_layers[layer->id()].contour);
+            }
+        }
+        // Repeat points for each object copy.
+        while (layers.size() <= object_layers.size())
+            layers.emplace_back();
+        for (const PrintInstance &instance : object->instances()) {
+            for (size_t i = 0; i < object_layers.size(); i++) {
+                layers[i].contour.insert(layers[i].contour.begin(), object_layers[i].contour.begin(), object_layers[i].contour.end());
+            }
+        }
+    }
+
+}
+
 void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out)
 {
     // First off we need to decide how tall the skirt must be.
@@ -1886,7 +1952,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
     }
 
     // Include the wipe tower.
-    if (has_wipe_tower() && ! m_wipe_tower_data.tool_changes.empty()) {
+    if (has_wipe_tower() && ! m_wipe_tower_data.tool_changes.empty()/* && (!config().complete_objects || config().complete_objects_one_skirt)*/) {
         double width = m_config.wipe_tower_width + 2*m_wipe_tower_data.brim_width;
         double depth = m_wipe_tower_data.depth + 2*m_wipe_tower_data.brim_width;
         Vec2d pt = Vec2d(-m_wipe_tower_data.brim_width, -m_wipe_tower_data.brim_width);
@@ -1939,7 +2005,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
 
     // Initial offset of the brim inner edge from the object (possible with a support & raft).
     // The skirt will touch the brim if the brim is extruded.
-    auto   distance = float(scale_(m_config.skirt_distance.value) - this->skirt_flow(extruders[extruders.size()-1]).spacing()/2.);
+    coord_t distance = scale_(m_config.skirt_distance.value) - this->skirt_flow(extruders[extruders.size()-1]).scaled_spacing()/2;
 
     size_t lines_per_extruder = (n_skirts + extruders.size() - 1) / extruders.size();
     size_t current_lines_per_extruder = n_skirts - lines_per_extruder * (extruders.size() - 1);
@@ -1953,17 +2019,17 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
         double mm3_per_mm = flow.mm3_per_mm();
         this->throw_if_canceled();
         // Offset the skirt outside.
-        distance += float(scale_(spacing/2));
+        distance += scale_(spacing/2);
         // Generate the skirt centerline.
         Polygon loop;
         {
-            Polygons loops = offset(convex_hull, distance, ClipperLib::jtRound, float(scale_(0.1)));
+            Polygons loops = offset(convex_hull, (double)distance, ClipperLib::jtRound, float(scale_(0.1)));
             Geometry::simplify_polygons(loops, scale_(0.05), &loops);
 			if (loops.empty())
 				break;
 			loop = loops.front();
         }
-        distance += float(scale_(spacing / 2));
+        distance += scale_(spacing / 2);
         // Extrude the skirt loop.
         ExtrusionLoop eloop(elrSkirt);
         eloop.paths.emplace_back(ExtrusionPath(

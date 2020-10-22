@@ -480,6 +480,7 @@ private:
 		DynamicPrintConfig &filament_overrides) const;
 
     void                _make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
+    void                _make_skirt_tight(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out);
     void                _make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     void                _make_brim_ears(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
     void                _make_brim_interior(const Flow &flow, const PrintObjectPtrs &objects, ExPolygons &unbrimmable, ExtrusionEntityCollection &out);
