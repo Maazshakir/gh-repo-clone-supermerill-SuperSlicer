@@ -645,7 +645,7 @@ wxCoord OG_CustomCtrl::CtrlLine::draw_act_bmps(wxDC& dc, wxPoint pos, const wxBi
 {
     pos = draw_blinking_bmp(dc, pos, is_blinking, rect_id);
     wxCoord h_pos = pos.x;
-    wxCoord v_pos = pos.y;
+    wxCoord v_pos = pos.y + lround((height - ctrl->m_bmp_blinking_sz.GetHeight()) / 2);
 
     dc.DrawBitmap(bmp_undo_to_sys, h_pos, v_pos);
 
