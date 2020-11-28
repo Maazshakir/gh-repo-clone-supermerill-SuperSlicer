@@ -58,6 +58,11 @@ PrintObject::PrintObject(Print* print, ModelObject* model_object, const Transfor
     // therefore a bounding box from 1st instance of a ModelObject is good enough for calculating the object center,
     // snug height and an approximate bounding box in XY.
     BoundingBoxf3  bbox        = model_object->raw_bounding_box();
+    if (print->config().bed_tilt.value != 0) {
+        this->model_object()->rotate(print->config().bed_tilt.value * PI / 180., Axis::X);
+        bbox = model_object->raw_bounding_box();
+        this->model_object()->rotate(-print->config().bed_tilt.value * PI / 180., Axis::X);
+    }
     Vec3d 		   bbox_center = bbox.center();
     // We may need to rotate the bbox / bbox_center from the original instance to the current instance.
     double z_diff = Geometry::rotation_diff_z(model_object->instances.front()->get_rotation(), instances.front().model_instance->get_rotation());
@@ -113,6 +118,10 @@ void PrintObject::slice()
 {
     if (! this->set_started(posSlice))
         return;
+    //hack for bed_tilt
+    if(print()->config().bed_tilt.value != 0){
+        this->model_object()->rotate(print()->config().bed_tilt.value * PI / 180., Axis::X);
+    }
     m_print->set_status(10, L("Processing triangulated mesh"));
     std::vector<coordf_t> layer_height_profile;
     this->update_layer_height_profile(*this->model_object(), m_slicing_params, layer_height_profile);
@@ -147,6 +156,11 @@ void PrintObject::slice()
         });
     if (m_layers.empty())
         throw Slic3r::SlicingError("No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n");    
+
+    //hack for bed_tilt
+    if (print()->config().bed_tilt.value != 0) {
+        this->model_object()->rotate(-print()->config().bed_tilt.value * PI / 180, Axis::X);
+    }
     this->set_done(posSlice);
 }
 

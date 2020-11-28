@@ -244,6 +244,12 @@ void PrintConfigDef::init_fff_params()
     def->max = 300;
     def->set_default_value(new ConfigOptionInts { 0 });
 
+    def = this->add("bed_tilt", coFloat);
+    def->label = L("Bed tilt");
+    def->category = OptionCategory::general;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(45));
+
     def = this->add("before_layer_gcode", coString);
     def->label = L("Before layer change G-code");
     def->category = OptionCategory::customgcode;

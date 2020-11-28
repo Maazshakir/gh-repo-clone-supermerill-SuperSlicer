@@ -584,6 +584,7 @@ const std::vector<std::string>& Preset::print_options()
         "milling_extra_size",
         "milling_speed",
         "thin_walls_merge",
+		"bed_tilt"
     };
     return s_opts;
 }

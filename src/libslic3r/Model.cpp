@@ -847,20 +847,20 @@ BoundingBoxf3 ModelObject::full_raw_mesh_bounding_box() const
 // This bounding box is only used for the actual slicing and for layer editing UI to calculate the layers.
 const BoundingBoxf3& ModelObject::raw_bounding_box() const
 {
-    if (! m_raw_bounding_box_valid) {
+    if (!m_raw_bounding_box_valid) {
         m_raw_bounding_box_valid = true;
         m_raw_bounding_box.reset();
         if (this->instances.empty())
             throw Slic3r::InvalidArgument("Can't call raw_bounding_box() with no instances");
 
         const Transform3d& inst_matrix = this->instances.front()->get_transformation().get_matrix(true);
-        for (const ModelVolume *v : this->volumes)
+        for (const ModelVolume* v : this->volumes)
         {
             if (v->is_model_part())
                 m_raw_bounding_box.merge(v->mesh().transformed_bounding_box(inst_matrix * v->get_matrix()));
         }
     }
-	return m_raw_bounding_box;
+    return m_raw_bounding_box;
 }
 
 // This returns an accurate snug bounding box of the transformed object instance, without the translation applied.
