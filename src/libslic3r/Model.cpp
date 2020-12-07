@@ -863,6 +863,20 @@ const BoundingBoxf3& ModelObject::raw_bounding_box() const
     return m_raw_bounding_box;
 }
 
+const BoundingBoxf3 ModelObject::raw_bounding_box(float radian_rotate /*= 0.f*/) const
+{
+    BoundingBoxf3 raw_bounding_box;
+    if (this->instances.empty())
+        throw Slic3r::InvalidArgument("Can't call raw_bounding_box() with no instances");
+
+    Transform3d inst_matrix = this->instances.front()->get_transformation().get_matrix(true);
+    inst_matrix = inst_matrix.rotate(Eigen::Quaterniond(Eigen::AngleAxisd(radian_rotate, Vec3d::UnitX())));
+    for (const ModelVolume* v : this->volumes)
+        if (v->is_model_part())
+            raw_bounding_box.merge(v->mesh().transformed_bounding_box(inst_matrix * v->get_matrix()));
+    return raw_bounding_box;
+}
+
 // This returns an accurate snug bounding box of the transformed object instance, without the translation applied.
 BoundingBoxf3 ModelObject::instance_bounding_box(size_t instance_idx, bool dont_translate) const
 {

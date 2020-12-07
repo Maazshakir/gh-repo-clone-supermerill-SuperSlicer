@@ -293,7 +293,9 @@ public:
     TriangleMesh full_raw_mesh() const;
     // A transformed snug bounding box around the non-modifier object volumes, without the translation applied.
     // This bounding box is only used for the actual slicing.
+    // Can have a rotation over X axis for titled bebelted printers
     const BoundingBoxf3& raw_bounding_box() const;
+    const BoundingBoxf3 raw_bounding_box(float radian_rotate) const;
     // A snug bounding box around the transformed non-modifier object volumes.
     BoundingBoxf3 instance_bounding_box(size_t instance_idx, bool dont_translate = false) const;
 	// A snug bounding box of non-transformed (non-rotated, non-scaled, non-translated) sum of non-modifier object volumes.

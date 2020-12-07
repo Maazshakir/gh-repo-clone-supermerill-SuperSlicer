@@ -2562,11 +2562,10 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs &mode
             instance->set_offset(Slic3r::to_3d(bed_shape.center().cast<double>(), -object->origin_translation(2)));
 #endif /* AUTOPLACEMENT_ON_LOAD */
         }
-
         const Vec3d size = object->bounding_box().size();
-        const Vec3d ratio = size.cwiseQuotient(bed_size);
+        const Vec3d ratio = size.cwiseQuotient(bed_size); // size / bed_size
         const double max_ratio = std::max(ratio(0), ratio(1));
-        if (max_ratio > 10000) {
+        if (max_ratio > 10000) { // this happen when the object is 10000 * bed_size
             // the size of the object is too big -> this could lead to overflow when moving to clipper coordinates,
             // so scale down the mesh
             double inv = 1. / max_ratio;

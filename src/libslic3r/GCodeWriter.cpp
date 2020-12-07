@@ -414,11 +414,17 @@ std::string GCodeWriter::travel_to_xy(const Vec2d &point, const std::string &com
     std::ostringstream gcode;
     gcode << write_acceleration();
 
-    m_pos.x() = point.x();
-    m_pos.y() = point.y();
+    if (this->config.bed_tilt.value != 0) {
+        //move y
+        m_pos.x() = point.x();
+        m_pos.y() = point.y() - m_pos.z() * cos(this->config.bed_tilt.value);
+    } else {
+        m_pos.x() = point.x();
+        m_pos.y() = point.y();
+    }
     
-    gcode << "G1 X" << XYZF_NUM(point.x())
-          <<   " Y" << XYZF_NUM(point.y())
+    gcode << "G1 X" << XYZF_NUM(m_pos.x())
+          <<   " Y" << XYZF_NUM(m_pos.y())
           <<   " F" << XYZF_NUM(this->config.travel_speed.value * 60.0);
     COMMENT(comment);
     gcode << "\n";
@@ -444,7 +450,14 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
     /*  In all the other cases, we perform an actual XYZ move and cancel
         the lift. */
     m_lifted = 0;
-    m_pos = point;
+    if (this->config.bed_tilt.value != 0) {
+        //move y
+        m_pos.x() = point.x();
+        m_pos.z() = point.z();
+        m_pos.y() = point.y() - m_pos.z() * cos(this->config.bed_tilt.value);
+    } else {
+        m_pos = point;
+    }
 
     std::ostringstream gcode;
     gcode << write_acceleration();
@@ -508,19 +521,25 @@ bool GCodeWriter::will_move_z(double z) const
     return true;
 }
 
-std::string GCodeWriter::extrude_to_xy(const Vec2d &point, double dE, const std::string &comment)
+std::string GCodeWriter::extrude_to_xy(const Vec2d& point, double dE, const std::string& comment)
 {
     assert(dE == dE);
-    m_pos.x() = point.x();
-    m_pos.y() = point.y();
+    if (this->config.bed_tilt.value != 0) {
+        //move y
+        m_pos.x() = point.x();
+        m_pos.y() = point.y() - m_pos.z() * cos(this->config.bed_tilt.value);
+    } else {
+        m_pos.x() = point.x();
+        m_pos.y() = point.y();
+    }
     bool is_extrude = m_tool->extrude(dE) != 0;
 
     std::ostringstream gcode;
     gcode << write_acceleration();
-    gcode << "G1 X" << XYZF_NUM(point.x())
-        << " Y" << XYZF_NUM(point.y());
-    if(is_extrude)
-        gcode <<    " " << m_extrusion_axis << E_NUM(m_tool->E());
+    gcode << "G1 X" << XYZF_NUM(m_pos.x())
+        << " Y" << XYZF_NUM(m_pos.y());
+    if (is_extrude)
+        gcode << " " << m_extrusion_axis << E_NUM(m_tool->E());
     COMMENT(comment);
     gcode << "\n";
     return gcode.str();
