@@ -166,6 +166,25 @@ double Area(const Path &poly)
   return -a * 0.5;
 }
 //------------------------------------------------------------------------------
+IntPoint Centroid(const Path& poly, double area)
+{
+    double x_temp = 0;
+    double y_temp = 0;
+
+    const int max = poly.size() - 1;
+    size_t i = 0;
+    for (; i < max; ++i)
+    {
+        size_t j = i + 1;
+        x_temp += (double)(poly[i].X + poly[j].X) * ((double)poly[i].X * poly[j].Y - (double)poly[j].X * poly[i].Y);
+        y_temp += (double)(poly[i].Y + poly[j].Y) * ((double)poly[i].X * poly[j].Y - (double)poly[j].X * poly[i].Y);
+    }
+    x_temp += (double)(poly[i].X + poly[0].X) * ((double)poly[i].X * poly[0].Y - (double)poly[0].X * poly[i].Y);
+    y_temp += (double)(poly[i].Y + poly[0].Y) * ((double)poly[i].X * poly[0].Y - (double)poly[0].X * poly[i].Y);
+
+    return IntPoint(x_temp / (6 * area), y_temp / (6 * area));
+}
+//------------------------------------------------------------------------------
 
 double Area(const OutRec &outRec)
 {
