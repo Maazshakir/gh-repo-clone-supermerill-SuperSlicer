@@ -77,10 +77,13 @@ jobs:
       run: |
         chmod +x ../build_appimage.sh
         ../build_appimage.sh
+    - name: 'Tar files'
+      working-directory: ./build/package
+      run: tar -cvf SuperSlicer_ubu64.AppImage.tar SuperSlicer_ubu64.AppImage
     - name: Upload appimage
       uses: actions/upload-artifact@v1.0.0
       with:
         name: SuperSlicer-AppImage.tar
-        path: build/package/SuperSlicer_ubu64.AppImage
+        path: build/package/SuperSlicer_ubu64.AppImage.tar
         
         
