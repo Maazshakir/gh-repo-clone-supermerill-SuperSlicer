@@ -3056,7 +3056,7 @@ void Tab::load_current_preset()
             //update width/spacing links
             if (m_type == Preset::TYPE_PRINT) {
                 //verify that spacings are set
-                if (m_config->update_phony({ wxGetApp().plater()->config() })) {
+                if (m_config && m_config->update_phony({ wxGetApp().plater()->config() })) {
                     update_dirty();
                     reload_config();
                 }

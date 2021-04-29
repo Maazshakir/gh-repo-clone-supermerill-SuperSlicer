@@ -160,6 +160,8 @@ template<> inline const t_config_enum_values& ConfigOptionEnum<PrinterTechnology
         {"FFF", ptFFF},
         {"SLA", ptSLA},
         {"SLS", ptSLS},
+        {"CNC", ptMill},
+        {"LSR", ptLaser},
     };
     return keys_map;
 }

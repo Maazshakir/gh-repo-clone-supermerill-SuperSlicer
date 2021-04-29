@@ -1995,6 +1995,10 @@ void GUI_App::load_current_presets(bool check_printer_presets_ /*= true*/)
     check_printer_presets();
 
     PrinterTechnology printer_technology = preset_bundle->printers.get_edited_preset().printer_technology();
+
+#ifdef __APPLE__
+    std::cout << "printer_technology:from_preset(" << preset_bundle->printers.get_edited_preset().name << ") = " << (int)printer_technology << "\n";
+#endif
 	this->plater()->set_printer_technology(printer_technology);
     for (Tab *tab : tabs_list)
 		if (tab->supports_printer_technology(printer_technology)) {
