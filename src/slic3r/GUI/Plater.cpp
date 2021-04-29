@@ -2001,14 +2001,16 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     background_process.set_fff_print(&fff_print);
     background_process.set_sla_print(&sla_print);
     background_process.set_gcode_result(&gcode_result);
-    background_process.set_thumbnail_cb([this](ThumbnailsList& thumbnails, const Vec2ds& sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)
+    background_process.set_thumbnail_cb([this](ThumbnailsList& thumbnails, const Vec2ds& sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background)->bool
         {
             std::packaged_task<void(ThumbnailsList&, const Vec2ds&, bool, bool, bool, bool)> task([this](ThumbnailsList& thumbnails, const Vec2ds& sizes, bool printable_only, bool parts_only, bool show_bed, bool transparent_background) {
                 generate_thumbnails(thumbnails, sizes, printable_only, parts_only, show_bed, transparent_background);
                 });
             std::future<void> result = task.get_future();
             wxTheApp->CallAfter([&]() { task(thumbnails, sizes, printable_only, parts_only, show_bed, transparent_background); });
-            result.wait();
+            //can deadlock if background processing is cancelled / locked,  So here is a timeout. 
+            // 2 second should eb plenty to generate thumbnails. If not, you're not allowed to create thumbnails :'(
+            return std::future_status::ready == result.wait_for(std::chrono::seconds(2));
         });
     background_process.set_slicing_completed_event(EVT_SLICING_COMPLETED);
     background_process.set_finished_event(EVT_PROCESS_COMPLETED);
