@@ -886,9 +886,14 @@ namespace DoExport {
 	    // Write thumbnails using base64 encoding
 	    if (thumbnail_cb != nullptr)
 	    {
+            //Create the thumbnails
 	        const size_t max_row_length = 78;
 	        ThumbnailsList thumbnails;
-	        thumbnail_cb(thumbnails, sizes, true, true, true, true);
+            // note that it needs the gui thread, so can create deadlock if  job is canceled.
+	        bool can_create_thumbnail = thumbnail_cb(thumbnails, sizes, true, true, true, true);
+            throw_if_canceled();
+            if (!can_create_thumbnail) return;
+
 	        for (const ThumbnailData& data : thumbnails)
 	        {
 	            if (data.is_valid())
