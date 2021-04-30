@@ -45,6 +45,8 @@ PresetBundle::PresetBundle() :
     printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults()), "- default FFF -"),
     physical_printers(PhysicalPrinter::printer_options())
 {
+
+    std::cout << "create PresetBundle with default printer as " << (int)this->printers.preset(0).printer_technology() << "\n";
     // The following keys are handled by the UI, they do not have a counterpart in any StaticPrintConfig derived classes,
     // therefore they need to be handled differently. As they have no counterpart in StaticPrintConfig, they are not being
     // initialized based on PrintConfigDef(), but to empty values (zeros, empty vectors, empty strings).
@@ -103,6 +105,10 @@ PresetBundle::PresetBundle() :
     this->printers     .select_preset(0);
 
     this->project_config.apply_only(FullPrintConfig::defaults(), s_project_options);
+
+#ifndef __APPLE__
+    std::cout << "end PresetBundle creation with default printer as " << (int)this->printers.preset(0).printer_technology() << "\n";
+#endif
 }
 
 PresetBundle::~PresetBundle()

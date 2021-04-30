@@ -1435,16 +1435,18 @@ public:
     }
 
     void set(const ConfigOption *rhs) override {
+        std::cout << "set enum to " << rhs->serialize() << ": "<< (int)this->value << "=>";
         if (rhs->type() != this->type())
             throw Slic3r::RuntimeError("ConfigOptionEnum<T>: Assigning an incompatible type");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>
         this->value = (T)rhs->getInt();
         this->phony = rhs->phony;
+        std::cout << (int)this->value << "\n";
     }
 
     std::string serialize() const override
     {
-        // as names is staic-initialized, it's thread safe
+        // as names are static-initialized, it's thread safe
         static t_config_enum_names names = ConfigOptionEnum<T>::create_enum_names();
         assert(static_cast<int>(this->value) < int(names.size()));
         return names[static_cast<int>(this->value)];
@@ -1453,7 +1455,10 @@ public:
     bool deserialize(const std::string &str, bool append = false) override
     {
         UNUSED(append);
-        return from_string(str, this->value);
+        std::cout << "deserialize enum from " << str << " : " << (int)this->value << "=>";
+        bool ok = from_string(str, this->value);
+        std::cout << (int)this->value << "\n";
+        return ok;
     }
 
     static bool has(T value) 

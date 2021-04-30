@@ -13,11 +13,12 @@
 //            class PrintRegionConfig : public StaticPrintConfig
 //            class MachineEnvelopeConfig : public StaticPrintConfig
 //            class GCodeConfig : public StaticPrintConfig
-//                class PrintConfig : public MachineEnvelopeConfig, public GCodeConfig
-//                    class FullPrintConfig : PrintObjectConfig,PrintRegionConfig,PrintConfig
+//                  class  : public MachineEnvelopeConfig, public GCodeConfig
+//                          class FullPrintConfig : PrintObjectConfig,PrintRegionConfig,PrintConfig
 //            class SLAPrintObjectConfig : public StaticPrintConfig
 //            class SLAMaterialConfig : public StaticPrintConfig
 //            class SLAPrinterConfig : public StaticPrintConfig
+//                  class SLAFullPrintConfig : public SLAPrinterConfig, public SLAPrintConfig, public SLAPrintObjectConfig, public SLAMaterialConfig
 //    class DynamicConfig : public virtual ConfigBase
 //        class DynamicPrintConfig : public DynamicConfig
 //            class DynamicPrintAndCLIConfig : public DynamicPrintConfig
@@ -1238,8 +1239,8 @@ public:
 
     ConfigOptionBool                allow_empty_layers;
     ConfigOptionBool                avoid_crossing_perimeters;
-
-    ConfigOptionBool                avoid_crossing_not_first_layer;    ConfigOptionFloatOrPercent      avoid_crossing_perimeters_max_detour;
+    ConfigOptionBool                avoid_crossing_not_first_layer;    
+    ConfigOptionFloatOrPercent      avoid_crossing_perimeters_max_detour;
     ConfigOptionPoints              bed_shape;
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloatOrPercent      bridge_acceleration;

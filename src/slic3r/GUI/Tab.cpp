@@ -3030,8 +3030,10 @@ void Tab::load_current_preset()
                     }
                     else {
                         int page_id = wxGetApp().tab_panel()->FindPage(tab);
-                        wxGetApp().tab_panel()->GetPage(page_id)->Show(false);
-                        wxGetApp().tab_panel()->RemovePage(page_id);
+                        if (page_id >= 0) {
+                            wxGetApp().tab_panel()->GetPage(page_id)->Show(false);
+                            wxGetApp().tab_panel()->RemovePage(page_id);
+                        }
                     }
                 }
                 static_cast<TabPrinter*>(this)->m_printer_technology = printer_technology;

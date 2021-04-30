@@ -106,9 +106,8 @@ BackgroundSlicingProcess::~BackgroundSlicingProcess()
 
 bool BackgroundSlicingProcess::select_technology(PrinterTechnology tech)
 {
-#ifdef __APPLE__
 	std::cout << "BackgroundSlicingProcess:select_technology(" << (int)tech << ")\n";
-#endif
+
 	bool changed = false;
 	if (m_print == nullptr || m_print->technology() != tech) {
 		if (m_print != nullptr)

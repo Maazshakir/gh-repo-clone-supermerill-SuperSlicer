@@ -628,6 +628,9 @@ void PresetUpdater::priv::perform_updates(Updates &&updates, bool snapshot) cons
 
 			update.install();
 
+
+    std::cout << "PresetUpdater Bundle::create\n" << "\n";
+
 			PresetBundle bundle;
 			bundle.load_configbundle(update.source.string(), PresetBundle::LOAD_CFGBNDLE_SYSTEM);
 
