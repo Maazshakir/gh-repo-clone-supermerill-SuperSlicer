@@ -1435,7 +1435,7 @@ public:
     }
 
     void set(const ConfigOption *rhs) override {
-        std::cout << "set enum to " << rhs->serialize() << ": "<< (int)this->value << "=>";
+        std::cout << "set enum "<< (uint64_t)rhs <<" to " << rhs->serialize() << ": "<< (int)this->value << "=>";
         if (rhs->type() != this->type())
             throw Slic3r::RuntimeError("ConfigOptionEnum<T>: Assigning an incompatible type");
         // rhs could be of the following type: ConfigOptionEnumGeneric or ConfigOptionEnum<T>

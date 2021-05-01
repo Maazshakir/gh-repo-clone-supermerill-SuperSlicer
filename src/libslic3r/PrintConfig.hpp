@@ -458,6 +458,8 @@ public:
 
 class StaticPrintConfig : public StaticConfig
 {
+    template<typename T>
+    friend class StaticCache;
 public:
     StaticPrintConfig() {}
 
@@ -496,8 +498,15 @@ protected:
     class StaticCache : public StaticCacheBase
     {
     public:
-        // Calling the constructor of m_defaults with 0 forces m_defaults to not run the initialization.
-        StaticCache() : m_defaults(nullptr) {}
+        // To be called during the StaticCache setup.
+        StaticCache(T* _defaults) : m_defaults(_defaults) {
+            _defaults->initialize(*this, (const char*)_defaults);
+            ConfigOption* optptr = this->optptr("printer_technology", m_defaults);
+            if (optptr) {
+                ConfigOptionEnum<PrinterTechnology>* opt = static_cast<ConfigOptionEnum<PrinterTechnology>*>(optptr);
+                std::cout << "create default config @" << (uint64_t)_defaults << " with option printer_technology @" << (uint64_t)(opt) << " value " << (int)(opt->value) << "\n";
+            }
+        }
         ~StaticCache() { delete m_defaults; m_defaults = nullptr; }
 
         bool                initialized() const { return ! m_keys.empty(); }
@@ -517,40 +526,45 @@ protected:
         const std::vector<std::string>& keys()      const { return m_keys; }
         const T&                        defaults()  const { return *m_defaults; }
 
+
+    private:
+
         // To be called during the StaticCache setup.
         // Collect option keys from m_map_name_to_offset,
         // assign default values to m_defaults.
-        void                finalize(T *defaults, const ConfigDef *defs)
+        void                finalize(T* defaults)
         {
+            assert(defaults != nullptr);
+            const ConfigDef* defs = m_defaults->def();
             assert(defs != nullptr);
             m_defaults = defaults;
             m_keys.clear();
             m_keys.reserve(m_map_name_to_offset.size());
-            for (const auto &kvp : defs->options) {
+            for (const auto& kvp : defs->options) {
                 // Find the option given the option name kvp.first by an offset from (char*)m_defaults.
-                ConfigOption *opt = this->optptr(kvp.first, m_defaults);
+                ConfigOption* opt = this->optptr(kvp.first, m_defaults);
                 if (opt == nullptr)
                     // This option is not defined by the ConfigBase of type T.
                     continue;
                 m_keys.emplace_back(kvp.first);
-                const ConfigOptionDef *def = defs->get(kvp.first);
+                const ConfigOptionDef* def = defs->get(kvp.first);
                 assert(def != nullptr);
                 if (def->default_value)
                     opt->set(def->default_value.get());
             }
         }
 
-    private:
         T                                  *m_defaults;
         std::vector<std::string>            m_keys;
     };
 };
 
 #define STATIC_PRINT_CONFIG_CACHE_BASE(CLASS_NAME) \
+    friend StaticCache<CLASS_NAME>; \
 public: \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     const ConfigOption*      optptr(const t_config_option_key &opt_key) const override \
-        {   const ConfigOption* opt = s_cache_##CLASS_NAME.optptr(opt_key, this); \
+        {   const ConfigOption* opt = config_cache().optptr(opt_key, this); \
             if (opt == nullptr && parent != nullptr) \
                 /*if not find, try with the parent config.*/ \
                 opt = parent->option(opt_key); \
@@ -558,28 +572,23 @@ public: \
         } \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     ConfigOption*            optptr(const t_config_option_key &opt_key, bool create = false) override \
-        { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
+        { return config_cache().optptr(opt_key, this); } \
     /* Overrides ConfigBase::keys(). Collect names of all configuration values maintained by this configuration store. */ \
-    t_config_option_keys     keys() const override { return s_cache_##CLASS_NAME.keys(); } \
-    const t_config_option_keys& keys_ref() const override { return s_cache_##CLASS_NAME.keys(); } \
-    static const CLASS_NAME& defaults() { initialize_cache(); return s_cache_##CLASS_NAME.defaults(); } \
+    t_config_option_keys     keys() const override { return config_cache().keys(); } \
+    const t_config_option_keys& keys_ref() const override { return config_cache().keys(); } \
+    static const CLASS_NAME& defaults() { return config_cache().defaults(); } \
 private: \
-    static void initialize_cache() \
+	static const StaticPrintConfig::StaticCache<CLASS_NAME>& config_cache() \
     { \
-        if (! s_cache_##CLASS_NAME.initialized()) { \
-            CLASS_NAME *inst = new CLASS_NAME(1); \
-            inst->initialize(s_cache_##CLASS_NAME, (const char*)inst); \
-            s_cache_##CLASS_NAME.finalize(inst, inst->def()); \
-        } \
+        static StaticPrintConfig::StaticCache<CLASS_NAME> threadsafe_cache_##CLASS_NAME(new CLASS_NAME(1)); \
+        return threadsafe_cache_##CLASS_NAME; \
     } \
-    /* Cache object holding a key/option map, a list of option keys and a copy of this static config initialized with the defaults. */ \
-    static StaticPrintConfig::StaticCache<CLASS_NAME> s_cache_##CLASS_NAME;
 
 #define STATIC_PRINT_CONFIG_CACHE(CLASS_NAME) \
     STATIC_PRINT_CONFIG_CACHE_BASE(CLASS_NAME) \
 public: \
     /* Public default constructor will initialize the key/option cache and the default object copy if needed. */ \
-    CLASS_NAME() { initialize_cache(); *this = s_cache_##CLASS_NAME.defaults(); } \
+    CLASS_NAME() { *this = config_cache().defaults(); } \
 protected: \
     /* Protected constructor to be called when compounded. */ \
     CLASS_NAME(int) {}
@@ -1232,7 +1241,7 @@ protected:
 class PrintConfig : public MachineEnvelopeConfig, public GCodeConfig
 {
     STATIC_PRINT_CONFIG_CACHE_DERIVED(PrintConfig)
-    PrintConfig() : MachineEnvelopeConfig(0), GCodeConfig(0) { initialize_cache(); *this = s_cache_PrintConfig.defaults(); }
+    PrintConfig() : MachineEnvelopeConfig(0), GCodeConfig(0) { *this = config_cache().defaults(); }
 public:
     double                          min_object_distance() const;
     static double                   min_object_distance(const ConfigBase *config, double height = 0);
@@ -1431,7 +1440,7 @@ class FullPrintConfig :
     public PrintConfig
 {
     STATIC_PRINT_CONFIG_CACHE_DERIVED(FullPrintConfig)
-    FullPrintConfig() : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0) { initialize_cache(); *this = s_cache_FullPrintConfig.defaults(); }
+    FullPrintConfig() : PrintObjectConfig(0), PrintRegionConfig(0), PrintConfig(0) { *this = config_cache().defaults(); }
 
 public:
     // Validate the FullPrintConfig. Returns an empty string on success, otherwise an error message is returned.
@@ -1744,7 +1753,7 @@ protected:
 class SLAFullPrintConfig : public SLAPrinterConfig, public SLAPrintConfig, public SLAPrintObjectConfig, public SLAMaterialConfig
 {
     STATIC_PRINT_CONFIG_CACHE_DERIVED(SLAFullPrintConfig)
-    SLAFullPrintConfig() : SLAPrinterConfig(0), SLAPrintConfig(0), SLAPrintObjectConfig(0), SLAMaterialConfig(0) { initialize_cache(); *this = s_cache_SLAFullPrintConfig.defaults(); }
+    SLAFullPrintConfig() : SLAPrinterConfig(0), SLAPrintConfig(0), SLAPrintObjectConfig(0), SLAMaterialConfig(0) {  *this = config_cache().defaults(); }
 
 public:
     // Validate the SLAFullPrintConfig. Returns an empty string on success, otherwise an error message is returned.

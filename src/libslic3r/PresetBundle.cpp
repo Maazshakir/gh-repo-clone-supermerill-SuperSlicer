@@ -46,7 +46,12 @@ PresetBundle::PresetBundle() :
     physical_printers(PhysicalPrinter::printer_options())
 {
 
+    std::cout << "create PresetBundle, does it has the printer tech? "<< (this->printers.preset(0).config.has("printer_technology") ? "yes" : "no");
+    if(this->printers.preset(0).config.has("printer_technology"))
+        std::cout << ", value: " << (int)(this->printers.preset(0).config.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology")->value) 
+        << " @"<< (uint64_t)this->printers.preset(0).config.option<ConfigOptionEnum<PrinterTechnology>>("printer_technology") << "\n";
     std::cout << "create PresetBundle with default printer as " << (int)this->printers.preset(0).printer_technology() << "\n";
+    
     // The following keys are handled by the UI, they do not have a counterpart in any StaticPrintConfig derived classes,
     // therefore they need to be handled differently. As they have no counterpart in StaticPrintConfig, they are not being
     // initialized based on PrintConfigDef(), but to empty values (zeros, empty vectors, empty strings).
@@ -170,8 +175,10 @@ void PresetBundle::setup_directories()
 
 void PresetBundle::load_presets(AppConfig &config, const std::string &preferred_model_id)
 {
+    std::cout << "PresetBundle::load_presets test point 1 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
     // First load the vendor specific system presets.
     std::string errors_cummulative = this->load_system_presets();
+    std::cout << "PresetBundle::load_presets test point 2 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
 
     const std::string dir_user_presets = data_dir()
 #ifdef SLIC3R_PROFILE_USE_PRESETS_SUBDIR
@@ -202,21 +209,27 @@ void PresetBundle::load_presets(AppConfig &config, const std::string &preferred_
         errors_cummulative += err.what();
     }
     try {
+        std::cout << "PresetBundle::load_presets test point 5 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
         this->printers.load_presets(dir_user_presets, "printer");
     } catch (const std::runtime_error &err) {
         errors_cummulative += err.what();
     }
     try {
+        std::cout << "PresetBundle::load_presets test point 6 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
         this->physical_printers.load_printers(dir_user_presets, "physical_printer");
     } catch (const std::runtime_error &err) {
         errors_cummulative += err.what();
     }
+    std::cout << "PresetBundle::load_presets test point 7 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
     this->update_multi_material_filament_presets();
+    std::cout << "PresetBundle::load_presets test point 8 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
     this->update_compatible(PresetSelectCompatibleType::Never);
     if (! errors_cummulative.empty())
         throw Slic3r::RuntimeError(errors_cummulative);
+    std::cout << "PresetBundle::load_presets test point 9 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
 
     this->load_selections(config, preferred_model_id);
+    std::cout << "PresetBundle::load_presets test point 10 : (" << this->printers.get_edited_preset().name << ") = " << (int)this->printers.get_edited_preset().printer_technology() << "\n";
 }
 
 // Load system presets into this PresetBundle.

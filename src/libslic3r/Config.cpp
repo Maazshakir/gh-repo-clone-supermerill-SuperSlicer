@@ -431,6 +431,17 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
         // If the key is not in the parameter definition, or this ConfigBase is a static type and it does not support the parameter,
         // an exception is thrown if not ignore_nonexistent.
         ConfigOption *my_opt = this->option(opt_key, true);
+        if (opt_key == "printer_technology") {
+            std::cout << "Config:"<< (uint64_t)(this)<<"::apply_only printer_technology";
+            if (my_opt == nullptr)
+                std::cout << " for the first time ";
+            else
+                std::cout << " from @"<< (uint64_t)(this->option<ConfigOptionEnum<PrinterTechnology>>("printer_technology")) <<" value " << (int)(this->option<ConfigOptionEnum<PrinterTechnology>>("printer_technology")->value);
+            const ConfigOption* other_opt = other.option(opt_key);
+            if (other_opt == nullptr)
+                std::cout << " to nothing because it doesn't exist\n";
+            else std::cout << " to @"<< (uint64_t)(other.option<ConfigOptionEnum<PrinterTechnology>>(opt_key))<<" value:" << (int)other.option<ConfigOptionEnum<PrinterTechnology>>(opt_key)->value << "\n";
+        }
         // If we didn't find an option, look for any other option having this as an alias.
         if (my_opt == nullptr) {
             const ConfigDef       *def = this->def();
@@ -504,6 +515,11 @@ std::string ConfigBase::opt_serialize(const t_config_option_key &opt_key) const
 
 void ConfigBase::set(const std::string &opt_key, int value, bool create)
 {
+    if (opt_key == "printer_technology") {
+        std::cout << "Config::set printer_technology";
+            std::cout << " from value " << (int)(this->option<ConfigOptionEnum<PrinterTechnology>>("printer_technology")->value);
+        std::cout << " to "<< value <<"\n";
+    }
     ConfigOption *opt = this->option_throw(opt_key, create);
     switch (opt->type()) {
     	case coInt:    static_cast<ConfigOptionInt*>(opt)->value = value; break;
@@ -516,6 +532,11 @@ void ConfigBase::set(const std::string &opt_key, int value, bool create)
 
 void ConfigBase::set(const std::string &opt_key, double value, bool create)
 {
+    if (opt_key == "printer_technology") {
+        std::cout << "Config::set printer_technology";
+        std::cout << " from value " << (int)(this->option<ConfigOptionEnum<PrinterTechnology>>("printer_technology")->value);
+        std::cout << " to " << value << "\n";
+    }
     ConfigOption *opt = this->option_throw(opt_key, create);
     switch (opt->type()) {
     	case coFloat:  			static_cast<ConfigOptionFloat*>(opt)->value = value; break;
@@ -532,6 +553,11 @@ bool ConfigBase::set_deserialize_nothrow(const t_config_option_key &opt_key_src,
     // Both opt_key and value may be modified by _handle_legacy().
     // If the opt_key is no more valid in this version of Slic3r, opt_key is cleared by _handle_legacy().
     this->handle_legacy(opt_key, value);
+    if (opt_key_src == "printer_technology") {
+        std::cout << "Config::set_deserialize_nothrow printer_technology";
+        std::cout << " from value " << (int)(this->option<ConfigOptionEnum<PrinterTechnology>>("printer_technology")->value);
+        std::cout << " to " << value_src << " == " << value <<"\n";
+    }
     if (opt_key.empty())
         // Ignore the option.
         return true;
@@ -586,6 +612,14 @@ bool ConfigBase::set_deserialize_raw(const t_config_option_key &opt_key_src, con
     }
     
     ConfigOption *opt = this->option(opt_key, true);
+    if (opt_key_src == "printer_technology") {
+        std::cout << "Config::set_deserialize printer_technology";
+        if (opt == nullptr)
+            std::cout << " for the first time ";
+        else
+            std::cout << " from value " << (int)(this->option<ConfigOptionEnum<PrinterTechnology>>("printer_technology")->value);
+        std::cout << " to " << value << "\n";
+    }
     if (opt == nullptr)
         throw new UnknownOptionException(opt_key);
 
