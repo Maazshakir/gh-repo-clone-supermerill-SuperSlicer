@@ -1989,12 +1989,19 @@ bool GUI_App::checked_tab(Tab* tab)
 // Update UI / Tabs to reflect changes in the currently loaded presets
 void GUI_App::load_current_presets(bool check_printer_presets_ /*= true*/)
 {
+    std::cout << "GUI_App:load_current_presets start : (" << preset_bundle->printers.get_edited_preset().name << ") = " << (int)preset_bundle->printers.get_edited_preset().printer_technology() << "\n";
+
     // check printer_presets for the containing information about "Print Host upload"
     // and create physical printer from it, if any exists
     if (check_printer_presets_)
-    check_printer_presets();
+        check_printer_presets();
+    std::cout << "GUI_App:load_current_presets check_printer_presets : (" << preset_bundle->printers.get_edited_preset().name << ") = " << (int)preset_bundle->printers.get_edited_preset().printer_technology() << "\n";
+
 
     PrinterTechnology printer_technology = preset_bundle->printers.get_edited_preset().printer_technology();
+
+    std::cout << "GUI_App:load_current_presets check_printer_presets : (" << preset_bundle->printers.get_edited_preset().name << ") = " << (int)printer_technology << "\n";
+
 	this->plater()->set_printer_technology(printer_technology);
     for (Tab *tab : tabs_list)
 		if (tab->supports_printer_technology(printer_technology)) {
