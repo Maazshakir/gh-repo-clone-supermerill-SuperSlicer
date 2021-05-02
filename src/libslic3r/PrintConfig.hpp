@@ -398,8 +398,11 @@ protected:
     class StaticCache : public StaticCacheBase
     {
     public:
-        // Calling the constructor of m_defaults with 0 forces m_defaults to not run the initialization.
-        StaticCache() : m_defaults(nullptr) {}
+        // To be called during the StaticCache setup.
+        StaticCache(T* _defaults, std::function<void(T*, StaticCache<T>*)> initialize) : m_defaults(_defaults) {
+            initialize(_defaults , this);
+            this->finalize(_defaults);
+        }
         ~StaticCache() { delete m_defaults; m_defaults = nullptr; }
 
         bool                initialized() const { return ! m_keys.empty(); }
@@ -419,11 +422,14 @@ protected:
         const std::vector<std::string>& keys()      const { return m_keys; }
         const T&                        defaults()  const { return *m_defaults; }
 
+    private:
         // To be called during the StaticCache setup.
         // Collect option keys from m_map_name_to_offset,
         // assign default values to m_defaults.
-        void                finalize(T *defaults, const ConfigDef *defs)
+        void                finalize(T* defaults)
         {
+            assert(defaults != nullptr);
+            const ConfigDef* defs = m_defaults->def();
             assert(defs != nullptr);
             m_defaults = defaults;
             m_keys.clear();
@@ -442,7 +448,6 @@ protected:
             }
         }
 
-    private:
         T                                  *m_defaults;
         std::vector<std::string>            m_keys;
     };
@@ -452,31 +457,27 @@ protected:
 public: \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     const ConfigOption*      optptr(const t_config_option_key &opt_key) const override \
-        { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
+        {   return config_cache().optptr(opt_key, this); } \
     /* Overrides ConfigBase::optptr(). Find ando/or create a ConfigOption instance for a given name. */ \
     ConfigOption*            optptr(const t_config_option_key &opt_key, bool create = false) override \
-        { return s_cache_##CLASS_NAME.optptr(opt_key, this); } \
+        { return config_cache().optptr(opt_key, this); } \
     /* Overrides ConfigBase::keys(). Collect names of all configuration values maintained by this configuration store. */ \
-    t_config_option_keys     keys() const override { return s_cache_##CLASS_NAME.keys(); } \
-    const t_config_option_keys& keys_ref() const override { return s_cache_##CLASS_NAME.keys(); } \
-    static const CLASS_NAME& defaults() { initialize_cache(); return s_cache_##CLASS_NAME.defaults(); } \
+    t_config_option_keys     keys() const override { return config_cache().keys(); } \
+    const t_config_option_keys& keys_ref() const override { return config_cache().keys(); } \
+    static const CLASS_NAME& defaults() { return config_cache().defaults(); } \
 private: \
-    static void initialize_cache() \
+    static const StaticPrintConfig::StaticCache<CLASS_NAME>& config_cache() \
     { \
-        if (! s_cache_##CLASS_NAME.initialized()) { \
-            CLASS_NAME *inst = new CLASS_NAME(1); \
-            inst->initialize(s_cache_##CLASS_NAME, (const char*)inst); \
-            s_cache_##CLASS_NAME.finalize(inst, inst->def()); \
-        } \
+        static StaticPrintConfig::StaticCache<CLASS_NAME> threadsafe_cache_##CLASS_NAME(new CLASS_NAME(1), \
+            [](CLASS_NAME *def, StaticPrintConfig::StaticCache<CLASS_NAME> *cache){ def->initialize(*cache, (const char*)def); } ); \
+        return threadsafe_cache_##CLASS_NAME; \
     } \
-    /* Cache object holding a key/option map, a list of option keys and a copy of this static config initialized with the defaults. */ \
-    static StaticPrintConfig::StaticCache<CLASS_NAME> s_cache_##CLASS_NAME;
 
 #define STATIC_PRINT_CONFIG_CACHE(CLASS_NAME) \
     STATIC_PRINT_CONFIG_CACHE_BASE(CLASS_NAME) \
 public: \
     /* Public default constructor will initialize the key/option cache and the default object copy if needed. */ \
-    CLASS_NAME() { initialize_cache(); *this = s_cache_##CLASS_NAME.defaults(); } \
+    CLASS_NAME() { *this = config_cache().defaults(); } \
 protected: \
     /* Protected constructor to be called when compounded. */ \
     CLASS_NAME(int) {}
@@ -534,7 +535,7 @@ protected: \
 #define PRINT_CONFIG_CLASS_DERIVED_DEFINE1(CLASS_NAME, CLASSES_PARENTS_TUPLE, PARAMETER_DEFINITION, PARAMETER_REGISTRATION, PARAMETER_HASHES, PARAMETER_EQUALS) \
 class CLASS_NAME : PRINT_CONFIG_CLASS_DERIVED_CLASS_LIST(CLASSES_PARENTS_TUPLE) { \
     STATIC_PRINT_CONFIG_CACHE_DERIVED(CLASS_NAME) \
-    CLASS_NAME() : PRINT_CONFIG_CLASS_DERIVED_INITIALIZER(CLASSES_PARENTS_TUPLE, 0) { initialize_cache(); *this = s_cache_##CLASS_NAME.defaults(); } \
+    CLASS_NAME() : PRINT_CONFIG_CLASS_DERIVED_INITIALIZER(CLASSES_PARENTS_TUPLE, 0) { *this = config_cache().defaults(); } \
 public: \
     PARAMETER_DEFINITION \
     size_t hash() const throw() \
