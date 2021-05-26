@@ -17,6 +17,7 @@ import subprocess
 repo = "supermerill/SuperSlicer"
 program_name = "SuperSlicer"
 path_7zip = r"C:\Program Files\7-Zip\7z.exe"
+github_auth_token = "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"
 	
 def get_version():
 	settings_stream = open("./version.inc", mode="r", encoding="utf-8");
@@ -48,7 +49,7 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 		if entry["name"] == "nightly_win64" and not found_win:
 			found_win = True;
 			print("ask for: "+entry["archive_download_url"]);
-			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token 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',}, allow_redirects=True);
+			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token ' + github_auth_token,}, allow_redirects=True);
 			print("win: " +str(resp));
 			z = zipfile.ZipFile(io.BytesIO(resp.content))
 			base_name = release_path+"/"+program_name+"_"+version+"_win64_"+date_str;
@@ -60,7 +61,7 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 		if entry["name"] == "nightly_macos.dmg" and not found_macos:
 			found_macos = True;
 			print("ask for: "+entry["archive_download_url"]);
-			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token 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',}, allow_redirects=True);
+			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token ' + github_auth_token,}, allow_redirects=True);
 			print("macos: " +str(resp));
 			z = zipfile.ZipFile(io.BytesIO(resp.content));
 			z.extractall(release_path);
@@ -68,7 +69,7 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 		if entry["name"] == program_name+"-AppImage.tar" and not found_linux_appimage:
 			found_linux_appimage = True;
 			print("ask for: "+entry["archive_download_url"]);
-			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token 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',}, allow_redirects=True);
+			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token ' + github_auth_token,}, allow_redirects=True);
 			print("appimage: " +str(resp));
 			z = zipfile.ZipFile(io.BytesIO(resp.content));
 			z.extractall(release_path);
@@ -79,7 +80,7 @@ with urlopen("https://api.github.com/repos/"+repo+"/actions/artifacts") as f:
 		if entry["name"] == "nightly_linux.tar" and not found_linux:
 			found_linux = True;
 			print("ask for: "+entry["archive_download_url"]);
-			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token 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',}, allow_redirects=True);
+			resp = requests.get(entry["archive_download_url"], headers={'Authorization': 'token ' + github_auth_token,}, allow_redirects=True);
 			print("appimage: " +str(resp));
 			z = zipfile.ZipFile(io.BytesIO(resp.content));
 			z.extractall(release_path);
