@@ -14,8 +14,8 @@ from datetime import date
 import tarfile
 import subprocess
 
-repo = "slic3r/slic3r"
-program_name = "Slic3r"
+repo = "supermerill/SuperSlicer"
+program_name = "SuperSlicer"
 path_7zip = r"C:\Program Files\7-Zip\7z.exe"
 	
 def get_version():
