@@ -55,6 +55,7 @@ group:Advanced
 	line:Gap Fill
 		setting:label$_:gap_fill
 		setting:width$5:gap_fill_min_area
+		setting:width$5:gap_fill_last
 	end_line
 	line:Seam
 		setting:label_width$12:sidetext_width$0:seam_position
@@ -173,9 +174,13 @@ group:title_width$19:Ironing post-process (This will go on top of infills and pe
 page:Skirt & Brim:skirt+brim
 group:Skirt
 	setting:skirts
-	setting:skirt_distance
+	line:Distance
+		setting:skirt_distance
+		setting:label$from brim:sidetext$else from object:skirt_distance_from_brim
+	end_line
 	setting:skirt_height
 	setting:draft_shield
+	setting:skirt_brim
 	setting:min_skirt_length
 group:Brim
 	setting:brim_width

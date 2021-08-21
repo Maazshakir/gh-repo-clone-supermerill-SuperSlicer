@@ -674,6 +674,13 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(true));
 
+    def = this->add("draft_shield", coBool);
+    def->label = L("Draft shield");
+    def->tooltip = L("If enabled, the skirt will be as tall as a highest printed object. "
+        "This is useful to protect an ABS or ASA print from warping and detaching from print bed due to wind draft.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("duplicate_distance", coFloat);
     def->label = L("Distance between objects");
     def->category = OptionCategory::output;
@@ -1876,6 +1883,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
 
+    def = this->add("gap_fill_last", coBool);
+    def->label = L("after last perimeter");
+    def->full_label = L("Gapfill after last perimeter");
+    def->category = OptionCategory::perimeter;
+    def->tooltip = L("All gaps between the alst periemter and the infill which are thinner than a perimeter will be filled by gapfill.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool{true });
+
     def = this->add("gap_fill_min_area", coFloatOrPercent);
     def->label = L("Min surface");
     def->full_label = L("Min gap-fill surface");
@@ -1884,7 +1899,7 @@ void PrintConfigDef::init_fff_params()
     def->ratio_over = "perimeter_width_square";
     def->min = 0;
     def->mode = comExpert;
-    def->set_default_value(new ConfigOptionFloatOrPercent{ 100,true });
+    def->set_default_value(new ConfigOptionFloatOrPercent{100, true });
 
     def = this->add("gap_fill_overlap", coPercent);
     def->label = L("Gap fill overlap");
@@ -3264,6 +3279,14 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionFloat(30);
     def->set_default_value(new ConfigOptionFloat(30));
 #endif
+    def = this->add("skirt_brim", coInt);
+    def->label = L("Brim");
+    def->full_label = L("Skirt brim");
+    def->category = OptionCategory::skirtBrim;
+    def->tooltip = L("Extra skirt lines on the first layer.");
+    def->sidetext = L("lines");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("skirt_distance", coFloat);
     def->label = L("Distance from object");
@@ -3275,11 +3298,19 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(6));
 
+    def = this->add("skirt_distance_from_brim", coBool);
+    def->label = L("from brim");
+    def->full_label = L("Skirt distance from brim");
+    def->category = OptionCategory::skirtBrim;
+    def->tooltip = L("The distance is computed from the brim and not from the objects");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(true));
+
     def = this->add("skirt_height", coInt);
     def->label = L("Skirt height");
     def->category = OptionCategory::skirtBrim;
     def->tooltip = L("Height of skirt expressed in layers. Set this to a tall value to use skirt "
-                   "as a shield against drafts.");
+        "as a shield against drafts.");
     def->sidetext = L("layers");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(1));
@@ -3297,13 +3328,6 @@ void PrintConfigDef::init_fff_params()
     def->precision = 6;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(0, false));
-
-    def = this->add("draft_shield", coBool);
-    def->label = L("Draft shield");
-    def->tooltip = L("If enabled, the skirt will be as tall as a highest printed object. "
-    				 "This is useful to protect an ABS or ASA print from warping and detaching from print bed due to wind draft.");
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("skirts", coInt);
     def->label = L("Loops (minimum)");
@@ -4405,7 +4429,7 @@ void PrintConfigDef::init_fff_params()
                     "\nAs cylinders are often exported as triangles of varying size, points may not be on the circle circumference."
                     " This setting allows you some leway to broaden the detection."
                     "\nIn mm or in % of the radius.");
-    def->sidetext = L("mm²");
+    def->sidetext = L("mm or %");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionFloatOrPercent(0.01, false));
 
@@ -5494,6 +5518,7 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "gap_fill",
 "gap_fill_min_area",
 "gap_fill_overlap",
+"gap_fill_infill",
 "infill_dense",
 "infill_connection",
 "infill_dense_algo",
@@ -5521,6 +5546,8 @@ void PrintConfigDef::to_prusa(t_config_option_key& opt_key, std::string& value, 
 "retract_lift_top",
 "seam_angle_cost",
 "seam_travel_cost",
+"skirt_brim",
+"skirt_distance_from_brim",
 "skirt_extrusion_width",
 "small_perimeter_min_length",
 "small_perimeter_max_length",
@@ -5745,7 +5772,10 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
 
             const double first_layer_height = config->get_abs_value("first_layer_height");
             //add the skirt
-            if (config->option("skirts")->getInt() > 0 && config->option("skirt_height")->getInt() >= 1 && !config->option("complete_objects_one_skirt")->getBool()) {
+            int skirts = config->option("skirts")->getInt();
+            if (skirts > 0 && ref_height == 0)
+                skirts += config->option("skirt_brim")->getInt();
+            if (skirts > 0 && config->option("skirt_height")->getInt() >= 1 && !config->option("complete_objects_one_skirt")->getBool()) {
                 if (ref_height == 0) {
                     skirt_dist = config->option("skirt_distance")->getFloat();
                     Flow skirt_flow = Flow::new_from_config_width(
@@ -5754,7 +5784,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
                         (float)max_nozzle_diam,
                         (float)first_layer_height
                     );
-                    skirt_dist += skirt_flow.width + (skirt_flow.spacing() * ((double)config->option("skirts")->getInt() - 1));
+                    skirt_dist += skirt_flow.width + (skirt_flow.spacing() * ((double)skirts - 1));
                     base_dist = std::max(base_dist, skirt_dist + 1);
                     //set to 0 becasue it's incorporated into the base_dist, so we don't want to be added in to it again.
                     skirt_dist = 0;
@@ -5768,7 +5798,7 @@ double PrintConfig::min_object_distance(const ConfigBase *config, double ref_hei
                             (float)max_nozzle_diam,
                             (float)first_layer_height
                         );
-                        skirt_dist += skirt_flow.width + (skirt_flow.spacing() * ((double)config->option("skirts")->getInt() - 1));
+                        skirt_dist += skirt_flow.width + (skirt_flow.spacing() * ((double)skirts - 1));
                     }
                 }
             }

@@ -200,7 +200,9 @@ bool Print::invalidate_state_by_config_options(const std::vector<t_config_option
                opt_key == "skirts"
             || opt_key == "skirt_height"
             || opt_key == "draft_shield"
+            || opt_key == "skirt_brim"
             || opt_key == "skirt_distance"
+            || opt_key == "skirt_distance_from_brim"
             || opt_key == "min_skirt_length"
             || opt_key == "complete_objects_one_skirt"
             || opt_key == "complete_objects_one_brim"
@@ -326,7 +328,9 @@ bool Print::invalidate_step(PrintStep step)
 	bool invalidated = Inherited::invalidate_step(step);
     // Propagate to dependent steps.
     if (step == psSkirt)
-		invalidated |= Inherited::invalidate_step(psBrim);
+        invalidated |= Inherited::invalidate_step(psBrim);
+    if (step == psBrim) // this one only if skirt_distance_from_brim
+        invalidated |= Inherited::invalidate_step(psSkirt);
     if (step != psGCodeExport)
         invalidated |= Inherited::invalidate_step(psGCodeExport);
     return invalidated;
@@ -1641,16 +1645,22 @@ BoundingBox Print::total_bounding_box() const
         extra = std::max(extra, m_config.brim_width.value + brim_flow.width/2);
     }
     if (this->has_skirt()) {
-        int skirts = m_config.skirts.value;
+        int skirts = m_config.skirts.value + m_config.skirt_brim.value;
         if (skirts == 0 && this->has_infinite_skirt()) skirts = 1;
         Flow skirt_flow = this->skirt_flow();
-        extra = std::max(
-            extra,
-            m_config.brim_width.value
+        if (m_config.skirt_distance_from_brim)
+            extra += m_config.brim_width.value
                 + m_config.skirt_distance.value
                 + skirts * skirt_flow.spacing()
-                + skirt_flow.width/2
-        );
+                + skirt_flow.width / 2;
+        else
+            extra = std::max(
+                extra,
+                m_config.brim_width.value
+                    + m_config.skirt_distance.value
+                    + skirts * skirt_flow.spacing()
+                    + skirt_flow.width/2
+            );
     }
     
     if (extra > 0)
@@ -1748,11 +1758,13 @@ void Print::process()
     }
     if (this->set_started(psSkirt)) {
         m_skirt.clear();
+        m_skirt_first_layer.reset();
 
         m_skirt_convex_hull.clear();
         m_first_layer_convex_hull.points.clear();
         for (PrintObject *obj : m_objects) {
             obj->m_skirt.clear();
+            obj->m_skirt_first_layer.reset();
         }
         if (this->has_skirt()) {
             this->set_status(88, L("Generating skirt"));
@@ -1762,11 +1774,11 @@ void Print::process()
                     const std::vector<PrintInstance> copies{ obj->instances() };
                     obj->m_instances.clear();
                     obj->m_instances.emplace_back();
-                    this->_make_skirt({ obj }, obj->m_skirt);
+                    this->_make_skirt({ obj }, obj->m_skirt, obj->m_skirt_first_layer);
                     obj->m_instances = copies;
                 }
             } else {
-                this->_make_skirt(m_objects, m_skirt);
+                this->_make_skirt(m_objects, m_skirt, m_skirt_first_layer);
             }
         }
         this->set_done(psSkirt);
@@ -1888,7 +1900,7 @@ std::string Print::export_gcode(const std::string& path_template, GCodeProcessor
     return path.c_str();
 }
 
-void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out)
+void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollection &out, std::optional<ExtrusionEntityCollection>& out_first_layer)
 {
     // First off we need to decide how tall the skirt must be.
     // The skirt_height option from config is expressed in layers, but our
@@ -1930,6 +1942,12 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
                 for (const Polyline &polyline : poly)
                     append(object_points, polyline.points);
             }
+        }
+        // Include the brim.
+        if (config().skirt_distance_from_brim) {
+            for (const ExPolygon& expoly : object->m_layers[0]->lslices)
+                for (const Polygon& poly : offset(expoly.contour, scale_(object->config().brim_width)))
+                    append(object_points, poly.points);
         }
         // Repeat points for each object copy.
         for (const PrintInstance &instance : object->instances()) {
@@ -1973,12 +1991,15 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
 
     // Number of skirt loops per skirt layer.
     size_t n_skirts = m_config.skirts.value;
+    size_t n_skirts_first_layer = n_skirts + m_config.skirt_brim.value;
     if (this->has_infinite_skirt() && n_skirts == 0)
         n_skirts = 1;
-
+    if (m_config.skirt_brim.value > 0)
+        out_first_layer.emplace();
     // Initial offset of the brim inner edge from the object (possible with a support & raft).
     // The skirt will touch the brim if the brim is extruded.
-    auto   distance = float(scale_(m_config.skirt_distance.value) - this->skirt_flow(extruders[extruders.size()-1]).spacing()/2.);
+    float distance = float(scale_(m_config.skirt_distance.value) - this->skirt_flow(extruders[extruders.size() - 1]).spacing() / 2.);
+
 
     size_t lines_per_extruder = (n_skirts + extruders.size() - 1) / extruders.size();
     size_t current_lines_per_extruder = n_skirts - lines_per_extruder * (extruders.size() - 1);
@@ -1986,7 +2007,8 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
     // Draw outlines from outside to inside.
     // Loop while we have less skirts than required or any extruder hasn't reached the min length if any.
     std::vector<coordf_t> extruded_length(extruders.size(), 0.);
-    for (size_t i = n_skirts, extruder_idx = 0, nb_skirts = 1; i > 0; -- i) {
+    for (size_t i = std::max(n_skirts, n_skirts_first_layer), extruder_idx = 0, nb_skirts = 1; i > 0; -- i) {
+        bool first_layer_only = i <= (n_skirts_first_layer - n_skirts);
         Flow   flow = this->skirt_flow(extruders[extruders.size() - (1+ extruder_idx)]);
         float  spacing = flow.spacing();
         double mm3_per_mm = flow.mm3_per_mm();
@@ -2016,8 +2038,11 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
         eloop.paths.back().polyline = loop.split_at_first_point();
         //we make it clowkwise, but as it will be reversed, it will be ccw
         eloop.make_clockwise();
-        out.append(eloop);
-        if (m_config.min_skirt_length.value > 0) {
+        if(!first_layer_only)
+            out.append(eloop);
+        if(out_first_layer)
+            out_first_layer->append(eloop);
+        if (m_config.min_skirt_length.value > 0 && !first_layer_only) {
             // The skirt length is limited. Sum the total amount of filament length extruded, in mm.
             extruded_length[extruder_idx] += unscale<double>(loop.length()) * extruders_e_per_mm[extruder_idx];
             if (extruded_length[extruder_idx] < m_config.min_skirt_length.value) {
@@ -2043,6 +2068,8 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
     }
     // Brims were generated inside out, reverse to print the outmost contour first.
     out.reverse();
+    if (out_first_layer)
+        out_first_layer->reverse();
 
     // Remember the outer edge of the last skirt line extruded as m_skirt_convex_hull.
     for (Polygon &poly : offset(convex_hull, distance + 0.5f * float(this->skirt_flow(extruders[extruders.size() - 1]).scaled_spacing()), ClipperLib::jtRound, float(scale_(0.1))))

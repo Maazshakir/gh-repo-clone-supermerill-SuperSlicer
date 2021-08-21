@@ -515,6 +515,7 @@ const std::vector<std::string>& Preset::print_options()
         "travel_speed", "travel_speed_z",
         // gapfill
         "gap_fill",
+        "gap_fill_last",
         "gap_fill_min_area",
         "gap_fill_overlap",
         "gap_fill_speed",
@@ -526,7 +527,11 @@ const std::vector<std::string>& Preset::print_options()
         "perimeter_acceleration",
         "travel_acceleration",
         // skirt
-        "skirts", "skirt_distance", "skirt_height",
+        "skirts",
+        "skirt_distance",
+        "skirt_distance_from_brim",
+        "skirt_height",
+        "skirt_brim",
         "skirt_extrusion_width",
         "min_skirt_length",
         "draft_shield",

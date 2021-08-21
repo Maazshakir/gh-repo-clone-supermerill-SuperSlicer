@@ -790,6 +790,7 @@ public:
     ConfigOptionPercent             fill_smooth_distribution;
     ConfigOptionFloatOrPercent      fill_smooth_width;
     ConfigOptionBool                gap_fill;
+    ConfigOptionBool                gap_fill_last;
     ConfigOptionFloatOrPercent      gap_fill_min_area;
     ConfigOptionPercent             gap_fill_overlap;
     ConfigOptionFloat               gap_fill_speed;
@@ -905,6 +906,7 @@ protected:
         OPT_PTR(fill_smooth_distribution);
         OPT_PTR(fill_smooth_width);
         OPT_PTR(gap_fill);
+        OPT_PTR(gap_fill_last);
         OPT_PTR(gap_fill_min_area);
         OPT_PTR(gap_fill_overlap);
         OPT_PTR(gap_fill_speed);
@@ -1327,7 +1329,9 @@ public:
     ConfigOptionFloat               resolution;
     ConfigOptionFloats              retract_before_travel;
     ConfigOptionBools               retract_layer_change;
+    ConfigOptionInt                 skirt_brim;
     ConfigOptionFloat               skirt_distance;
+    ConfigOptionBool                skirt_distance_from_brim;
     ConfigOptionInt                 skirt_height;
     ConfigOptionFloatOrPercent      skirt_extrusion_width;
     ConfigOptionBool                draft_shield;
@@ -1424,7 +1428,9 @@ protected:
         OPT_PTR(resolution);
         OPT_PTR(retract_before_travel);
         OPT_PTR(retract_layer_change);
+        OPT_PTR(skirt_brim);
         OPT_PTR(skirt_distance);
+        OPT_PTR(skirt_distance_from_brim);
         OPT_PTR(skirt_extrusion_width);
         OPT_PTR(skirt_height);
         OPT_PTR(draft_shield);

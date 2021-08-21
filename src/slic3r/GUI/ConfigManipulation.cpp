@@ -377,7 +377,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
 
     toggle_field("perimeter_loop_seam", config->opt_bool("perimeter_loop"));
 
-    toggle_field("gap_fill_min_area", config->opt_bool("gap_fill"));
+    for (auto el : { "gap_fill_last", "gap_fill_min_area" })
+        toggle_field(el, config->opt_bool("gap_fill"));
 
     toggle_field("avoid_crossing_not_first_layer", config->opt_bool("avoid_crossing_perimeters"));
 
@@ -439,7 +440,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     bool have_skirt = config->opt_int("skirts") > 0;
     toggle_field("skirt_height", have_skirt && !config->opt_bool("draft_shield"));
     toggle_field("skirt_width", have_skirt);
-    for (auto el : { "skirt_distance", "draft_shield", "min_skirt_length" })
+    for (auto el : { "skirt_brim", "skirt_distance", "skirt_distance_from_brim", "draft_shield", "min_skirt_length" })
         toggle_field(el, have_skirt);
 
     bool have_brim = config->opt_float("brim_width") > 0 || config->opt_float("brim_width_interior") > 0;
