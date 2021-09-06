@@ -106,6 +106,7 @@ group:Modifying slices
 	line:Convert round vertical holes to polyholes
 		setting:label$_:hole_to_polyhole
 		setting:hole_to_polyhole_threshold
+		setting:hole_to_polyhole_twisted
 	end_line
 group:Other
 	setting:clip_multipart_objects
@@ -257,6 +258,7 @@ group:Speed for non-print moves
 	end_line
 group:sidetext_width$7:Modifiers
 	line:First layer speed
+		setting:label_width$8:width$4:first_layer_min_speed
 		setting:label_width$8:width$4:first_layer_speed
 		setting:label_width$8:width$4:first_layer_infill_speed
 	end_line

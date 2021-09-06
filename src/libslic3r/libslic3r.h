@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <vector>
+#include <set>
 #include <cassert>
 #include <cmath>
 #include <type_traits>
@@ -99,11 +100,10 @@ extern Semver SEMVER;
 template<typename T, typename Q>
 inline T unscale(Q v) { return T(v) * T(SCALING_FACTOR); }
 
-inline double unscaled(double v) { return v * SCALING_FACTOR; }
-inline coordf_t unscale_(coord_t v) { return v * SCALING_FACTOR; }
-inline coord_t scale_t(coordf_t v) { return (coord_t)(v * UNSCALING_FACTOR); }
-inline double scale_d(coordf_t v) { return (v * UNSCALING_FACTOR); }
-inline double scale_d(coord_t v) { return (double(v) * UNSCALING_FACTOR); }
+inline double unscaled(coord_t v) { return double(v) * SCALING_FACTOR; }
+inline double unscaled(coordf_t v) { return v * SCALING_FACTOR; }
+inline coord_t scale_t(double v) { return coord_t(v * UNSCALING_FACTOR); }
+inline coordf_t scale_d(double v) { return coordf_t(v * UNSCALING_FACTOR); }
 
 enum Axis { 
 	X=0,
@@ -123,6 +123,15 @@ inline void append(std::vector<T>& dest, const std::vector<T>& src)
         dest = src;
     else
         dest.insert(dest.end(), src.begin(), src.end());
+}
+
+template <typename T>
+inline void append(std::set<T>& dest, const std::set<T>& src)
+{
+    if (dest.empty())
+        dest = src;
+    else
+        dest.insert(src.begin(), src.end());
 }
 
 template <typename T>

@@ -47,6 +47,7 @@ protected:
     void layout();
     void create_icon_size_slider();
     void create_settings_mode_widget();
+    std::shared_ptr<ConfigOptionsGroup> create_general_options_group(const wxString& title, wxNotebook* tabs);
 };
 
 } // GUI

@@ -798,6 +798,7 @@ public:
     ConfigOptionFloatOrPercent      infill_anchor_max;
     ConfigOptionBool                hole_to_polyhole;
     ConfigOptionFloatOrPercent      hole_to_polyhole_threshold;
+    ConfigOptionBool                hole_to_polyhole_twisted;
     ConfigOptionInt                 infill_extruder;
     ConfigOptionFloatOrPercent      infill_extrusion_width;
     ConfigOptionInt                 infill_every_layers;
@@ -914,6 +915,7 @@ protected:
         OPT_PTR(infill_anchor_max);
         OPT_PTR(hole_to_polyhole);
         OPT_PTR(hole_to_polyhole_threshold);
+        OPT_PTR(hole_to_polyhole_twisted);
         OPT_PTR(infill_extruder);
         OPT_PTR(infill_extrusion_width);
         OPT_PTR(infill_every_layers);
@@ -1088,12 +1090,14 @@ public:
     ConfigOptionFloats              filament_cooling_final_speed;
     ConfigOptionStrings             filament_ramming_parameters;
     ConfigOptionBool                gcode_comments;
+    ConfigOptionString              gcode_filename_illegal_char;
     ConfigOptionEnum<GCodeFlavor>   gcode_flavor;
     ConfigOptionBool                gcode_label_objects;
     ConfigOptionInt                 gcode_precision_xyz;
     ConfigOptionInts                gcode_precision_e;
     ConfigOptionString              layer_gcode;
     ConfigOptionString              feature_gcode;
+    ConfigOptionFloat               max_gcode_per_second;
     ConfigOptionFloat               max_print_speed;
     ConfigOptionFloat               max_volumetric_speed;
 #ifdef HAS_PRESSURE_EQUALIZER
@@ -1139,6 +1143,7 @@ public:
     ConfigOptionFloat               wipe_advanced_multiplier;
     ConfigOptionFloats              wipe_extra_perimeter;
     ConfigOptionEnum<WipeAlgo>      wipe_advanced_algo;
+    ConfigOptionFloats              wipe_speed;
     ConfigOptionFloat               z_step;
     ConfigOptionString              color_change_gcode;
     ConfigOptionString              pause_print_gcode;
@@ -1201,12 +1206,14 @@ protected:
         OPT_PTR(filament_cooling_final_speed);
         OPT_PTR(filament_ramming_parameters);
         OPT_PTR(gcode_comments);
+        OPT_PTR(gcode_filename_illegal_char);
         OPT_PTR(gcode_flavor);
         OPT_PTR(gcode_label_objects);
         OPT_PTR(gcode_precision_xyz);
         OPT_PTR(gcode_precision_e);
         OPT_PTR(layer_gcode);
         OPT_PTR(feature_gcode);
+        OPT_PTR(max_gcode_per_second);
         OPT_PTR(max_print_speed);
         OPT_PTR(max_volumetric_speed);
         OPT_PTR(milling_z_lift);
@@ -1252,6 +1259,7 @@ protected:
         OPT_PTR(wipe_advanced_multiplier);
         OPT_PTR(wipe_advanced_algo);
         OPT_PTR(wipe_extra_perimeter);
+        OPT_PTR(wipe_speed);
         OPT_PTR(z_step);
         OPT_PTR(color_change_gcode);
         OPT_PTR(pause_print_gcode);
@@ -1276,6 +1284,7 @@ public:
     ConfigOptionInts                bed_temperature;
     ConfigOptionFloatOrPercent      bridge_acceleration;
     ConfigOptionInts                bridge_fan_speed;
+    ConfigOptionInts                bridge_internal_fan_speed;
     ConfigOptionInts                chamber_temperature;
     ConfigOptionBool                complete_objects;
     ConfigOptionBool                complete_objects_one_skirt;
@@ -1301,6 +1310,7 @@ public:
     ConfigOptionPercent             first_layer_flow_ratio;
     ConfigOptionFloatOrPercent      first_layer_speed;
     ConfigOptionFloatOrPercent      first_layer_infill_speed;
+    ConfigOptionFloatOrPercent      first_layer_min_speed;
     ConfigOptionInts                first_layer_temperature;
     ConfigOptionInts                full_fan_speed_layer;
     ConfigOptionFloatOrPercent      infill_acceleration;
@@ -1375,6 +1385,7 @@ protected:
         OPT_PTR(bed_temperature);
         OPT_PTR(bridge_acceleration);
         OPT_PTR(bridge_fan_speed);
+        OPT_PTR(bridge_internal_fan_speed);
         OPT_PTR(chamber_temperature);
         OPT_PTR(complete_objects);
         OPT_PTR(complete_objects_one_skirt);
@@ -1400,6 +1411,7 @@ protected:
         OPT_PTR(first_layer_flow_ratio);
         OPT_PTR(first_layer_speed);
         OPT_PTR(first_layer_infill_speed);
+        OPT_PTR(first_layer_min_speed);
         OPT_PTR(first_layer_temperature);
         OPT_PTR(full_fan_speed_layer);
         OPT_PTR(infill_acceleration);
@@ -1938,6 +1950,7 @@ public:
     const ConfigOption*         option(const t_config_option_key &opt_key) const { return m_data.option(opt_key); }
     int                         opt_int(const t_config_option_key &opt_key) const { return m_data.opt_int(opt_key); }
     int                         extruder() const { return opt_int("extruder"); }
+    int                         first_layer_extruder() const { return opt_int("first_layer_extruder"); }
     double                      opt_float(const t_config_option_key &opt_key) const { return m_data.opt_float(opt_key); }
     std::string                 opt_serialize(const t_config_option_key &opt_key) const { return m_data.opt_serialize(opt_key); }
 
@@ -1950,8 +1963,6 @@ public:
     // Not thread safe! Should not be called from other than the main thread!
     void                touch() { m_timestamp = ++ s_last_timestamp; }
 
-    void                to_prusa(t_config_option_key& opt_key, std::string& value) const
-        { m_data.to_prusa(opt_key, value); }
 private:
     friend class cereal::access;
     template<class Archive> void serialize(Archive& ar) { ar(m_timestamp); ar(m_data); }
