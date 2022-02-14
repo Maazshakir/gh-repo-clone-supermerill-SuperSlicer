@@ -561,6 +561,7 @@ public:
 
     void set_as_dirty();
     bool is_preview_dirty();
+    bool is_gcode_preview_dirty(const GCodeProcessor::Result& gcode_result);
     void set_items_show(bool show_objects, bool show_gcode);
 
     unsigned int get_volumes_count() const;
