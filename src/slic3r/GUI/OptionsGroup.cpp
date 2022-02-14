@@ -6,6 +6,7 @@
 #include "OG_CustomCtrl.hpp"
 #include "MsgDialog.hpp"
 #include "format.hpp"
+#include "Tab.hpp"
 
 #include <utility>
 #include <wx/bookctrl.h>
@@ -15,6 +16,7 @@
 #include "libslic3r/Exception.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "libslic3r/Preset.hpp"
 #include "I18N.hpp"
 
 namespace Slic3r { namespace GUI {
@@ -83,12 +85,12 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
     }
     // Grab a reference to fields for convenience
     const t_field& field = m_fields[id];
-	field->m_on_change = [this](const std::string& opt_id, const boost::any& value) {
-			//! This function will be called from Field.
-			//! Call OptionGroup._on_change(...)
-			if (!m_disabled)
-				this->on_change_OG(opt_id, value);
-	};
+    field->m_on_change = [this](const std::string& opt_id, const boost::any& value) {
+        //! This function will be called from Field.
+        //! Call OptionGroup._on_change(...)
+        if (!m_disabled)
+            this->on_change_OG(opt_id, value);
+    };
     field->m_on_kill_focus = [this](const std::string& opt_id) {
 			//! This function will be called from Field.
 			if (!m_disabled)
@@ -579,8 +581,22 @@ void OptionsGroup::clear_fields_except_of(const std::vector<std::string> left_fi
 }
 
 void OptionsGroup::on_change_OG(const t_config_option_key& opt_id, const boost::any& value) {
-	if (m_on_change != nullptr)
+    auto it = m_options.find(opt_id);
+    if (it != m_options.end() && it->second.opt.is_script && it->second.script) {
+        it->second.script->call_script_function_set(it->second, value);
+    }else if (m_on_change != nullptr)
 		m_on_change(opt_id, value);
+}
+
+void OptionsGroup::update_script_presets() {
+    for (auto& key_opt : m_options) {
+        if (key_opt.second.opt.is_script) {
+            Field* field = get_field(key_opt.first);
+            if (field) {
+                this->set_value(key_opt.first, key_opt.second.script->call_script_function_get_value(key_opt.second.opt));
+            } //if not, it will set at ConfigOptionsGroup::reload_config()
+        }
+    }
 }
 
 Option ConfigOptionsGroup::get_option(const std::string& opt_key, int opt_index /*= -1*/)
@@ -647,9 +663,8 @@ void ConfigOptionsGroup::back_to_config_value(const DynamicPrintConfig& config, 
 		value = int(milling_diameter->values.size());
 	}
     else if (m_opt_map.find(opt_key) == m_opt_map.end() ||
-		    // This option don't have corresponded field
-		     opt_key == "bed_shape"				|| opt_key == "filament_ramming_parameters" ||
-		     opt_key == "compatible_printers"	|| opt_key == "compatible_prints" ) {
+		    // This option doesn't have corresponded field
+             is_option_without_field(opt_key) ) {
         value = get_config_value(config, opt_key);
         this->change_opt_value(opt_key, value);
         return;
@@ -686,6 +701,7 @@ void ConfigOptionsGroup::reload_config()
 		const ConfigOptionDef &option = m_options.at(opt_id).opt;
 		this->set_value(opt_id, config_value(opt_key, opt_index, option.gui_flags == "serialized"));
 	}
+    update_script_presets();
 }
 
 void ConfigOptionsGroup::Hide()
@@ -987,7 +1003,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 		ret = from_u8(config.opt_string(opt_key));
 		break;
 	case coStrings:
-		if (opt_key == "compatible_printers" || opt_key == "compatible_prints") {
+		if (opt_key == "compatible_printers" || opt_key == "compatible_prints" || opt_key == "gcode_substitutions") {
 			ret = config.option<ConfigOptionStrings>(opt_key)->values;
 			break;
 		}
@@ -1087,38 +1103,21 @@ wxString OptionsGroup::get_url(const std::string& path_end)
 
 bool OptionsGroup::launch_browser(const std::string& path_end)
 {
-    bool launch = true;
-
-    if (get_app_config()->get("suppress_hyperlinks").empty()) {
-        wxWindow* parent = wxGetApp().mainframe->m_tabpanel;
-        RichMessageDialog dialog(parent, _L("Open hyperlink in default browser?"), format_wxstr(_L("%s: Open hyperlink"), SLIC3R_APP_NAME), wxYES_NO);
-        dialog.ShowCheckBox(_L("Remember my choice"));
-        int answer = dialog.ShowModal();
-        if (answer == wxID_CANCEL)
-            return false;
-
-        if (dialog.IsCheckBoxChecked()) {
-            wxString preferences_item = _L("Suppress to open hyperlink in browser");
-            wxString msg =
-                format_wxstr(_L("%s will remember your choice."), SLIC3R_APP_NAME) + "\n\n" +
-                _L("You will not be asked about it again on label hovering.") + "\n\n" +
-                format_wxstr(_L("Visit \"Preferences\" and check \"%1%\"\nto changes your choice."), preferences_item);
-
-            MessageDialog msg_dlg(parent, msg, format_wxstr(_L("%s: Don't ask me again"), SLIC3R_APP_NAME), wxOK | wxCANCEL | wxICON_INFORMATION);
-            if (msg_dlg.ShowModal() == wxID_CANCEL)
-                return false;
-
-            get_app_config()->set("suppress_hyperlinks", dialog.IsCheckBoxChecked() ? (answer == wxID_NO ? "1" : "0") : "");
-        }
-
-        launch = answer == wxID_YES;
-    }
-    if (launch)
-        launch = get_app_config()->get("suppress_hyperlinks") != "1";
-
-    return launch && wxLaunchDefaultBrowser(OptionsGroup::get_url(path_end));
+    return wxGetApp().open_browser_with_warning_dialog(OptionsGroup::get_url(path_end), wxGetApp().mainframe->m_tabpanel);
 }
 
+static const std::vector<std::string> option_without_field = {
+    "bed_shape",
+    "filament_ramming_parameters",
+    "gcode_substitutions",
+    "compatible_prints",
+    "compatible_printers"
+};
+
+bool OptionsGroup::is_option_without_field(const std::string& opt_key)
+{
+    return  std::find(option_without_field.begin(), option_without_field.end(), opt_key) != option_without_field.end();
+}
 
 
 //-------------------------------------------------------------------------------------------

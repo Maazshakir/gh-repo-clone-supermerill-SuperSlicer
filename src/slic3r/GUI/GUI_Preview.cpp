@@ -413,7 +413,6 @@ void Preview::reload_print(bool keep_volumes)
 #endif /* __linux__ */
         (!keep_volumes && m_canvas->is_preview_dirty()))
     {
-        m_canvas->set_preview_dirty();
         m_canvas->reset_volumes();
         m_loaded = false;
 #ifdef __linux__
@@ -851,7 +850,8 @@ void Preview::update_layers_slider_mode()
                         return false;
 
                     for (ModelVolume* volume : object->volumes)
-                        if ((volume->config.has("extruder") &&
+                        if ((volume->config.has("extruder") && 
+                            volume->config.option("extruder")->getInt() != 0 && // extruder isn't default
                             volume->config.option("extruder")->getInt() != extruder) ||
                             !volume->mmu_segmentation_facets.empty())
                             return false;
