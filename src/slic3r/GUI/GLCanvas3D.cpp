@@ -2368,7 +2368,8 @@ bool GLCanvas3D::is_gcode_preview_dirty(const GCodeProcessor::Result& gcode_resu
 
 void GLCanvas3D::load_gcode_preview(const GCodeProcessor::Result& gcode_result, const std::vector<std::string>& str_tool_colors)
 {
-    if (last_showned_gcode != gcode_result.computed_timestamp) {
+    if (last_showned_gcode != gcode_result.computed_timestamp
+        || !m_gcode_viewer.is_loaded(gcode_result)) {
         last_showned_gcode = gcode_result.computed_timestamp;
         m_gcode_viewer.load(gcode_result, *this->fff_print(), m_initialized);
 
