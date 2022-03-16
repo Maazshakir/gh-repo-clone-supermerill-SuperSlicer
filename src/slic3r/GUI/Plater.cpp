@@ -3044,7 +3044,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
     this->update_print_volume_state();
     // Apply new config to the possibly running background task.
     bool               was_running = this->background_process.running();
-    Print::ApplyStatus invalidated = this->background_process.apply(this->q->model(), wxGetApp().preset_bundle->full_config());
+    Print::ApplyStatus invalidated = this->background_process.apply(this->q->model(), wxGetApp().preset_bundle->full_config(), wxGetApp().preset_bundle->physical_printers.get_selected_printer_config());
 
     // Just redraw the 3D canvas without reloading the scene to consume the update of the layer height profile.
     if (view3D->is_layers_editing_enabled())
@@ -3139,7 +3139,7 @@ unsigned int Plater::priv::update_background_process(bool force_validation, bool
 
     //update tab if needed
     // auto_switch_preview == 0 means "no force tab change"
-    if (invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED && wxGetApp().app_config->get("auto_switch_preview") != "0")
+    if (wxGetApp().is_editor() && invalidated != Print::ApplyStatus::APPLY_STATUS_UNCHANGED && wxGetApp().app_config->get("auto_switch_preview") != "0")
     {
         // auto_switch_preview == 3 means "force tab change only if for gcode"
         if (wxGetApp().app_config->get("auto_switch_preview") == "3") {
@@ -3821,8 +3821,6 @@ void Plater::priv::on_slicing_began()
 {
 	clear_warnings();
 	notification_manager->close_notification_of_type(NotificationType::SlicingComplete);
-    //preview->get_canvas3d()->set_gcode_viewer_dirty();
-    //preview->get_canvas3d()->set_preview_dirty();
 }
 void Plater::priv::add_warning(const Slic3r::PrintStateBase::Warning& warning, size_t oid)
 {
@@ -5105,8 +5103,7 @@ void Plater::load_gcode(const wxString& filename)
     p->gcode_result = std::move(processor.extract_result());
 
     // show results
-    //p->preview->get_canvas3d()->set_preview_dirty();
-    //p->preview->get_canvas3d()->set_gcode_viewer_dirty();
+    p->preview->reset_gcode_toolpaths();
     p->preview->reload_print(false);
     p->preview->get_canvas3d()->zoom_to_gcode();
 
@@ -6142,6 +6139,7 @@ void Plater::on_config_change(const DynamicPrintConfig &config)
             update_scheduled = true;
         }
         else if (opt_key == "printer_model") {
+            p->preview->set_as_dirty();
             // update to force bed selection(for texturing)
             bed_shape_changed = true;
             update_scheduled = true;
