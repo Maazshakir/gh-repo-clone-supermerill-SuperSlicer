@@ -746,7 +746,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         if (num_extruders != m_config.nozzle_diameter.size()) {
         	num_extruders = m_config.nozzle_diameter.size();
         	num_extruders_changed = true;
-    }
+        }
     }
     
     class LayerRanges

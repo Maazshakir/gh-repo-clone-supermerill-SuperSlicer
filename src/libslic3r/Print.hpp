@@ -496,14 +496,15 @@ public:
 
     //put this in public to be accessible for tests, it was in private before.
     bool                invalidate_state_by_config_options(const std::vector<t_config_option_key> &opt_keys);
+
+    // Invalidates the step, and its depending steps in Print.
+    //in public to invalidate gcode when the physical printer change. It's needed if we allow the gcode macro to read these values.
+    bool                invalidate_step(PrintStep step);
 protected:
     // methods for handling regions
     PrintRegion*        get_region(size_t idx)        { return m_regions[idx]; }
     //PrintRegion*        add_region();
     PrintRegion*        add_region(const PrintRegionConfig &config);
-
-    // Invalidates the step, and its depending steps in Print.
-    bool                invalidate_step(PrintStep step);
 
 private:
 	void 				config_diffs(
