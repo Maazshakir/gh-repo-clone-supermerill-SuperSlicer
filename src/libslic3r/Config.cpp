@@ -820,7 +820,7 @@ ConfigSubstitutions ConfigBase::load_from_ini(const std::string &file, ForwardCo
         return this->load(tree, compatibility_rule);
     } catch (const ConfigurationError &e) {
         throw ConfigurationError(format("Failed loading configuration file \"%1%\": %2%", file, e.what()));
-}
+    }
 }
 
 ConfigSubstitutions ConfigBase::load(const boost::property_tree::ptree &tree, ForwardCompatibilitySubstitutionRule compatibility_rule)
@@ -933,6 +933,14 @@ size_t ConfigBase::load_from_gcode_string(const char* str, ConfigSubstitutionCon
         }
         catch (UnknownOptionException & /* e */) {
             // ignore
+        } catch (BadOptionValueException & e) {
+            if (substitutions.rule == ForwardCompatibilitySubstitutionRule::Disable)
+                throw e;
+            // log the error
+            const ConfigDef* def = this->def();
+            if (def == nullptr) throw e;
+            const ConfigOptionDef* optdef = def->get(std::string(key, key_end));
+            substitutions.substitutions.emplace_back(optdef, std::string(value, end), ConfigOptionUniquePtr(optdef->default_value->clone()));
         }
         end = start;
     }

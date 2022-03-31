@@ -2141,7 +2141,7 @@ void Print::_make_skirt(const PrintObjectPtrs &objects, ExtrusionEntityCollectio
             out_first_layer->append(eloop);
         if (m_config.min_skirt_length.value > 0 && !first_layer_only) {
             // The skirt length is limited. Sum the total amount of filament length extruded, in mm.
-            extruded_length[extruder_idx] += unscale<double>(loop.length());// *extruders_e_per_mm[extruder_idx];
+            extruded_length[extruder_idx] += unscale<double>(loop.length()) * extruders_e_per_mm[extruder_idx];
             if (extruded_length[extruder_idx] < m_config.min_skirt_length.value) {
                 // Not extruded enough yet with the current extruder. Add another loop.
                 if (i == 1 && extruded_length[extruder_idx] > 0)
@@ -2374,7 +2374,11 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(flow.spacing_ratio, float(SCALED_EPSILON));
             for (Polygon poly : polys) {
-                object_islands.emplace_back(brim_offset == 0 ? ExPolygon{ poly } : offset_ex(poly, brim_offset)[0]);
+                if (brim_offset == 0) {
+                    object_islands.emplace_back(poly);
+                } else {
+                    append(object_islands, offset_ex(Polygons{ poly }, brim_offset));
+                }
             }
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());

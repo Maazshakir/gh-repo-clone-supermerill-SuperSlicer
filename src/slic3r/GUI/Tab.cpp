@@ -1899,6 +1899,9 @@ bool Tab::create_pages(std::string setting_type_name, int idx_page)
                 }
                 else if (boost::starts_with(params[i], "width$")) {
                     option.opt.width = atoi(params[i].substr(6, params[i].size() - 6).c_str());
+#ifdef __WXGTK3__
+                    option.opt.width += 4; // add width for the big [-][+] buttons
+#endif
                 }
                 else if (boost::starts_with(params[i], "height$")) {
                     option.opt.height = atoi(params[i].substr(7, params[i].size() - 7).c_str());
