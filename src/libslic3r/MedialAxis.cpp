@@ -1208,6 +1208,7 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
     bool changes = false;
     for (size_t i = 0; i < pp.size(); ++i) {
         ThickPolyline& polyline = pp[i];
+        bool polyline_changes = false;
         // remove bits with too small extrusion
         while (polyline.points.size() > 1 && polyline.width.front() < this->min_width && polyline.endpoints.first) {
             //try to split if possible
@@ -1224,11 +1225,13 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
                     polyline.width.erase(polyline.width.begin());
                 }
                 changes = true;
+                polyline_changes = true;
                 break;
             }
             polyline.points.erase(polyline.points.begin());
             polyline.width.erase(polyline.width.begin());
             changes = true;
+            polyline_changes = true;
         }
         while (polyline.points.size() > 1 && polyline.width.back() < this->min_width && polyline.endpoints.second) {
             //try to split if possible
@@ -1245,14 +1248,16 @@ MedialAxis::remove_too_thin_extrusion(ThickPolylines& pp)
                     polyline.width.erase(polyline.width.end() - 1);
                 }
                 changes = true;
+                polyline_changes = true;
                 break;
             }
             polyline.points.erase(polyline.points.end() - 1);
             polyline.width.erase(polyline.width.end() - 1);
             changes = true;
+            polyline_changes = true;
         }
         //remove points and bits that comes from a "main line"
-        if (polyline.points.size() < 2 || (changes && polyline.length() < this->max_width && polyline.points.size() ==2)) {
+        if (polyline.points.size() < 2 || (polyline_changes && polyline.length() < this->max_width && polyline.points.size() ==2)) {
             //remove self if too small
             pp.erase(pp.begin() + i);
             --i;
