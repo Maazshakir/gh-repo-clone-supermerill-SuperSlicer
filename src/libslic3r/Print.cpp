@@ -2374,7 +2374,11 @@ void Print::_make_brim(const Flow &flow, const PrintObjectPtrs &objects, ExPolyg
         if (!object->support_layers().empty()) {
             Polygons polys = object->support_layers().front()->support_fills.polygons_covered_by_spacing(flow.spacing_ratio, float(SCALED_EPSILON));
             for (Polygon poly : polys) {
-                object_islands.emplace_back(brim_offset == 0 ? ExPolygon{ poly } : offset_ex(poly, brim_offset)[0]);
+                if (brim_offset == 0) {
+                    object_islands.emplace_back(poly);
+                } else {
+                    append(object_islands, offset_ex(Polygons{ poly }, brim_offset));
+                }
             }
         }
         islands.reserve(islands.size() + object_islands.size() * object->m_instances.size());
