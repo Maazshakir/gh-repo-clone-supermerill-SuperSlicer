@@ -390,9 +390,10 @@ void PerimeterGenerator::process()
         ExPolygons top_fills;
         ExPolygons fill_clip;
         // simplification already done at slicing
-        //ExPolygons last        = union_ex(surface.expolygon.simplify_p(SCALED_RESOLUTION));
-        ExPolygons last = union_ex(surface.expolygon);
-        double last_area = -1;
+        //simplify the loop to avoid artifacts when shrinking almost-0 segments
+        coord_t resolution = scale_t(this->print_config->resolution.value);
+        ExPolygons last    = union_ex(surface.expolygon.simplify_p((resolution < SCALED_EPSILON ? SCALED_EPSILON : resolution)));
+        double last_area   = -1;
 
         if (loop_number >= 0) {
 
@@ -702,7 +703,12 @@ void PerimeterGenerator::process()
                             holes[i].emplace_back(hole, i, false, has_steep_overhang);
                     }
                 }
-                last = std::move(next_onion);
+
+                //simplify the loop to avoid artifacts when shrinking almost-0 segments
+                resolution = scale_t(this->print_config->resolution.value);
+                last.clear();
+                for(ExPolygon& exp : next_onion)
+                    exp.simplify((resolution < SCALED_EPSILON ? SCALED_EPSILON : resolution), &last);
 
                 //store surface for top infill if only_one_perimeter_top
                 if (i == 0 && (config->only_one_perimeter_top && this->upper_slices != NULL)) {
