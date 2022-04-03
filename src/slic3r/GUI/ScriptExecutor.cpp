@@ -512,6 +512,11 @@ void ScriptContainer::init(const std::string& tab_key, Tab* tab)
 {
     m_tab = tab;
     const boost::filesystem::path ui_script_file = Slic3r::GUI::get_app_config()->layout_config_path() / (tab_key + ".as");
+    std::cout << "data_dir() = " << data_dir() << "\n";
+    std::cout << "data_dir exist " << boost::filesystem::path(Slic3r::data_dir()) << "? " << (boost::filesystem::exists(boost::filesystem::path(Slic3r::data_dir())) ? "true" : "false") << "\n";
+    std::cout << "layout_config_path exist " << Slic3r::GUI::get_app_config()->layout_config_path().string() << "? " << (boost::filesystem::exists(Slic3r::GUI::get_app_config()->layout_config_path()) ? "true" : "false") << "\n";
+    std::cout << "ui_script_file exist " << ui_script_file.string() << "? " << (boost::filesystem::exists(ui_script_file) ? "true" : "false") << "\n";
+    std::wcout << L"(utf) ui_script_file exist " << ui_script_file.wstring() << L"? " << (boost::filesystem::exists(ui_script_file) ? L"true" : L"false") << "\n";
     if (boost::filesystem::exists(ui_script_file)) {
         //launch the engine if not yet
         if (m_script_engine.get() == nullptr) {
